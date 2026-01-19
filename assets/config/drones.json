@@ -1,0 +1,8 @@
+[
+  {
+    "id": "drone_01",
+    "name": "Starter Drone",
+    "sprite": "drone_01.png",
+    "baseDps": 2
+  }
+]

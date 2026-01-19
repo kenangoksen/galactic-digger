@@ -1,0 +1,2511 @@
+[
+  {
+    "id": "miner_01",
+    "name": "Pebble Tapper",
+    "sprite": "miner_01.png",
+    "baseCost": 5,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 4,
+      "dpsBase": 0
+    },
+    "skills": [
+      {
+        "id": "m01_s10",
+        "name": "Tap Rhythm",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m01_s25",
+        "name": "Stronger Fingers",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 25
+      },
+      {
+        "id": "m01_s50",
+        "name": "Ore Touch",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 50
+      },
+      {
+        "id": "m01_s75",
+        "name": "Lucky Tap",
+        "kind": "critChance",
+        "value": 0.01,
+        "unlockAt": 75
+      },
+      {
+        "id": "m01_s100",
+        "name": "Crit Tap",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 100
+      },
+      {
+        "id": "m01_s125",
+        "name": "Ore Sense",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 125
+      },
+      {
+        "id": "m01_s150",
+        "name": "Team Push",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_02",
+    "name": "Dust Driller",
+    "sprite": "miner_01.png",
+    "baseCost": 28,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 7
+    },
+    "skills": [
+      {
+        "id": "m02_s10",
+        "name": "Sharpened Drill",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m02_s25",
+        "name": "Better Fuel",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 25
+      },
+      {
+        "id": "m02_s50",
+        "name": "Overclock",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50
+      },
+      {
+        "id": "m02_s75",
+        "name": "Crew Sync",
+        "kind": "globalDpsMultiplier",
+        "value": 0.01,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_03",
+    "name": "Crater Pocker",
+    "sprite": "miner_01.png",
+    "baseCost": 152,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 30
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m03_s10",
+        "name": "Tap Mult",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m03_s25",
+        "name": "Tap Mult+",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 25
+      },
+      {
+        "id": "m03_s50",
+        "name": "Tap Mult++",
+        "kind": "tapMultiplier",
+        "value": 0.15,
+        "unlockAt": 50
+      },
+      {
+        "id": "m03_s75",
+        "name": "DPS Spark",
+        "kind": "dpsMultiplier",
+        "value": 0.2,
+        "unlockAt": 75
+      },
+      {
+        "id": "m03_s100",
+        "name": "Ore Flow",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 100
+      },
+      {
+        "id": "m03_s125",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 125
+      },
+      {
+        "id": "m03_s150",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_04",
+    "name": "Moon Knocker",
+    "sprite": "miner_01.png",
+    "baseCost": 835,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 125
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m04_s10",
+        "name": "Tap Mult",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m04_s25",
+        "name": "Tap Mult+",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 25
+      },
+      {
+        "id": "m04_s50",
+        "name": "Tap Mult++",
+        "kind": "tapMultiplier",
+        "value": 0.15,
+        "unlockAt": 50
+      },
+      {
+        "id": "m04_s75",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 75
+      },
+      {
+        "id": "m04_s100",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 100
+      },
+      {
+        "id": "m04_s125",
+        "name": "Ore Flow",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 125
+      },
+      {
+        "id": "m04_s150",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_05",
+    "name": "Tap Comet",
+    "sprite": "miner_01.png",
+    "baseCost": 4595,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 517
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m05_s10",
+        "name": "Tap +",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m05_s25",
+        "name": "Tap ++",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 25
+      },
+      {
+        "id": "m05_s50",
+        "name": "Tap +++",
+        "kind": "tapMultiplier",
+        "value": 0.15,
+        "unlockAt": 50
+      },
+      {
+        "id": "m05_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_06",
+    "name": "Tiny Drill",
+    "sprite": "miner_01.png",
+    "baseCost": 25302,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 2137
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m06_s10",
+        "name": "Drill Oil",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m06_s25",
+        "name": "Drill Oil+",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m06_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 50
+      },
+      {
+        "id": "m06_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_07",
+    "name": "Chisel Bot",
+    "sprite": "miner_01.png",
+    "baseCost": 139314,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 8835
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m07_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m07_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m07_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m07_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_08",
+    "name": "Ore Runner",
+    "sprite": "miner_01.png",
+    "baseCost": 767064,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 36538
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m08_s10",
+        "name": "DPS +20%",
+        "kind": "dpsMultiplier",
+        "value": 0.2,
+        "unlockAt": 10
+      },
+      {
+        "id": "m08_s25",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 25
+      },
+      {
+        "id": "m08_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 50
+      },
+      {
+        "id": "m08_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_09",
+    "name": "Tap Specialist",
+    "sprite": "miner_01.png",
+    "baseCost": 4223000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 151087
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m09_s10",
+        "name": "Tap +10%",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m09_s25",
+        "name": "Tap +12%",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 25
+      },
+      {
+        "id": "m09_s50",
+        "name": "Tap +15%",
+        "kind": "tapMultiplier",
+        "value": 0.15,
+        "unlockAt": 50
+      },
+      {
+        "id": "m09_s75",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 75
+      },
+      {
+        "id": "m09_s100",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 100
+      },
+      {
+        "id": "m09_s125",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 125
+      },
+      {
+        "id": "m09_s150",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_10",
+    "name": "Tap Captain",
+    "sprite": "miner_01.png",
+    "baseCost": 23250000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 624762
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m10_s10",
+        "name": "Tap +10%",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m10_s25",
+        "name": "Tap +12%",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 25
+      },
+      {
+        "id": "m10_s50",
+        "name": "Tap +15%",
+        "kind": "tapMultiplier",
+        "value": 0.15,
+        "unlockAt": 50
+      },
+      {
+        "id": "m10_s75",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 75
+      },
+      {
+        "id": "m10_s100",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 100
+      },
+      {
+        "id": "m10_s125",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 125
+      },
+      {
+        "id": "m10_s150",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_11",
+    "name": "Rock Grinder",
+    "sprite": "miner_01.png",
+    "baseCost": 128000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 2583394
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m11_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m11_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m11_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m11_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_12",
+    "name": "Crust Borer",
+    "sprite": "miner_01.png",
+    "baseCost": 705000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 10686282
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m12_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m12_s25",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 25
+      },
+      {
+        "id": "m12_s50",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 50
+      },
+      {
+        "id": "m12_s75",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_13",
+    "name": "Ore Chef",
+    "sprite": "miner_01.png",
+    "baseCost": 3882000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 44194571
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m13_s10",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m13_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m13_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m13_s75",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_14",
+    "name": "Lava Driller",
+    "sprite": "miner_01.png",
+    "baseCost": 21370000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 182731522
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m14_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m14_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m14_s50",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m14_s75",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_15",
+    "name": "Canyon Ripper",
+    "sprite": "miner_01.png",
+    "baseCost": 117700000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 755863820
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m15_s10",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 10
+      },
+      {
+        "id": "m15_s25",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m15_s50",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 50
+      },
+      {
+        "id": "m15_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_16",
+    "name": "Crystal Cutter",
+    "sprite": "miner_01.png",
+    "baseCost": 647900000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 3125169428
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m16_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m16_s25",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 25
+      },
+      {
+        "id": "m16_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m16_s75",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_17",
+    "name": "Iron Hound",
+    "sprite": "miner_01.png",
+    "baseCost": 3568000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 12925811611
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m17_s10",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 10
+      },
+      {
+        "id": "m17_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m17_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m17_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_18",
+    "name": "Tectonic Twin",
+    "sprite": "miner_01.png",
+    "baseCost": 19640000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 53441107373
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m18_s10",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 10
+      },
+      {
+        "id": "m18_s25",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m18_s50",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 50
+      },
+      {
+        "id": "m18_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_19",
+    "name": "Deep Core Kid",
+    "sprite": "miner_01.png",
+    "baseCost": 108200000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 221105868767
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m19_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m19_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m19_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m19_s75",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_20",
+    "name": "Quartz Queen",
+    "sprite": "miner_01.png",
+    "baseCost": 595500000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 914042081533
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m20_s10",
+        "name": "Tap +10%",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m20_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m20_s50",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m20_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_21",
+    "name": "Basalt Baron",
+    "sprite": "miner_01.png",
+    "baseCost": 3279000000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 3780096019621
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m21_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m21_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m21_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m21_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_22",
+    "name": "Meteor Mason",
+    "sprite": "miner_01.png",
+    "baseCost": 18050000000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 15629187323014
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m22_s10",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m22_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m22_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 50
+      },
+      {
+        "id": "m22_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_23",
+    "name": "Nimbus Nibbler",
+    "sprite": "miner_01.png",
+    "baseCost": 99400000000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 64641920920539
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m23_s10",
+        "name": "Tap +10%",
+        "kind": "tapMultiplier",
+        "value": 0.1,
+        "unlockAt": 10
+      },
+      {
+        "id": "m23_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m23_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m23_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_24",
+    "name": "Obsidian Owl",
+    "sprite": "miner_01.png",
+    "baseCost": 547300000000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 267321421712087
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m24_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m24_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m24_s50",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m24_s75",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_25",
+    "name": "Cobalt Captain",
+    "sprite": "miner_01.png",
+    "baseCost": 3013000000000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 1105347572921061
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m25_s10",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 10
+      },
+      {
+        "id": "m25_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m25_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m25_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_26",
+    "name": "Tap & Drill Duo",
+    "sprite": "miner_01.png",
+    "baseCost": 16590000000000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 4571146990121378
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m26_s10",
+        "name": "Tap +12%",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 10
+      },
+      {
+        "id": "m26_s25",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 25
+      },
+      {
+        "id": "m26_s50",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 50
+      },
+      {
+        "id": "m26_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_27",
+    "name": "Rubble Raptor",
+    "sprite": "miner_01.png",
+    "baseCost": 91360000000000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 18906166672667612
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m27_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m27_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m27_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 50
+      },
+      {
+        "id": "m27_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_28",
+    "name": "Shale Shredder",
+    "sprite": "miner_01.png",
+    "baseCost": 503000000000000000000,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 78180848678997710
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m28_s10",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m28_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m28_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m28_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_29",
+    "name": "Tap Reactor",
+    "sprite": "miner_01.png",
+    "baseCost": 2.77e+21,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 323355614621201600
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m29_s10",
+        "name": "Tap +15%",
+        "kind": "tapMultiplier",
+        "value": 0.15,
+        "unlockAt": 10
+      },
+      {
+        "id": "m29_s25",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 25
+      },
+      {
+        "id": "m29_s50",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 50
+      },
+      {
+        "id": "m29_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_30",
+    "name": "Core Maestro",
+    "sprite": "miner_01.png",
+    "baseCost": 1.525e+22,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 1337085399724067300
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m30_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m30_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m30_s50",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m30_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_31",
+    "name": "Nebula Engineer",
+    "sprite": "miner_01.png",
+    "baseCost": 8.396e+22,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 5529021756846575000
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m31_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m31_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m31_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m31_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      },
+      {
+        "id": "m31_s100",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 100
+      },
+      {
+        "id": "m31_s125",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 125
+      },
+      {
+        "id": "m31_s150",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_32",
+    "name": "Starlight Foreman",
+    "sprite": "miner_01.png",
+    "baseCost": 4.623e+23,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 22865364371754353000
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m32_s10",
+        "name": "Tap +12%",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 10
+      },
+      {
+        "id": "m32_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m32_s50",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m32_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      },
+      {
+        "id": "m32_s100",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 100
+      },
+      {
+        "id": "m32_s125",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 125
+      },
+      {
+        "id": "m32_s150",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_33",
+    "name": "Void Harvester",
+    "sprite": "miner_01.png",
+    "baseCost": 2.545e+24,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 94544240822704590000
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m33_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m33_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m33_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m33_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      },
+      {
+        "id": "m33_s100",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 100
+      },
+      {
+        "id": "m33_s125",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 125
+      },
+      {
+        "id": "m33_s150",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_34",
+    "name": "Orbit Supervisor",
+    "sprite": "miner_01.png",
+    "baseCost": 1.402e+25,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 391145769544468860000
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m34_s10",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m34_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m34_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m34_s75",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 75
+      },
+      {
+        "id": "m34_s100",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 100
+      },
+      {
+        "id": "m34_s125",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 125
+      },
+      {
+        "id": "m34_s150",
+        "name": "DPS +40%",
+        "kind": "dpsMultiplier",
+        "value": 0.4,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_35",
+    "name": "Quantum Digger",
+    "sprite": "miner_01.png",
+    "baseCost": 7.717e+25,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 1.6171221414040114e+21
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m35_s10",
+        "name": "Tap +12%",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 10
+      },
+      {
+        "id": "m35_s25",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m35_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 50
+      },
+      {
+        "id": "m35_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 75
+      },
+      {
+        "id": "m35_s100",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 100
+      },
+      {
+        "id": "m35_s125",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 125
+      },
+      {
+        "id": "m35_s150",
+        "name": "DPS +40%",
+        "kind": "dpsMultiplier",
+        "value": 0.4,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_36",
+    "name": "Asteroid Artisan",
+    "sprite": "miner_01.png",
+    "baseCost": 4.249e+26,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 6.687466799055043e+21
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m36_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m36_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m36_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m36_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      },
+      {
+        "id": "m36_s100",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 100
+      },
+      {
+        "id": "m36_s125",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 125
+      },
+      {
+        "id": "m36_s150",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_37",
+    "name": "Solar Sapper",
+    "sprite": "miner_01.png",
+    "baseCost": 2.339e+27,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 2.7650412362615612e+22
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m37_s10",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m37_s25",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 25
+      },
+      {
+        "id": "m37_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m37_s75",
+        "name": "DPS +40%",
+        "kind": "dpsMultiplier",
+        "value": 0.4,
+        "unlockAt": 75
+      },
+      {
+        "id": "m37_s100",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 100
+      },
+      {
+        "id": "m37_s125",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 125
+      },
+      {
+        "id": "m37_s150",
+        "name": "DPS +45%",
+        "kind": "dpsMultiplier",
+        "value": 0.45,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_38",
+    "name": "Galaxy Golem",
+    "sprite": "miner_01.png",
+    "baseCost": 1.288e+28,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 1.143562439522783e+23
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m38_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m38_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m38_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m38_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      },
+      {
+        "id": "m38_s100",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 100
+      },
+      {
+        "id": "m38_s125",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 125
+      },
+      {
+        "id": "m38_s150",
+        "name": "DPS +40%",
+        "kind": "dpsMultiplier",
+        "value": 0.4,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_39",
+    "name": "Tap Titan",
+    "sprite": "miner_01.png",
+    "baseCost": 7.092e+28,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 4.729234786325415e+23
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m39_s10",
+        "name": "Tap +15%",
+        "kind": "tapMultiplier",
+        "value": 0.15,
+        "unlockAt": 10
+      },
+      {
+        "id": "m39_s25",
+        "name": "Tap +18%",
+        "kind": "tapMultiplier",
+        "value": 0.18,
+        "unlockAt": 25
+      },
+      {
+        "id": "m39_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m39_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.35,
+        "unlockAt": 75
+      },
+      {
+        "id": "m39_s100",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 100
+      },
+      {
+        "id": "m39_s125",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 125
+      },
+      {
+        "id": "m39_s150",
+        "name": "DPS +40%",
+        "kind": "dpsMultiplier",
+        "value": 0.4,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_40",
+    "name": "Star Founder",
+    "sprite": "miner_01.png",
+    "baseCost": 3.905e+29,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 1.9557863399175934e+24
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m40_s10",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 10
+      },
+      {
+        "id": "m40_s25",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 25
+      },
+      {
+        "id": "m40_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m40_s75",
+        "name": "DPS +40%",
+        "kind": "dpsMultiplier",
+        "value": 0.4,
+        "unlockAt": 75
+      },
+      {
+        "id": "m40_s100",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 100
+      },
+      {
+        "id": "m40_s125",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 125
+      },
+      {
+        "id": "m40_s150",
+        "name": "DPS +45%",
+        "kind": "dpsMultiplier",
+        "value": 0.45,
+        "unlockAt": 150
+      }
+    ]
+  },
+  {
+    "id": "miner_41",
+    "name": "Nova Nurse",
+    "sprite": "miner_01.png",
+    "baseCost": 2.15e+30,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 8.087660396221827e+24
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m41_s10",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m41_s25",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 25
+      },
+      {
+        "id": "m41_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 50
+      },
+      {
+        "id": "m41_s75",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_42",
+    "name": "Comet Accountant",
+    "sprite": "miner_01.png",
+    "baseCost": 1.184e+31,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 3.3450618036497304e+25
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m42_s10",
+        "name": "Tap +12%",
+        "kind": "tapMultiplier",
+        "value": 0.12,
+        "unlockAt": 10
+      },
+      {
+        "id": "m42_s25",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 25
+      },
+      {
+        "id": "m42_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m42_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_43",
+    "name": "Gravity Gardener",
+    "sprite": "miner_01.png",
+    "baseCost": 6.518e+31,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 1.3831206555411606e+26
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m43_s10",
+        "name": "DPS +25%",
+        "kind": "dpsMultiplier",
+        "value": 0.25,
+        "unlockAt": 10
+      },
+      {
+        "id": "m43_s25",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 25
+      },
+      {
+        "id": "m43_s50",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m43_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_44",
+    "name": "Singularity Smith",
+    "sprite": "miner_01.png",
+    "baseCost": 3.589e+32,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 5.720002933891168e+26
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m44_s10",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 10
+      },
+      {
+        "id": "m44_s25",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.25,
+        "unlockAt": 25
+      },
+      {
+        "id": "m44_s50",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 50
+      },
+      {
+        "id": "m44_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_45",
+    "name": "Aurora Admiral",
+    "sprite": "miner_01.png",
+    "baseCost": 1.976e+33,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 2.365344874684523e+27
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m45_s10",
+        "name": "Tap +15%",
+        "kind": "tapMultiplier",
+        "value": 0.15,
+        "unlockAt": 10
+      },
+      {
+        "id": "m45_s25",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 25
+      },
+      {
+        "id": "m45_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.02,
+        "unlockAt": 50
+      },
+      {
+        "id": "m45_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_46",
+    "name": "Cosmic CFO",
+    "sprite": "miner_01.png",
+    "baseCost": 1.088e+34,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 9.781746101986468e+27
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m46_s10",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m46_s25",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 25
+      },
+      {
+        "id": "m46_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m46_s75",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_47",
+    "name": "Crit Conductor",
+    "sprite": "miner_01.png",
+    "baseCost": 5.991e+34,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 4.045404865426024e+28
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m47_s10",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m47_s25",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.35,
+        "unlockAt": 25
+      },
+      {
+        "id": "m47_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m47_s75",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_48",
+    "name": "Tap Oracle",
+    "sprite": "miner_01.png",
+    "baseCost": 3.299e+35,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 1.6730852136712954e+29
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m48_s10",
+        "name": "Tap +18%",
+        "kind": "tapMultiplier",
+        "value": 0.18,
+        "unlockAt": 10
+      },
+      {
+        "id": "m48_s25",
+        "name": "Tap +20%",
+        "kind": "tapMultiplier",
+        "value": 0.2,
+        "unlockAt": 25
+      },
+      {
+        "id": "m48_s50",
+        "name": "Crit Chance",
+        "kind": "critChance",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m48_s75",
+        "name": "Crit Power",
+        "kind": "critMultiplier",
+        "value": 0.35,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_49",
+    "name": "Mineral Magnet",
+    "sprite": "miner_01.png",
+    "baseCost": 1.816e+36,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 6.917509182090768e+29
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m49_s10",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 10
+      },
+      {
+        "id": "m49_s25",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 25
+      },
+      {
+        "id": "m49_s50",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 50
+      },
+      {
+        "id": "m49_s75",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 75
+      }
+    ]
+  },
+  {
+    "id": "miner_50",
+    "name": "Endgame Excavator",
+    "sprite": "miner_01.png",
+    "baseCost": 1e+37,
+    "costGrowth": 1.07,
+    "stats": {
+      "tapBase": 0,
+      "dpsBase": 2.860927011129071e+30
+    },
+    "scaling": {
+      "perLevel": 1.07
+    },
+    "skills": [
+      {
+        "id": "m50_s10",
+        "name": "DPS +30%",
+        "kind": "dpsMultiplier",
+        "value": 0.3,
+        "unlockAt": 10
+      },
+      {
+        "id": "m50_s25",
+        "name": "DPS +35%",
+        "kind": "dpsMultiplier",
+        "value": 0.35,
+        "unlockAt": 25
+      },
+      {
+        "id": "m50_s50",
+        "name": "Global DPS +0.5%",
+        "kind": "globalDpsMultiplier",
+        "value": 0.005,
+        "unlockAt": 50
+      },
+      {
+        "id": "m50_s75",
+        "name": "Ore +3%",
+        "kind": "mineralMultiplier",
+        "value": 0.03,
+        "unlockAt": 75
+      }
+    ]
+  }
+]

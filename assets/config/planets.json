@@ -1,0 +1,6 @@
+[
+  { "id": "planet_01", "name": "Dusty Rock", "sprite": "planet_01.png" },
+  { "id": "planet_02", "name": "Candy Crater", "sprite": "planet_02.png" },
+  { "id": "planet_03", "name": "Lava Puff", "sprite": "planet_03.png" },
+  { "id": "planet_04", "name": "Frost Pebble", "sprite": "planet_04.png" }
+]
