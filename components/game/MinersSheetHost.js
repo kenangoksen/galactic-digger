@@ -1,14 +1,20 @@
 // components/game/MinersSheetHost.js
-// NOTE: Keep sheet mounted to preserve scroll position and avoid remount jank.
+// Keep sheet mounted (no remount), but allow props to update every render.
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing } from "react-native";
 
 export default function MinersSheetHost({ sheetContent, children }) {
   const sheet = useRef(new Animated.Value(0)).current; // 0 closed / 1 open
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const openSheet = () => {
+  // sheetContent inline geliyorsa identity sürekli değişir -> ref ile yakala
+  const sheetContentRef = useRef(sheetContent);
+  useEffect(() => {
+    sheetContentRef.current = sheetContent;
+  }, [sheetContent]);
+
+  const openSheet = useCallback(() => {
     setSheetOpen(true);
     Animated.timing(sheet, {
       toValue: 1,
@@ -16,58 +22,53 @@ export default function MinersSheetHost({ sheetContent, children }) {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  };
+  }, [sheet]);
 
-  const closeSheet = () => {
+  const closeSheet = useCallback(() => {
     Animated.timing(sheet, {
       toValue: 0,
       duration: 220,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     }).start(() => setSheetOpen(false));
-  };
+  }, [sheet]);
 
-  const toggleSheet = () => {
+  const toggleSheet = useCallback(() => {
     if (sheetOpen) closeSheet();
     else openSheet();
-  };
+  }, [sheetOpen, closeSheet, openSheet]);
 
-  // Stage slides a bit when sheet opens (visual only)
   const stageTranslateY = useMemo(
     () =>
       sheet.interpolate({
         inputRange: [0, 1],
         outputRange: [0, -160],
       }),
-    [sheet]
+    [sheet],
   );
 
-  // Sheet slides up from bottom
   const sheetTranslateY = useMemo(
     () =>
       sheet.interpolate({
         inputRange: [0, 1],
         outputRange: [420, 0],
       }),
-    [sheet]
+    [sheet],
   );
 
-  // Keep sheet mounted always. When closed, pointerEvents='none' so it won't steal taps.
-  const Sheet = useMemo(() => {
-    function SheetImpl() {
-      return (
-        <Animated.View
-          style={{
-            transform: [{ translateY: sheetTranslateY }],
-            pointerEvents: sheetOpen ? "auto" : "none",
-          }}
-        >
-          {sheetContent({ closeSheet })}
-        </Animated.View>
-      );
-    }
-    return SheetImpl;
-  }, [sheetContent, sheetOpen, sheetTranslateY]);
+  // ✅ IMPORTANT:
+  // Sheet component identity stable -> no remount / no scroll reset
+  // BUT content is rendered each render -> minerals/props update normally
+  const Sheet = useCallback(() => {
+    return (
+      <Animated.View
+        style={{ transform: [{ translateY: sheetTranslateY }] }}
+        pointerEvents={sheetOpen ? "auto" : "none"}
+      >
+        {sheetContentRef.current({ closeSheet })}
+      </Animated.View>
+    );
+  }, [sheetOpen, sheetTranslateY, closeSheet]);
 
   return children({
     sheetOpen,
@@ -75,6 +76,7 @@ export default function MinersSheetHost({ sheetContent, children }) {
     closeSheet,
     toggleSheet,
     stageTranslateY,
+    sheetProgress: sheet,
     Sheet,
   });
 }

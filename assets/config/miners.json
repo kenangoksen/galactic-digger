@@ -3,7 +3,7 @@
     "id": "miner_01",
     "name": "Pebble Tapper",
     "sprite": "miner_01.png",
-    "baseCost": 5,
+    "baseCost": "5",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 4,
@@ -65,7 +65,7 @@
     "id": "miner_02",
     "name": "Dust Driller",
     "sprite": "miner_01.png",
-    "baseCost": 28,
+    "baseCost": "50",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -106,7 +106,7 @@
     "id": "miner_03",
     "name": "Crater Pocker",
     "sprite": "miner_01.png",
-    "baseCost": 152,
+    "baseCost": "250",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -171,7 +171,7 @@
     "id": "miner_04",
     "name": "Moon Knocker",
     "sprite": "miner_01.png",
-    "baseCost": 835,
+    "baseCost": "1000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -236,7 +236,7 @@
     "id": "miner_05",
     "name": "Tap Comet",
     "sprite": "miner_01.png",
-    "baseCost": 4595,
+    "baseCost": "4000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -280,7 +280,7 @@
     "id": "miner_06",
     "name": "Tiny Drill",
     "sprite": "miner_01.png",
-    "baseCost": 25302,
+    "baseCost": "20",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -324,7 +324,7 @@
     "id": "miner_07",
     "name": "Chisel Bot",
     "sprite": "miner_01.png",
-    "baseCost": 139314,
+    "baseCost": "100",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -368,7 +368,7 @@
     "id": "miner_08",
     "name": "Ore Runner",
     "sprite": "miner_01.png",
-    "baseCost": 767064,
+    "baseCost": "400",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -412,7 +412,7 @@
     "id": "miner_09",
     "name": "Tap Specialist",
     "sprite": "miner_01.png",
-    "baseCost": 4223000,
+    "baseCost": "2,500,000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -477,7 +477,7 @@
     "id": "miner_10",
     "name": "Tap Captain",
     "sprite": "miner_01.png",
-    "baseCost": 23250000,
+    "baseCost": "15,000,000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -542,7 +542,7 @@
     "id": "miner_11",
     "name": "Rock Grinder",
     "sprite": "miner_01.png",
-    "baseCost": 128000000,
+    "baseCost": "100,000,000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -586,7 +586,7 @@
     "id": "miner_12",
     "name": "Crust Borer",
     "sprite": "miner_01.png",
-    "baseCost": 705000000,
+    "baseCost": "800,000,000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -630,7 +630,7 @@
     "id": "miner_13",
     "name": "Ore Chef",
     "sprite": "miner_01.png",
-    "baseCost": 3882000000,
+    "baseCost": "6,500,000,000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -674,7 +674,7 @@
     "id": "miner_14",
     "name": "Lava Driller",
     "sprite": "miner_01.png",
-    "baseCost": 21370000000,
+    "baseCost": "50,000,000,000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -718,7 +718,7 @@
     "id": "miner_15",
     "name": "Canyon Ripper",
     "sprite": "miner_01.png",
-    "baseCost": 117700000000,
+    "baseCost": "4,50E+14",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -762,7 +762,7 @@
     "id": "miner_16",
     "name": "Crystal Cutter",
     "sprite": "miner_01.png",
-    "baseCost": 647900000000,
+    "baseCost": "4,00E+15",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -806,7 +806,7 @@
     "id": "miner_17",
     "name": "Iron Hound",
     "sprite": "miner_01.png",
-    "baseCost": 3568000000000,
+    "baseCost": "3,60E+16",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -850,7 +850,7 @@
     "id": "miner_18",
     "name": "Tectonic Twin",
     "sprite": "miner_01.png",
-    "baseCost": 19640000000000,
+    "baseCost": "3,20E+17",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -894,7 +894,7 @@
     "id": "miner_19",
     "name": "Deep Core Kid",
     "sprite": "miner_01.png",
-    "baseCost": 108200000000000,
+    "baseCost": "2,70E+18",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -938,7 +938,7 @@
     "id": "miner_20",
     "name": "Quartz Queen",
     "sprite": "miner_01.png",
-    "baseCost": 595500000000000,
+    "baseCost": "2,40E+19",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -982,7 +982,7 @@
     "id": "miner_21",
     "name": "Basalt Baron",
     "sprite": "miner_01.png",
-    "baseCost": 3279000000000000,
+    "baseCost": "3,00E+20",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1026,7 +1026,7 @@
     "id": "miner_22",
     "name": "Meteor Mason",
     "sprite": "miner_01.png",
-    "baseCost": 18050000000000000,
+    "baseCost": "9,00E+21",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1070,7 +1070,7 @@
     "id": "miner_23",
     "name": "Nimbus Nibbler",
     "sprite": "miner_01.png",
-    "baseCost": 99400000000000000,
+    "baseCost": "3,50E+23",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1114,7 +1114,7 @@
     "id": "miner_24",
     "name": "Obsidian Owl",
     "sprite": "miner_01.png",
-    "baseCost": 547300000000000000,
+    "baseCost": "1,40E+25",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1158,7 +1158,7 @@
     "id": "miner_25",
     "name": "Cobalt Captain",
     "sprite": "miner_01.png",
-    "baseCost": 3013000000000000000,
+    "baseCost": "4,20E+27",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1202,7 +1202,7 @@
     "id": "miner_26",
     "name": "Tap & Drill Duo",
     "sprite": "miner_01.png",
-    "baseCost": 16590000000000000000,
+    "baseCost": "2,10E+30",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1246,7 +1246,7 @@
     "id": "miner_27",
     "name": "Rubble Raptor",
     "sprite": "miner_01.png",
-    "baseCost": 91360000000000000000,
+    "baseCost": "1,00E+43",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1290,7 +1290,7 @@
     "id": "miner_28",
     "name": "Shale Shredder",
     "sprite": "miner_01.png",
-    "baseCost": 503000000000000000000,
+    "baseCost": "1,00E+58",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1334,7 +1334,7 @@
     "id": "miner_29",
     "name": "Tap Reactor",
     "sprite": "miner_01.png",
-    "baseCost": 2.77e+21,
+    "baseCost": "1,00E+73",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1378,7 +1378,7 @@
     "id": "miner_30",
     "name": "Core Maestro",
     "sprite": "miner_01.png",
-    "baseCost": 1.525e+22,
+    "baseCost": "1,00E+88",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1422,7 +1422,7 @@
     "id": "miner_31",
     "name": "Nebula Engineer",
     "sprite": "miner_01.png",
-    "baseCost": 8.396e+22,
+    "baseCost": "1,00E+103",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1487,7 +1487,7 @@
     "id": "miner_32",
     "name": "Starlight Foreman",
     "sprite": "miner_01.png",
-    "baseCost": 4.623e+23,
+    "baseCost": "1,00E+118",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1552,7 +1552,7 @@
     "id": "miner_33",
     "name": "Void Harvester",
     "sprite": "miner_01.png",
-    "baseCost": 2.545e+24,
+    "baseCost": "1,00E+133",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1617,7 +1617,7 @@
     "id": "miner_34",
     "name": "Orbit Supervisor",
     "sprite": "miner_01.png",
-    "baseCost": 1.402e+25,
+    "baseCost": "1,00E+148",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -1682,11 +1682,11 @@
     "id": "miner_35",
     "name": "Quantum Digger",
     "sprite": "miner_01.png",
-    "baseCost": 7.717e+25,
+    "baseCost": "1,00E+163",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 1.6171221414040114e+21
+      "dpsBase": 1.6171221414040114e21
     },
     "scaling": {
       "perLevel": 1.07
@@ -1747,11 +1747,11 @@
     "id": "miner_36",
     "name": "Asteroid Artisan",
     "sprite": "miner_01.png",
-    "baseCost": 4.249e+26,
+    "baseCost": "1,00E+178",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 6.687466799055043e+21
+      "dpsBase": 6.687466799055043e21
     },
     "scaling": {
       "perLevel": 1.07
@@ -1812,11 +1812,11 @@
     "id": "miner_37",
     "name": "Solar Sapper",
     "sprite": "miner_01.png",
-    "baseCost": 2.339e+27,
+    "baseCost": "1,00E+193",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 2.7650412362615612e+22
+      "dpsBase": 2.7650412362615612e22
     },
     "scaling": {
       "perLevel": 1.07
@@ -1877,11 +1877,11 @@
     "id": "miner_38",
     "name": "Galaxy Golem",
     "sprite": "miner_01.png",
-    "baseCost": 1.288e+28,
+    "baseCost": "1,00E+208",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 1.143562439522783e+23
+      "dpsBase": 1.143562439522783e23
     },
     "scaling": {
       "perLevel": 1.07
@@ -1942,11 +1942,11 @@
     "id": "miner_39",
     "name": "Tap Titan",
     "sprite": "miner_01.png",
-    "baseCost": 7.092e+28,
+    "baseCost": "1,00E+223",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 4.729234786325415e+23
+      "dpsBase": 4.729234786325415e23
     },
     "scaling": {
       "perLevel": 1.07
@@ -2007,11 +2007,11 @@
     "id": "miner_40",
     "name": "Star Founder",
     "sprite": "miner_01.png",
-    "baseCost": 3.905e+29,
+    "baseCost": "1,00E+238",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 1.9557863399175934e+24
+      "dpsBase": 1.9557863399175934e24
     },
     "scaling": {
       "perLevel": 1.07
@@ -2072,11 +2072,11 @@
     "id": "miner_41",
     "name": "Nova Nurse",
     "sprite": "miner_01.png",
-    "baseCost": 2.15e+30,
+    "baseCost": "1.000e500",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 8.087660396221827e+24
+      "dpsBase": 8.087660396221827e24
     },
     "scaling": {
       "perLevel": 1.07
@@ -2116,11 +2116,11 @@
     "id": "miner_42",
     "name": "Comet Accountant",
     "sprite": "miner_01.png",
-    "baseCost": 1.184e+31,
+    "baseCost": "1.000e1000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 3.3450618036497304e+25
+      "dpsBase": 3.3450618036497304e25
     },
     "scaling": {
       "perLevel": 1.07
@@ -2160,11 +2160,11 @@
     "id": "miner_43",
     "name": "Gravity Gardener",
     "sprite": "miner_01.png",
-    "baseCost": 6.518e+31,
+    "baseCost": "1.000e2000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 1.3831206555411606e+26
+      "dpsBase": 1.3831206555411606e26
     },
     "scaling": {
       "perLevel": 1.07
@@ -2204,11 +2204,11 @@
     "id": "miner_44",
     "name": "Singularity Smith",
     "sprite": "miner_01.png",
-    "baseCost": 3.589e+32,
+    "baseCost": "1.000e4000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 5.720002933891168e+26
+      "dpsBase": 5.720002933891168e26
     },
     "scaling": {
       "perLevel": 1.07
@@ -2248,11 +2248,11 @@
     "id": "miner_45",
     "name": "Aurora Admiral",
     "sprite": "miner_01.png",
-    "baseCost": 1.976e+33,
+    "baseCost": "1.000e8000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 2.365344874684523e+27
+      "dpsBase": 2.365344874684523e27
     },
     "scaling": {
       "perLevel": 1.07
@@ -2292,11 +2292,11 @@
     "id": "miner_46",
     "name": "Cosmic CFO",
     "sprite": "miner_01.png",
-    "baseCost": 1.088e+34,
+    "baseCost": "1.000e14000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 9.781746101986468e+27
+      "dpsBase": 9.781746101986468e27
     },
     "scaling": {
       "perLevel": 1.07
@@ -2336,11 +2336,11 @@
     "id": "miner_47",
     "name": "Crit Conductor",
     "sprite": "miner_01.png",
-    "baseCost": 5.991e+34,
+    "baseCost": "1.000e25500",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 4.045404865426024e+28
+      "dpsBase": 4.045404865426024e28
     },
     "scaling": {
       "perLevel": 1.07
@@ -2380,11 +2380,11 @@
     "id": "miner_48",
     "name": "Tap Oracle",
     "sprite": "miner_01.png",
-    "baseCost": 3.299e+35,
+    "baseCost": "1.000e25500",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 1.6730852136712954e+29
+      "dpsBase": 1.6730852136712954e29
     },
     "scaling": {
       "perLevel": 1.07
@@ -2424,11 +2424,11 @@
     "id": "miner_49",
     "name": "Mineral Magnet",
     "sprite": "miner_01.png",
-    "baseCost": 1.816e+36,
+    "baseCost": "1.000e45500",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 6.917509182090768e+29
+      "dpsBase": 6.917509182090768e29
     },
     "scaling": {
       "perLevel": 1.07
@@ -2468,11 +2468,11 @@
     "id": "miner_50",
     "name": "Endgame Excavator",
     "sprite": "miner_01.png",
-    "baseCost": 1e+37,
+    "baseCost": "1.000e72000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
-      "dpsBase": 2.860927011129071e+30
+      "dpsBase": 2.860927011129071e30
     },
     "scaling": {
       "perLevel": 1.07
