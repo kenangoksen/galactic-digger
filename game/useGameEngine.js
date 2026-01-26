@@ -3,7 +3,6 @@
 // Sadece ECONOMY (minerals/cost/buy) Decimal-safe yapılır.
 
 import {
-  unlockedCount,
   useCallback,
   useEffect,
   useMemo,
@@ -130,6 +129,7 @@ export function useGameEngine() {
   const planetCount = planets?.length || 1;
   const globalStageIndex = (zone - 1) * 10 + (step - 1);
   const planetIndex = planetCount > 0 ? globalStageIndex % planetCount : 0;
+  const unlockedCount = eco.unlockedCount || 2;
 
   const currentPlanet = planets?.[planetIndex] ||
     planets?.[0] || {
