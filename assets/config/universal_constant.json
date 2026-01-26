@@ -1,0 +1,44 @@
+[
+  {
+    "id": "prime_continuum",
+    "name": "Prime Continuum",
+    "type": "ascendRewardMultiplier",
+    "baseValue": 0.25,
+    "description": "Increases Stellar Fragment gain on Stellar Rewind."
+  },
+  {
+    "id": "graviton_law",
+    "name": "Graviton Law",
+    "type": "enemyHpGrowthReducer",
+    "baseValue": 0.05,
+    "description": "Reduces enemy HP growth per sector."
+  },
+  {
+    "id": "eternal_drift",
+    "name": "Eternal Drift",
+    "type": "idleDominance",
+    "baseValue": 0.3,
+    "description": "Idle DPS becomes more effective than active play."
+  },
+  {
+    "id": "singular_genesis",
+    "name": "Singular Genesis",
+    "type": "startingPowerBoost",
+    "baseValue": 0.5,
+    "description": "Increases starting miner power after Big Bang."
+  },
+  {
+    "id": "cosmic_inversion",
+    "name": "Cosmic Inversion",
+    "type": "clickDpsRatioShift",
+    "baseValue": 0.15,
+    "description": "Alters balance between click and DPS damage."
+  },
+  {
+    "id": "last_equation",
+    "name": "Last Equation",
+    "type": "lateGameSoftCapReducer",
+    "baseValue": 0.08,
+    "description": "Softens late-game scaling penalties."
+  }
+]

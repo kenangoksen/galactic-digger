@@ -1,0 +1,86 @@
+[
+  {
+    "id": "core_singularity",
+    "name": "Core Singularity",
+    "type": "globalDpsMultiplier",
+    "baseValue": 0.08,
+    "description": "Increases all DPS by compressing energy into a single core."
+  },
+  {
+    "id": "quantum_overdrive",
+    "name": "Quantum Overdrive",
+    "type": "minerDpsMultiplier",
+    "baseValue": 0.1,
+    "description": "Boosts miner output via quantum acceleration."
+  },
+  {
+    "id": "entropy_engine",
+    "name": "Entropy Engine",
+    "type": "bossDpsMultiplier",
+    "baseValue": 0.12,
+    "description": "Amplifies damage dealt to Cosmic Thresholds."
+  },
+  {
+    "id": "dark_matter_flow",
+    "name": "Dark Matter Flow",
+    "type": "idleDpsMultiplier",
+    "baseValue": 0.15,
+    "description": "Enhances idle DPS using dark matter currents."
+  },
+  {
+    "id": "stellar_compression",
+    "name": "Stellar Compression",
+    "type": "dpsScalingReducer",
+    "baseValue": 0.05,
+    "description": "Reduces DPS scaling penalty at high zones."
+  },
+  {
+    "id": "photon_strike_matrix",
+    "name": "Photon Strike Matrix",
+    "type": "tapMultiplier",
+    "baseValue": 0.12,
+    "description": "Improves click damage using photon alignment."
+  },
+  {
+    "id": "manual_override",
+    "name": "Manual Override",
+    "type": "dpsToTapConversion",
+    "baseValue": 0.02,
+    "description": "Converts a portion of DPS into click damage."
+  },
+  {
+    "id": "precision_lattice",
+    "name": "Precision Lattice",
+    "type": "critEnhancer",
+    "baseValue": 0.01,
+    "description": "Improves critical chance and multiplier."
+  },
+  {
+    "id": "astro_extraction_grid",
+    "name": "Astro Extraction Grid",
+    "type": "mineralMultiplier",
+    "baseValue": 0.1,
+    "description": "Boosts mineral extraction efficiency."
+  },
+  {
+    "id": "void_harvest_protocol",
+    "name": "Void Harvest Protocol",
+    "type": "bossRewardMultiplier",
+    "baseValue": 0.2,
+    "description": "Increases boss mineral rewards."
+  },
+  {
+    "id": "temporal_acceleration",
+    "name": "Temporal Acceleration",
+    "type": "zoneSpeedMultiplier",
+    "baseValue": 0.08,
+    "description": "Accelerates progression through sectors."
+  },
+  {
+    "id": "reality_stabilizer",
+    "name": "Reality Stabilizer",
+    "type": "hpScalingReducer",
+    "baseValue": 0.04,
+    "description": "Stabilizes enemy HP growth in deep space."
+  }
+]

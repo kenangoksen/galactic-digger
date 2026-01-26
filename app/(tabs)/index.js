@@ -24,6 +24,7 @@ export default function HomeScreen() {
     Alert.alert(name, "Şimdilik UI. Mekanikler burada.");
 
   const engine = useGameEngine();
+
   const anims = useStageAnims();
 
   return (
@@ -31,7 +32,6 @@ export default function HomeScreen() {
       <ImageBackground source={BG_IMG} style={styles.bg} resizeMode="cover">
         <MinersSheetHost
           // ✅ sadece bu değerler değişince sheet içeriği rebuild olur
-          sheetDeps={[engine.minerals, engine.ownedMiners, engine.ownedSkills]}
           sheetContent={({ closeSheet }) => (
             <MinersSheet
               miners={minersDef}
@@ -42,6 +42,7 @@ export default function HomeScreen() {
               onBuyOrUpgrade={engine.buyOrUpgradeMiner}
               onBuySkill={engine.buySkill}
               onClose={closeSheet}
+              unlockedCount={engine.unlockedCount}
             />
           )}
         >
@@ -57,11 +58,19 @@ export default function HomeScreen() {
                 hover={anims.hover}
                 minerIdle={anims.minerIdle}
                 floaters={anims.floaters}
-                isBoss={engine.isBoss}
-                zoneText={`Zone ${engine.zone} • ${engine.step}/10`}
+                isBossPlanet={engine.isBossPlanet}
+                // ✅ Boss planet'te step yazma
+                zoneText={
+                  engine.isBossPlanet
+                    ? `Zone ${engine.zone} • BOSS`
+                    : `Zone ${engine.zone} • ${engine.step}/10`
+                }
                 hp={engine.hp}
                 maxHp={engine.maxHp}
-                bossMsLeft={engine.isBoss ? engine.bossMsLeft : 0}
+                // ✅ Timer: GameStage hangi ismi bekliyorsa yakalasın
+                bossTimeMsLeft={engine.isBossPlanet ? engine.bossTimeMsLeft : 0}
+                bossMsLeft={engine.isBossPlanet ? engine.bossTimeMsLeft : 0}
+                bossTimerMs={engine.isBossPlanet ? engine.bossTimeMsLeft : 0}
                 onTap={() => {
                   anims.runTapFeedback();
                   const { dmg, isCrit } = engine.calcTapDamage();

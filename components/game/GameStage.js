@@ -1,5 +1,6 @@
 // components/game/GameStage.js
 import { Animated, Pressable, StyleSheet, View } from "react-native";
+import BossBar from "./BossBar";
 import HpBarCompact from "./HpBarCompact";
 
 export default function GameStage({
@@ -12,17 +13,14 @@ export default function GameStage({
   minerIdle,
   floaters,
   onTap,
-  hpPct = 1,
-  hpText = "",
-  bossTimeText = "",
-  planetLevelText = "",
+
   zoneText,
   hp,
   maxHp,
   bossMsLeft,
-}) {
-  const pct = Math.max(0, Math.min(1, Number(hpPct || 0)));
 
+  isBossPlanet, // ⬅️ engine’den geliyor
+}) {
   return (
     <Animated.View
       style={{ flex: 1, transform: [{ translateY: stageTranslateY }] }}
@@ -37,7 +35,6 @@ export default function GameStage({
             ]}
           />
 
-          {/* floaters */}
           {/* FLOATERS */}
           {(floaters || []).map((f) => {
             const translateX = f.t.interpolate({
@@ -110,14 +107,16 @@ export default function GameStage({
             ]}
             resizeMode="contain"
           />
-          {/* HP BAR (planet altı) */}
+
+          {/* =======================
+              HP BAR (planet altı)
+              ======================= */}
           <View style={styles.hpDock}>
-            <HpBarCompact
-              zoneText={zoneText}
-              hp={hp}
-              maxHp={maxHp}
-              bossMsLeft={bossMsLeft}
-            />
+            {isBossPlanet ? (
+              <BossBar hp={hp} maxHp={maxHp} timeMs={bossMsLeft} />
+            ) : (
+              <HpBarCompact zoneText={zoneText} hp={hp} maxHp={maxHp} />
+            )}
           </View>
 
           {/* miner */}
@@ -165,7 +164,7 @@ export default function GameStage({
               },
             ]}
             resizeMode="contain"
-          /> 
+          />
         </View>
       </Pressable>
     </Animated.View>
@@ -219,56 +218,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  hpWrap: {
-    position: "absolute",
-    top: "50%",
-    marginTop: 138, // planet altına yakın
-    left: 22,
-    right: 22,
-    gap: 6,
-  },
-
-  zoneTxt: {
-    color: "rgba(255,255,255,0.70)",
-    fontWeight: "900",
-    textAlign: "center",
-    fontSize: 12,
-  },
-
-  hpBar: {
-    height: 10,
-    borderRadius: 8,
-    overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-  },
-  hpFill: {
-    height: "100%",
-    backgroundColor: "rgba(255,235,195,0.92)",
-  },
-
-  hpTxt: {
-    color: "rgba(255,255,255,0.70)",
-    fontWeight: "900",
-    textAlign: "center",
-    fontSize: 12,
-  },
-
-  bossTxt: {
-    color: "rgba(255,255,255,0.70)",
-    fontWeight: "900",
-    textAlign: "center",
-    fontSize: 12,
-  },
   hpDock: {
     position: "absolute",
     top: "50%",
     left: 0,
     right: 0,
     alignItems: "center",
-    // planetin altına yaklaştır:
-    transform: [{ translateY: 120 }], // <<< burayı 110-135 arası oynatırız
+    transform: [{ translateY: 120 }],
     zIndex: 10,
   },
 });
