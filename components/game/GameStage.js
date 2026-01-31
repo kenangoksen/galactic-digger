@@ -6,6 +6,7 @@ import HpBarCompact from "./HpBarCompact";
 export default function GameStage({
   planetImg,
   stageTranslateY,
+  stageScale = 1, // default
   puffScale,
   puffOpacity,
   planetSquash,
@@ -23,7 +24,10 @@ export default function GameStage({
 }) {
   return (
     <Animated.View
-      style={{ flex: 1, transform: [{ translateY: stageTranslateY }] }}
+      style={{
+        flex: 1,
+        transform: [{ translateY: stageTranslateY }, { scale: stageScale }],
+      }}
     >
       <Pressable style={styles.stagePress} onPress={onTap}>
         <View style={styles.stage} pointerEvents="none">

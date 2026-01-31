@@ -1,19 +1,15 @@
 // components/SideBarRight.js
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
-  Easing,
-  Image,
-  Pressable,
-  StyleSheet,
-  View,
+    Animated,
+    Easing,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-
-// SENİN KOYACAĞIN DOSYA YOLLARI:
-const ICON_MODE_PROGRESS = require("../assets/images/ui/icons/right_progress.png"); // progress icon
-const ICON_MODE_FARM = require("../assets/images/ui/icons/right_farm.png"); // farm icon
-const ICON_AD = require("../assets/images/ui/icons/right_ad.png"); // gem ad icon
 
 export default function SideBarRight({
   mode = "progress", // "progress" | "farm"
@@ -21,6 +17,20 @@ export default function SideBarRight({
   onAdPress,
   adReady = true, // reklam hazır mı? true iken parıltı
 }) {
+  // ---- Tooltip State ----
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipTimer = useRef(null);
+
+  const handleToggle = () => {
+      onToggleMode();
+      
+      setShowTooltip(true);
+      if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
+      tooltipTimer.current = setTimeout(() => {
+          setShowTooltip(false);
+      }, 2000);
+  };
+
   // ---- Ad pulse anim ----
   const pulse = useRef(new Animated.Value(0)).current;
 
@@ -62,13 +72,18 @@ export default function SideBarRight({
   });
 
   const isProgress = mode === "progress";
-  const modeIcon = isProgress ? ICON_MODE_PROGRESS : ICON_MODE_FARM;
+  
+  // Icons
+  // Progress: Infinite loop / Forward
+  // Farm: Anchor / Repeat
+  const modeIconName = isProgress ? "infinite" : "repeat";
+  const modeColor = isProgress ? "#fbbf24" : "#4ade80"; // Gold vs Green
 
   // Mode glow renkleri (tasarımına göre sonra ince ayar yaparız)
   const modeGlow = useMemo(() => {
     return isProgress
-      ? { border: "rgba(255,235,195,0.55)", glow: "rgba(255,235,195,0.35)" }
-      : { border: "rgba(140,255,180,0.55)", glow: "rgba(140,255,180,0.30)" };
+      ? { border: "rgba(251, 191, 36, 0.6)", glow: "rgba(251, 191, 36, 0.2)" }
+      : { border: "rgba(74, 222, 128, 0.6)", glow: "rgba(74, 222, 128, 0.2)" };
   }, [isProgress]);
 
   return (
@@ -113,20 +128,31 @@ export default function SideBarRight({
               </Animated.View>
             )}
 
-            <Image source={ICON_AD} style={styles.icon} />
+            <Ionicons name="videocam" size={20} color="#60a5fa" />
           </View>
         </Pressable>
 
         {/* ---- MODE TOGGLE (altta) ---- */}
-        <Pressable onPress={onToggleMode} style={styles.btnWrap} hitSlop={12}>
-          <View style={[styles.btnBase, { borderColor: modeGlow.border }]}>
-            <View
-              pointerEvents="none"
-              style={[styles.modeGlow, { backgroundColor: modeGlow.glow }]}
-            />
-            <Image source={modeIcon} style={styles.icon} />
-          </View>
-        </Pressable>
+        <View style={styles.btnWrap}>
+            {showTooltip && (
+                <View style={[styles.tooltip, { borderColor: modeColor }]}>
+                    <Text style={[styles.tooltipText, { color: modeColor }]}>
+                        {isProgress ? "Progress Active" : "Farm Mode ON"}
+                    </Text>
+                    <View style={[styles.tooltipArrow, { borderLeftColor: modeColor }]} />
+                </View>
+            )}
+            
+            <Pressable onPress={handleToggle} hitSlop={12}>
+              <View style={[styles.btnBase, { borderColor: modeGlow.border, borderWidth: 1.5 }]}>
+                <View
+                  pointerEvents="none"
+                  style={[styles.modeGlow, { backgroundColor: modeGlow.glow }]}
+                />
+                <Ionicons name={modeIconName} size={22} color={modeColor} />
+              </View>
+            </Pressable>
+        </View>
       </LinearGradient>
     </LinearGradient>
   );
@@ -140,7 +166,9 @@ const styles = StyleSheet.create({
     width: 56,
     borderTopLeftRadius: 18,
     borderBottomLeftRadius: 18,
-    overflow: "hidden",
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
+    // overflow: "hidden", // REMOVED: prevents tooltip from showing
     zIndex: 25,
   },
   inner: {
@@ -151,6 +179,13 @@ const styles = StyleSheet.create({
     gap: 12,
     borderLeftWidth: 5,
     borderLeftColor: "rgba(255,255,255,0.18)",
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
+    overflow: "hidden", // Keep overflow hidden here for inner content, but not parent? 
+    // actually sidebar needs to be NOT hidden. inner can be if needed. 
+    // But inner wraps buttons. Tooltip is inside btnWrap inside inner.
+    // If inner has overflow hidden, tooltip will be cut!
+    // So REMOVE overflow: hidden from inner too.
   },
 
   btnWrap: {},
@@ -166,7 +201,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  icon: { width: 100, height: 100, resizeMode: "contain" },
+  // No longer used, handled by Ionicons size
+  icon: { },
 
   // Ad pulse glow
   glow: {
@@ -181,11 +217,47 @@ const styles = StyleSheet.create({
   // Mode glow (sabit, pulse yok)
   modeGlow: {
     position: "absolute",
-    left: -8,
-    right: -8,
-    top: -8,
-    bottom: -8,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     borderRadius: 999,
-    opacity: 0.35,
+    opacity: 0.45,
   },
+
+  tooltip: {
+      position: 'absolute',
+      right: 50, // Button width (42) + margin
+      top: 6, // Vertically center relative to 42px button
+      backgroundColor: '#000',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      zIndex: 100,
+      minWidth: 100,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+
+  tooltipText: {
+      fontSize: 10,
+      fontWeight: 'bold',
+      letterSpacing: 0.5,
+      textAlign: 'center',
+  },
+
+  tooltipArrow: {
+      position: 'absolute',
+      right: -6,
+      top: 10,
+      width: 0,
+      height: 0,
+      borderTopWidth: 6,
+      borderTopColor: 'transparent',
+      borderBottomWidth: 6,
+      borderBottomColor: 'transparent',
+      borderLeftWidth: 6,
+      // borderLeftColor set via inline style
+  }
 });

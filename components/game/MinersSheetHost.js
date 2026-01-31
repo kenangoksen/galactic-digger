@@ -42,7 +42,16 @@ export default function MinersSheetHost({ sheetContent, children }) {
     () =>
       sheet.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, -160],
+        outputRange: [0, -100], // Push up even more (-100)
+      }),
+    [sheet],
+  );
+
+  const stageScale = useMemo(
+    () =>
+      sheet.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 0.75], // Shrink stage to 75%
       }),
     [sheet],
   );
@@ -75,7 +84,9 @@ export default function MinersSheetHost({ sheetContent, children }) {
     openSheet,
     closeSheet,
     toggleSheet,
+    toggleSheet,
     stageTranslateY,
+    stageScale,
     sheetProgress: sheet,
     Sheet,
   });

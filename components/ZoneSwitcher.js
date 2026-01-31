@@ -1,4 +1,5 @@
 // components/ZoneSwitcher.js
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
@@ -33,9 +34,9 @@ export default function ZoneSwitcher({
           onPress={hasPrev ? onPrev : undefined}
           disabled={!hasPrev}
           style={[styles.arrowBtn, !hasPrev && styles.disabled]}
-          hitSlop={10}
+          hitSlop={12}
         >
-          <Image source={ICON_ARROW_LEFT} style={styles.arrowIcon} />
+          <Ionicons name="caret-back" size={24} color={hasPrev ? "#fff" : "rgba(255,255,255,0.2)"} />
         </Pressable>
 
         {/* ZONES */}
@@ -55,9 +56,9 @@ export default function ZoneSwitcher({
           onPress={hasNext ? onNext : undefined}
           disabled={!hasNext}
           style={[styles.arrowBtn, !hasNext && styles.disabled]}
-          hitSlop={10}
+          hitSlop={12}
         >
-          <Image source={ICON_ARROW_RIGHT} style={styles.arrowIcon} />
+          <Ionicons name="caret-forward" size={24} color={hasNext ? "#fff" : "rgba(255,255,255,0.2)"} />
         </Pressable>
       </LinearGradient>
     </View>

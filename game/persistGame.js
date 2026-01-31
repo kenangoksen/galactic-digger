@@ -34,7 +34,8 @@ export function normalizeLoadedEco(rawEco) {
 }
 
 // ---- API ----
-export async function loadGame() {
+// game/persistGame.js
+  export async function loadGame() {
   const str = await AsyncStorage.getItem(GAME_SAVE_KEY);
   if (!str) return null;
 
@@ -44,7 +45,7 @@ export async function loadGame() {
   // normalize
   return {
     version: data.version,
-    savedAt: data.savedAt || 0,
+    savedAt: data.savedAt || Date.now(), // Fallback to now if missing
     progress: {
       mode: data?.progress?.mode || "progress",
       zone: Number(data?.progress?.zone || 1),
@@ -56,7 +57,11 @@ export async function loadGame() {
 
 export async function saveGame(snapshot) {
   // snapshot zaten normalize edilmiş gelmeli
-  await AsyncStorage.setItem(GAME_SAVE_KEY, JSON.stringify(snapshot));
+  const data = {
+    ...snapshot,
+    savedAt: Date.now(),
+  };
+  await AsyncStorage.setItem(GAME_SAVE_KEY, JSON.stringify(data));
 }
 
 export async function clearGame() {
