@@ -15,8 +15,10 @@ import minersDef from "../assets/config/miners.json";
 import planets from "../assets/config/planets.json";
 import { PLANET_SPRITES } from "../assets/registry/planetSprites";
 
+import { AppState } from "react-native";
 import { D } from "./bn";
 import { computeTotals, getNextCost } from "./damage";
+import { loadGame, saveGame, serializeEco } from "./persistGame";
 
 // ---------------- Clicker Heroes-style monster HP ----------------
 function baseMonsterHp(zone) {
@@ -104,6 +106,19 @@ function ecoReducer(state, action) {
 
       return { ...state, unlockedCount: next };
     }
+    case "LOAD_STATE": {
+      // payload: { minerals: Decimal, unlockedCount, ownedMiners, ownedSkills }
+      const p = action.payload;
+      if (!p) return state;
+
+      return {
+        ...state,
+        minerals: p.minerals ?? state.minerals,
+        unlockedCount: p.unlockedCount ?? state.unlockedCount,
+        ownedMiners: p.ownedMiners ?? state.ownedMiners,
+        ownedSkills: p.ownedSkills ?? state.ownedSkills,
+      };
+    }
 
     default:
       return state;
@@ -170,6 +185,75 @@ export function useGameEngine() {
   const stepRef = useRef(step);
   const hpRef = useRef(hp);
   const maxHpRef = useRef(maxHp);
+
+  // --- SAVE / LOAD ---
+  const [hydrated, setHydrated] = useState(false);
+  const saveTimerRef = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      const loaded = await loadGame();
+      if (!alive) return;
+
+      if (loaded) {
+        // progress
+        setMode(loaded.progress.mode);
+        setZone(loaded.progress.zone);
+        setStep(loaded.progress.step);
+
+        // eco
+        dispatchEco({ type: "LOAD_STATE", payload: loaded.eco });
+      }
+
+      setHydrated(true);
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    // debounce
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+    saveTimerRef.current = setTimeout(() => {
+      const snapshot = {
+        version: 1,
+        savedAt: Date.now(),
+        progress: { mode, zone, step },
+        eco: serializeEco(eco),
+      };
+
+      saveGame(snapshot).catch(() => {});
+    }, 400);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [hydrated, mode, zone, step, eco]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "background" || state === "inactive") {
+        const snapshot = {
+          version: 1,
+          savedAt: Date.now(),
+          progress: { mode, zone, step },
+          eco: serializeEco(eco),
+        };
+        saveGame(snapshot).catch(() => {});
+      }
+    });
+
+    return () => sub.remove();
+  }, [hydrated, mode, zone, step, eco]);
 
   useEffect(() => {
     zoneRef.current = zone;
