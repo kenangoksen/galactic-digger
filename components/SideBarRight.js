@@ -5,11 +5,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
     Animated,
     Easing,
+    Image,
     Pressable,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+
+const ICON_AD = require("../assets/images/ui/icons/right_ad.png"); // gem ad icon
 
 export default function SideBarRight({
   mode = "progress", // "progress" | "farm"
@@ -74,12 +77,10 @@ export default function SideBarRight({
   const isProgress = mode === "progress";
   
   // Icons
-  // Progress: Infinite loop / Forward
-  // Farm: Anchor / Repeat
   const modeIconName = isProgress ? "infinite" : "repeat";
   const modeColor = isProgress ? "#fbbf24" : "#4ade80"; // Gold vs Green
 
-  // Mode glow renkleri (tasarımına göre sonra ince ayar yaparız)
+  // Mode glow
   const modeGlow = useMemo(() => {
     return isProgress
       ? { border: "rgba(251, 191, 36, 0.6)", glow: "rgba(251, 191, 36, 0.2)" }
@@ -87,108 +88,117 @@ export default function SideBarRight({
   }, [isProgress]);
 
   return (
-    <LinearGradient
-      colors={["rgba(0,0,0,0.00)", "rgba(10,10,14,0.55)"]}
-      start={{ x: 1, y: 0 }}
-      end={{ x: 0, y: 0 }}
-      style={styles.sidebar}
-      pointerEvents="box-none"
-    >
-      <LinearGradient
-        colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)"]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0, y: 0 }}
-        style={styles.inner}
-        pointerEvents="box-none"
-      >
-        {/* ---- AD BUTTON (üstte) ---- */}
-        <Pressable onPress={onAdPress} style={styles.btnWrap} hitSlop={12}>
-          <View style={styles.btnBase}>
-            {adReady && (
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.glow,
-                  {
-                    opacity: adGlowOpacity,
-                    transform: [{ scale: adGlowScale }],
-                  },
-                ]}
-              >
-                <LinearGradient
-                  colors={[
-                    "rgba(130,200,255,0.0)",
-                    "rgba(130,200,255,0.55)",
-                    "rgba(130,200,255,0.0)",
-                  ]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
-              </Animated.View>
-            )}
+    <View style={styles.container}>
+        
+        {/* VISUAL LAYER: Gradients and Buttons */}
+        <LinearGradient
+          colors={["rgba(0,0,0,0.00)", "rgba(10,10,14,0.55)"]}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 0 }}
+          style={styles.gradientRoot}
+          pointerEvents="box-none"
+        >
+          <LinearGradient
+            colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)"]}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 0 }}
+            style={styles.inner}
+            pointerEvents="box-none"
+          >
+            {/* ---- AD BUTTON (Top) ---- */}
+            <Pressable onPress={onAdPress} style={styles.btnWrap} hitSlop={12}>
+              <View style={styles.btnBase}>
+                {adReady && (
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.glow,
+                      {
+                        opacity: adGlowOpacity,
+                        transform: [{ scale: adGlowScale }],
+                      },
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[
+                        "rgba(130,200,255,0.0)",
+                        "rgba(130,200,255,0.55)",
+                        "rgba(130,200,255,0.0)",
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </Animated.View>
+                )}
 
-            <Ionicons name="videocam" size={20} color="#60a5fa" />
-          </View>
-        </Pressable>
-
-        {/* ---- MODE TOGGLE (altta) ---- */}
-        <View style={styles.btnWrap}>
-            {showTooltip && (
-                <View style={[styles.tooltip, { borderColor: modeColor }]}>
-                    <Text style={[styles.tooltipText, { color: modeColor }]}>
-                        {isProgress ? "Progress Active" : "Farm Mode ON"}
-                    </Text>
-                    <View style={[styles.tooltipArrow, { borderLeftColor: modeColor }]} />
-                </View>
-            )}
-            
-            <Pressable onPress={handleToggle} hitSlop={12}>
-              <View style={[styles.btnBase, { borderColor: modeGlow.border, borderWidth: 1.5 }]}>
-                <View
-                  pointerEvents="none"
-                  style={[styles.modeGlow, { backgroundColor: modeGlow.glow }]}
-                />
-                <Ionicons name={modeIconName} size={22} color={modeColor} />
+                <Image source={ICON_AD} style={styles.icon} />
               </View>
             </Pressable>
-        </View>
-      </LinearGradient>
-    </LinearGradient>
+
+            {/* ---- MODE TOGGLE (Bottom) ---- */}
+            <Pressable onPress={handleToggle} style={styles.btnWrap} hitSlop={12}>
+                <View style={[styles.btnBase, { borderColor: modeGlow.border, borderWidth: 1.5 }]}>
+                <View
+                    pointerEvents="none"
+                    style={[styles.modeGlow, { backgroundColor: modeGlow.glow }]}
+                />
+                <Ionicons name={modeIconName} size={22} color={modeColor} />
+                </View>
+            </Pressable>
+          </LinearGradient>
+        </LinearGradient>
+
+        {/* TOOLTIP LAYER: Sibling to Gradient to avoid clipping */}
+        {showTooltip && (
+            <View style={[styles.tooltip, { borderColor: modeColor }]}>
+                <Text style={[styles.tooltipText, { color: modeColor }]}>
+                    {isProgress ? "Progress Active" : "Farm Mode ON"}
+                </Text>
+                <View style={[styles.tooltipArrow, { borderLeftColor: modeColor }]} />
+            </View>
+        )}
+
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sidebar: {
+  // Root Container - Transparent, allows Tooltip to float
+  container: {
     position: "absolute",
     right: 0,
-    top: 184, // Left bar ile aynı hizaya getir
-    width: 56,
+    top: 184,
+    // width is implicitly determined by children? No, we should set it.
+    width: 56, 
+    // No height, so it hugs content
+    zIndex: 9999,
+    elevation: 20,
+    // OVERFLOW VISIBLE IS DEFAULT HERE
+  },
+
+  // The actual background gradient
+  gradientRoot: {
+    width: "100%",
     borderTopLeftRadius: 18,
     borderBottomLeftRadius: 18,
-    borderTopLeftRadius: 18,
-    borderBottomLeftRadius: 18,
-    // overflow: "hidden", // REMOVED: prevents tooltip from showing
-    zIndex: 25,
+    // overflow: "hidden", // We can keep this if valid for radius, but Tooltip is OUTSIDE now.
   },
   inner: {
-    flex: 1,
     paddingVertical: 12,
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "flex-end", // Buttons at bottom? if there's height. 
+    // If no height, they stack.
     gap: 12,
     borderLeftWidth: 5,
     borderLeftColor: "rgba(255,255,255,0.18)",
     borderTopLeftRadius: 18,
     borderBottomLeftRadius: 18,
-    overflow: "hidden", // Keep overflow hidden here for inner content, but not parent? 
-    // actually sidebar needs to be NOT hidden. inner can be if needed. 
-    // But inner wraps buttons. Tooltip is inside btnWrap inside inner.
-    // If inner has overflow hidden, tooltip will be cut!
-    // So REMOVE overflow: hidden from inner too.
   },
 
-  btnWrap: {},
+  btnWrap: {
+      // Normal wrapper
+  },
   btnBase: {
     width: 42,
     height: 42,
@@ -201,10 +211,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  // No longer used, handled by Ionicons size
-  icon: { },
-
-  // Ad pulse glow
+  icon: { width: 44, height: 44, resizeMode: "contain" }, 
+  
   glow: {
     position: "absolute",
     left: -10,
@@ -214,7 +222,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
 
-  // Mode glow (sabit, pulse yok)
   modeGlow: {
     position: "absolute",
     left: 0,
@@ -225,19 +232,32 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
 
+  // Tooltip positioned relative to CONTAINER
   tooltip: {
       position: 'absolute',
-      right: 50, // Button width (42) + margin
-      top: 6, // Vertically center relative to 42px button
+      right: 50, // Sticks out to left
+      bottom: 20, // Align with bottom button (approx 12px padding + ~8px offset)
+      // Note: Mode Toggle is the LAST element.
+      // PaddingVertical 12. Button 42.
+      // Center of button is 12 + 21 = 33px from bottom.
+      // Tooltip is ~26px high?
+      // Center tooltip at 33px from bottom.
+      // margin-bottom: 20 might be close roughly.
+      
       backgroundColor: '#000',
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 8,
       borderWidth: 1,
-      zIndex: 100,
+      zIndex: 10000, 
       minWidth: 100,
       alignItems: 'center',
       justifyContent: 'center',
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
   },
 
   tooltipText: {
@@ -250,7 +270,7 @@ const styles = StyleSheet.create({
   tooltipArrow: {
       position: 'absolute',
       right: -6,
-      top: 10,
+      top: 8, // Center vertically roughly
       width: 0,
       height: 0,
       borderTopWidth: 6,
@@ -258,6 +278,5 @@ const styles = StyleSheet.create({
       borderBottomWidth: 6,
       borderBottomColor: 'transparent',
       borderLeftWidth: 6,
-      // borderLeftColor set via inline style
   }
 });

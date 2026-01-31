@@ -139,14 +139,23 @@ export function useGameEngine() {
   const [step, setStep] = useState(1);
   const [maxUnlockedZone, setMaxUnlockedZone] = useState(1);
 
+  // Auto-update maxUnlockedZone if we are somehow ahead of it
+  useEffect(() => {
+    if (zone > maxUnlockedZone) {
+      setMaxUnlockedZone(zone);
+    }
+  }, [zone, maxUnlockedZone]);
+
   const isBossPlanet = zone % 5 === 0;
   
   const goNextZone = useCallback(() => {
+    // SIMPLE LOGIC: If we are not at the max unlocked zone, we can go next.
+    // This allows skipping steps/bosses if we already beat them before.
     if (zone < maxUnlockedZone) {
       const next = zone + 1;
       setZone(next);
-      setStep(1);
-      // Reset HP for new zone
+      setStep(1); // Start at step 1 of next zone
+      
       const newHp = monsterHp(next, 1);
       setMaxHp(newHp);
       setHp(newHp);
@@ -157,13 +166,14 @@ export function useGameEngine() {
     if (zone > 1) {
        const prev = zone - 1;
        setZone(prev);
-       setStep(1); 
-       // Reset HP for new zone
+       setStep(1);
+       setMode("farm"); // Automatically switch to farm mode when going back
+       
        const newHp = monsterHp(prev, 1);
        setMaxHp(newHp);
        setHp(newHp);
     }
-  }, [zone]);
+  }, [zone, setMode]);
 
   // economy (atomic)
   const [eco, dispatchEco] = useReducer(ecoReducer, ECO_INIT);
@@ -475,10 +485,12 @@ export function useGameEngine() {
 
       if (loaded) {
         setMode(loaded.progress.mode);
-        setZone(loaded.progress.zone);
-        setStep(loaded.progress.step);
-        // Load maxUnlockedZone (fallback to loaded zone if missing)
-        setMaxUnlockedZone(loaded.progress.maxUnlockedZone || loaded.progress.zone || 1);
+        const z = Number(loaded.progress.zone || 1);
+        setZone(z);
+        setStep(Number(loaded.progress.step || 1));
+        // Load maxUnlockedZone (fallback to zone if missing)
+        const maxZ = Number(loaded.progress.maxUnlockedZone || z);
+        setMaxUnlockedZone(maxZ);
         
         dispatchEco({ type: "LOAD_STATE", payload: loaded.eco });
         
@@ -499,7 +511,8 @@ export function useGameEngine() {
                 progress: { 
                     mode: current.mode, 
                     zone: current.zone, 
-                    step: current.step 
+                    step: current.step,
+                    maxUnlockedZone: current.maxUnlockedZone 
                 },
                 eco: serializeEco(current.eco),
              };
