@@ -26,9 +26,7 @@ export default function MinersSheetHost({ sheetContent, children, visible, onClo
 
   // sheetContent inline geliyorsa identity sürekli değişir -> ref ile yakala
   const sheetContentRef = useRef(sheetContent);
-  useEffect(() => {
-    sheetContentRef.current = sheetContent;
-  }, [sheetContent]);
+  sheetContentRef.current = sheetContent;
 
   const openSheet = useCallback(() => {
      if (isControlled) return; // Ignore local calls in controlled mode? Or call callback?
