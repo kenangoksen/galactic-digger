@@ -15,49 +15,40 @@
         "name": "Tap Rhythm",
         "kind": "tapMultiplier",
         "value": 0.1,
-        "unlockAt": 10
+        "unlockAt": 10,
+        "cost": "100"
       },
       {
         "id": "m01_s25",
         "name": "Stronger Fingers",
         "kind": "tapMultiplier",
         "value": 0.1,
-        "unlockAt": 25
+        "unlockAt": 25,
+        "cost": "500"
       },
       {
         "id": "m01_s50",
         "name": "Ore Touch",
         "kind": "tapMultiplier",
         "value": 0.1,
-        "unlockAt": 50
+        "unlockAt": 50,
+        "cost": "2500"
       },
       {
         "id": "m01_s75",
         "name": "Lucky Tap",
         "kind": "critChance",
         "value": 0.01,
-        "unlockAt": 75
+        "unlockAt": 75,
+        "cost": "10000"
       },
       {
         "id": "m01_s100",
         "name": "Crit Tap",
         "kind": "critMultiplier",
         "value": 0.25,
-        "unlockAt": 100
-      },
-      {
-        "id": "m01_s125",
-        "name": "Ore Sense",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 125
-      },
-      {
-        "id": "m01_s150",
-        "name": "Team Push",
-        "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 150
+        "unlockAt": 100,
+        "cost": "50000"
       }
     ]
   },
@@ -77,28 +68,40 @@
         "name": "Sharpened Drill",
         "kind": "dpsMultiplier",
         "value": 1,
-        "unlockAt": 10
+        "unlockAt": 10,
+        "cost": "1000"
       },
       {
         "id": "m02_s25",
         "name": "Better Fuel",
         "kind": "dpsMultiplier",
         "value": 1,
-        "unlockAt": 25
+        "unlockAt": 25,
+        "cost": "5000"
       },
       {
         "id": "m02_s50",
         "name": "Overclock",
         "kind": "dpsMultiplier",
         "value": 1,
-        "unlockAt": 50
+        "unlockAt": 50,
+        "cost": "25000"
       },
       {
         "id": "m02_s75",
         "name": "Crew Sync",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "100000"
+      },
+      {
+        "id": "m02_s100",
+        "name": "Global Hustle",
         "kind": "globalDpsMultiplier",
-        "value": 0.01,
-        "unlockAt": 75
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "500000"
       }
     ]
   },
@@ -118,52 +121,43 @@
     "skills": [
       {
         "id": "m03_s10",
-        "name": "Tap Mult",
-        "kind": "tapMultiplier",
-        "value": 0.1,
-        "unlockAt": 10
+        "name": "Power Poke",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "5000"
       },
       {
         "id": "m03_s25",
-        "name": "Tap Mult+",
-        "kind": "tapMultiplier",
-        "value": 0.12,
-        "unlockAt": 25
+        "name": "Deep Dig",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "25000"
       },
       {
         "id": "m03_s50",
-        "name": "Tap Mult++",
-        "kind": "tapMultiplier",
-        "value": 0.15,
-        "unlockAt": 50
+        "name": "Core Breach",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "125000"
       },
       {
         "id": "m03_s75",
-        "name": "DPS Spark",
+        "name": "Magma Tap",
         "kind": "dpsMultiplier",
-        "value": 0.2,
-        "unlockAt": 75
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "600000"
       },
       {
         "id": "m03_s100",
         "name": "Ore Flow",
         "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 100
-      },
-      {
-        "id": "m03_s125",
-        "name": "Crit Chance",
-        "kind": "critChance",
-        "value": 0.02,
-        "unlockAt": 125
-      },
-      {
-        "id": "m03_s150",
-        "name": "Global DPS +0.5%",
-        "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 150
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "3000000"
       }
     ]
   },
@@ -183,52 +177,43 @@
     "skills": [
       {
         "id": "m04_s10",
-        "name": "Tap Mult",
-        "kind": "tapMultiplier",
-        "value": 0.1,
-        "unlockAt": 10
+        "name": "Heavy Knock",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "20000"
       },
       {
         "id": "m04_s25",
-        "name": "Tap Mult+",
-        "kind": "tapMultiplier",
-        "value": 0.12,
-        "unlockAt": 25
+        "name": "Moon Rock",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "100000"
       },
       {
         "id": "m04_s50",
-        "name": "Tap Mult++",
-        "kind": "tapMultiplier",
-        "value": 0.15,
-        "unlockAt": 50
+        "name": "Gravity Well",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "500000"
       },
       {
         "id": "m04_s75",
-        "name": "Crit Chance",
-        "kind": "critChance",
-        "value": 0.02,
-        "unlockAt": 75
+        "name": "Tidal Force",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "2500000"
       },
       {
         "id": "m04_s100",
         "name": "Crit Power",
         "kind": "critMultiplier",
-        "value": 0.25,
-        "unlockAt": 100
-      },
-      {
-        "id": "m04_s125",
-        "name": "Ore Flow",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 125
-      },
-      {
-        "id": "m04_s150",
-        "name": "Global DPS +0.5%",
-        "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 150
+        "value": 0.5,
+        "unlockAt": 100,
+        "cost": "12000000"
       }
     ]
   },
@@ -248,31 +233,43 @@
     "skills": [
       {
         "id": "m05_s10",
-        "name": "Tap +",
-        "kind": "tapMultiplier",
-        "value": 0.1,
-        "unlockAt": 10
+        "name": "Comet Tail",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "80000"
       },
       {
         "id": "m05_s25",
-        "name": "Tap ++",
-        "kind": "tapMultiplier",
-        "value": 0.12,
-        "unlockAt": 25
+        "name": "Ice Core",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "400000"
       },
       {
         "id": "m05_s50",
-        "name": "Tap +++",
-        "kind": "tapMultiplier",
-        "value": 0.15,
-        "unlockAt": 50
+        "name": "Speed Inc",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "2000000"
       },
       {
         "id": "m05_s75",
-        "name": "Ore +3%",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 75
+        "name": "Impact",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "10000000"
+      },
+      {
+        "id": "m05_s100",
+        "name": "Global Haste",
+        "kind": "globalDpsMultiplier",
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "50000000"
       }
     ]
   },
@@ -280,7 +277,7 @@
     "id": "miner_06",
     "name": "Tiny Drill",
     "sprite": "miner_01.png",
-    "baseCost": "20",
+    "baseCost": "20000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -294,29 +291,41 @@
         "id": "m06_s10",
         "name": "Drill Oil",
         "kind": "dpsMultiplier",
-        "value": 0.25,
-        "unlockAt": 10
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "400000"
       },
       {
         "id": "m06_s25",
-        "name": "Drill Oil+",
+        "name": "Diamond Tip",
         "kind": "dpsMultiplier",
-        "value": 0.3,
-        "unlockAt": 25
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "2000000"
       },
       {
         "id": "m06_s50",
-        "name": "Crit Chance",
-        "kind": "critChance",
-        "value": 0.02,
-        "unlockAt": 50
+        "name": "Turbo Gear",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "10000000"
       },
       {
         "id": "m06_s75",
-        "name": "Ore +3%",
+        "name": "Nano Tech",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "50000000"
+      },
+      {
+        "id": "m06_s100",
+        "name": "Wealth",
         "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 75
+        "value": 0.2,
+        "unlockAt": 100,
+        "cost": "250000000"
       }
     ]
   },
@@ -324,7 +333,7 @@
     "id": "miner_07",
     "name": "Chisel Bot",
     "sprite": "miner_01.png",
-    "baseCost": "100",
+    "baseCost": "100000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -336,31 +345,43 @@
     "skills": [
       {
         "id": "m07_s10",
-        "name": "DPS +25%",
+        "name": "Sharp Edge",
         "kind": "dpsMultiplier",
-        "value": 0.25,
-        "unlockAt": 10
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "2000000"
       },
       {
         "id": "m07_s25",
-        "name": "DPS +30%",
+        "name": "Auto Hammer",
         "kind": "dpsMultiplier",
-        "value": 0.3,
-        "unlockAt": 25
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "10000000"
       },
       {
         "id": "m07_s50",
-        "name": "DPS +35%",
+        "name": "Laser Guide",
         "kind": "dpsMultiplier",
-        "value": 0.35,
-        "unlockAt": 50
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "50000000"
       },
       {
         "id": "m07_s75",
-        "name": "Global DPS +0.5%",
-        "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 75
+        "name": "Plasma Cut",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "250000000"
+      },
+      {
+        "id": "m07_s100",
+        "name": "Critical Mass",
+        "kind": "critMultiplier",
+        "value": 0.5,
+        "unlockAt": 100,
+        "cost": "1200000000"
       }
     ]
   },
@@ -368,7 +389,7 @@
     "id": "miner_08",
     "name": "Ore Runner",
     "sprite": "miner_01.png",
-    "baseCost": "400",
+    "baseCost": "400000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -380,31 +401,43 @@
     "skills": [
       {
         "id": "m08_s10",
-        "name": "DPS +20%",
+        "name": "Speed Shoes",
         "kind": "dpsMultiplier",
-        "value": 0.2,
-        "unlockAt": 10
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "8000000"
       },
       {
         "id": "m08_s25",
-        "name": "Ore +3%",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 25
+        "name": "Backpack",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "40000000"
       },
       {
         "id": "m08_s50",
-        "name": "Crit Chance",
-        "kind": "critChance",
-        "value": 0.02,
-        "unlockAt": 50
+        "name": "Hover Board",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "200000000"
       },
       {
         "id": "m08_s75",
-        "name": "Crit Power",
-        "kind": "critMultiplier",
-        "value": 0.25,
-        "unlockAt": 75
+        "name": "Jet Pack",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "1000000000"
+      },
+      {
+        "id": "m08_s100",
+        "name": "Global Speed",
+        "kind": "globalDpsMultiplier",
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "5000000000"
       }
     ]
   },
@@ -412,7 +445,7 @@
     "id": "miner_09",
     "name": "Tap Specialist",
     "sprite": "miner_01.png",
-    "baseCost": "2,500,000",
+    "baseCost": "2500000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -427,49 +460,40 @@
         "name": "Tap +10%",
         "kind": "tapMultiplier",
         "value": 0.1,
-        "unlockAt": 10
+        "unlockAt": 10,
+        "cost": "50000000"
       },
       {
         "id": "m09_s25",
         "name": "Tap +12%",
         "kind": "tapMultiplier",
         "value": 0.12,
-        "unlockAt": 25
+        "unlockAt": 25,
+        "cost": "250000000"
       },
       {
         "id": "m09_s50",
         "name": "Tap +15%",
         "kind": "tapMultiplier",
         "value": 0.15,
-        "unlockAt": 50
+        "unlockAt": 50,
+        "cost": "1250000000"
       },
       {
         "id": "m09_s75",
         "name": "Crit Chance",
         "kind": "critChance",
         "value": 0.02,
-        "unlockAt": 75
+        "unlockAt": 75,
+        "cost": "5000000000"
       },
       {
         "id": "m09_s100",
         "name": "Crit Power",
         "kind": "critMultiplier",
         "value": 0.25,
-        "unlockAt": 100
-      },
-      {
-        "id": "m09_s125",
-        "name": "Ore +3%",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 125
-      },
-      {
-        "id": "m09_s150",
-        "name": "Global DPS +0.5%",
-        "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 150
+        "unlockAt": 100,
+        "cost": "25000000000"
       }
     ]
   },
@@ -477,7 +501,7 @@
     "id": "miner_10",
     "name": "Tap Captain",
     "sprite": "miner_01.png",
-    "baseCost": "15,000,000",
+    "baseCost": "15000000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -489,52 +513,43 @@
     "skills": [
       {
         "id": "m10_s10",
-        "name": "Tap +10%",
-        "kind": "tapMultiplier",
-        "value": 0.1,
-        "unlockAt": 10
+        "name": "Captain Command",
+        "kind": "globalDpsMultiplier",
+        "value": 0.05,
+        "unlockAt": 10,
+        "cost": "300000000"
       },
       {
         "id": "m10_s25",
         "name": "Tap +12%",
         "kind": "tapMultiplier",
         "value": 0.12,
-        "unlockAt": 25
+        "unlockAt": 25,
+        "cost": "1500000000"
       },
       {
         "id": "m10_s50",
         "name": "Tap +15%",
         "kind": "tapMultiplier",
         "value": 0.15,
-        "unlockAt": 50
+        "unlockAt": 50,
+        "cost": "7500000000"
       },
       {
         "id": "m10_s75",
         "name": "DPS +25%",
         "kind": "dpsMultiplier",
         "value": 0.25,
-        "unlockAt": 75
+        "unlockAt": 75,
+        "cost": "30000000000"
       },
       {
         "id": "m10_s100",
         "name": "Crit Chance",
         "kind": "critChance",
         "value": 0.02,
-        "unlockAt": 100
-      },
-      {
-        "id": "m10_s125",
-        "name": "Ore +3%",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 125
-      },
-      {
-        "id": "m10_s150",
-        "name": "Global DPS +0.5%",
-        "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 150
+        "unlockAt": 100,
+        "cost": "150000000000"
       }
     ]
   },
@@ -542,7 +557,7 @@
     "id": "miner_11",
     "name": "Rock Grinder",
     "sprite": "miner_01.png",
-    "baseCost": "100,000,000",
+    "baseCost": "100000000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -554,31 +569,43 @@
     "skills": [
       {
         "id": "m11_s10",
-        "name": "DPS +25%",
+        "name": "Grind 1",
         "kind": "dpsMultiplier",
-        "value": 0.25,
-        "unlockAt": 10
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "2000000000"
       },
       {
         "id": "m11_s25",
-        "name": "DPS +30%",
+        "name": "Grind 2",
         "kind": "dpsMultiplier",
-        "value": 0.3,
-        "unlockAt": 25
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "10000000000"
       },
       {
         "id": "m11_s50",
-        "name": "Global DPS +0.5%",
-        "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 50
+        "name": "Grind 3",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "50000000000"
       },
       {
         "id": "m11_s75",
+        "name": "Grind 4",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "250000000000"
+      },
+      {
+        "id": "m11_s100",
         "name": "Ore +3%",
         "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 75
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "1000000000000"
       }
     ]
   },
@@ -586,7 +613,7 @@
     "id": "miner_12",
     "name": "Crust Borer",
     "sprite": "miner_01.png",
-    "baseCost": "800,000,000",
+    "baseCost": "800000000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -598,31 +625,43 @@
     "skills": [
       {
         "id": "m12_s10",
-        "name": "DPS +25%",
+        "name": "Bore 1",
         "kind": "dpsMultiplier",
-        "value": 0.25,
-        "unlockAt": 10
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "16000000000"
       },
       {
         "id": "m12_s25",
-        "name": "Crit Chance",
-        "kind": "critChance",
-        "value": 0.02,
-        "unlockAt": 25
+        "name": "Bore 2",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "80000000000"
       },
       {
         "id": "m12_s50",
-        "name": "Crit Power",
-        "kind": "critMultiplier",
-        "value": 0.25,
-        "unlockAt": 50
+        "name": "Bore 3",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "400000000000"
       },
       {
         "id": "m12_s75",
-        "name": "DPS +35%",
+        "name": "Bore 4",
         "kind": "dpsMultiplier",
-        "value": 0.35,
-        "unlockAt": 75
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "2000000000000"
+      },
+      {
+        "id": "m12_s100",
+        "name": "Global Power",
+        "kind": "globalDpsMultiplier",
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "10000000000000"
       }
     ]
   },
@@ -630,7 +669,7 @@
     "id": "miner_13",
     "name": "Ore Chef",
     "sprite": "miner_01.png",
-    "baseCost": "6,500,000,000",
+    "baseCost": "6500000000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -642,31 +681,43 @@
     "skills": [
       {
         "id": "m13_s10",
-        "name": "Ore +3%",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 10
+        "name": "Cook 1",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "130000000000"
       },
       {
         "id": "m13_s25",
-        "name": "DPS +25%",
+        "name": "Cook 2",
         "kind": "dpsMultiplier",
-        "value": 0.25,
-        "unlockAt": 25
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "650000000000"
       },
       {
         "id": "m13_s50",
-        "name": "Global DPS +0.5%",
-        "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 50
+        "name": "Cook 3",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "3250000000000"
       },
       {
         "id": "m13_s75",
-        "name": "DPS +35%",
+        "name": "Cook 4",
         "kind": "dpsMultiplier",
-        "value": 0.35,
-        "unlockAt": 75
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "16000000000000"
+      },
+      {
+        "id": "m13_s100",
+        "name": "Feast",
+        "kind": "mineralMultiplier",
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "80000000000000"
       }
     ]
   },
@@ -674,7 +725,7 @@
     "id": "miner_14",
     "name": "Lava Driller",
     "sprite": "miner_01.png",
-    "baseCost": "50,000,000,000",
+    "baseCost": "50000000000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -686,31 +737,43 @@
     "skills": [
       {
         "id": "m14_s10",
-        "name": "DPS +25%",
+        "name": "Heat 1",
         "kind": "dpsMultiplier",
-        "value": 0.25,
-        "unlockAt": 10
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "1000000000000"
       },
       {
         "id": "m14_s25",
-        "name": "DPS +30%",
+        "name": "Heat 2",
         "kind": "dpsMultiplier",
-        "value": 0.3,
-        "unlockAt": 25
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "5000000000000"
       },
       {
         "id": "m14_s50",
-        "name": "Ore +3%",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 50
+        "name": "Heat 3",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "25000000000000"
       },
       {
         "id": "m14_s75",
-        "name": "Crit Chance",
-        "kind": "critChance",
-        "value": 0.02,
-        "unlockAt": 75
+        "name": "Heat 4",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "125000000000000"
+      },
+      {
+        "id": "m14_s100",
+        "name": "Global Hit",
+        "kind": "globalDpsMultiplier",
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "600000000000000"
       }
     ]
   },
@@ -718,7 +781,7 @@
     "id": "miner_15",
     "name": "Canyon Ripper",
     "sprite": "miner_01.png",
-    "baseCost": "4,50E+14",
+    "baseCost": "450000000000000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -730,31 +793,43 @@
     "skills": [
       {
         "id": "m15_s10",
-        "name": "Crit Chance",
-        "kind": "critChance",
-        "value": 0.02,
-        "unlockAt": 10
+        "name": "Rip 1",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "9000000000000000"
       },
       {
         "id": "m15_s25",
-        "name": "Crit Power",
-        "kind": "critMultiplier",
-        "value": 0.25,
-        "unlockAt": 25
+        "name": "Rip 2",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "45000000000000000"
       },
       {
         "id": "m15_s50",
-        "name": "DPS +30%",
+        "name": "Rip 3",
         "kind": "dpsMultiplier",
-        "value": 0.3,
-        "unlockAt": 50
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "225000000000000000"
       },
       {
         "id": "m15_s75",
-        "name": "Global DPS +0.5%",
+        "name": "Rip 4",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "1000000000000000000"
+      },
+      {
+        "id": "m15_s100",
+        "name": "Global Power",
         "kind": "globalDpsMultiplier",
-        "value": 0.005,
-        "unlockAt": 75
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "5000000000000000000"
       }
     ]
   },
@@ -762,7 +837,7 @@
     "id": "miner_16",
     "name": "Crystal Cutter",
     "sprite": "miner_01.png",
-    "baseCost": "4,00E+15",
+    "baseCost": "4000000000000000",
     "costGrowth": 1.07,
     "stats": {
       "tapBase": 0,
@@ -774,31 +849,43 @@
     "skills": [
       {
         "id": "m16_s10",
-        "name": "DPS +25%",
+        "name": "Cut 1",
         "kind": "dpsMultiplier",
-        "value": 0.25,
-        "unlockAt": 10
+        "value": 1,
+        "unlockAt": 10,
+        "cost": "80000000000000000"
       },
       {
         "id": "m16_s25",
-        "name": "Ore +3%",
-        "kind": "mineralMultiplier",
-        "value": 0.03,
-        "unlockAt": 25
+        "name": "Cut 2",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 25,
+        "cost": "400000000000000000"
       },
       {
         "id": "m16_s50",
-        "name": "DPS +35%",
+        "name": "Cut 3",
         "kind": "dpsMultiplier",
-        "value": 0.35,
-        "unlockAt": 50
+        "value": 1,
+        "unlockAt": 50,
+        "cost": "2000000000000000000"
       },
       {
         "id": "m16_s75",
-        "name": "Crit Chance",
-        "kind": "critChance",
-        "value": 0.02,
-        "unlockAt": 75
+        "name": "Cut 4",
+        "kind": "dpsMultiplier",
+        "value": 1,
+        "unlockAt": 75,
+        "cost": "10000000000000000000"
+      },
+      {
+        "id": "m16_s100",
+        "name": "Wealth",
+        "kind": "mineralMultiplier",
+        "value": 0.1,
+        "unlockAt": 100,
+        "cost": "50000000000000000000"
       }
     ]
   },

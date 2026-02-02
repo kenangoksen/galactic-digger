@@ -1,9 +1,13 @@
 // app/(tabs)/index.js
+import { useState } from "react";
 import { Alert, ImageBackground, StyleSheet, View } from "react-native";
 
 import BottomNav from "../../components/BottomNav";
+import SettingsSheetHost from "../../components/game/SettingsSheetHost";
 import MinersSheet from "../../components/MinersSheet";
+import SettingsSheet from "../../components/SettingsSheet";
 import TopBar from "../../components/TopBar";
+import WelcomeBackModal from "../../components/WelcomeBackModal";
 
 import { fmt, getNextCost } from "../../game/damage";
 import { useGameEngine } from "../../game/useGameEngine";
@@ -23,7 +27,27 @@ export default function HomeScreen() {
   const onPressStub = (name) =>
     Alert.alert(name, "Şimdilik UI. Mekanikler burada.");
 
+  const [showSettings, setShowSettings] = useState(false);
+
   const engine = useGameEngine();
+
+  const handleReset = () => {
+    Alert.alert(
+      "RESET GAME",
+      "Are you sure? All progress, minerals, and miners will be lost forever.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "RESET",
+          style: "destructive",
+          onPress: () => {
+            engine.resetGame();
+            setShowSettings(false);
+          },
+        },
+      ]
+    );
+  };
 
   const anims = useStageAnims();
 
@@ -46,11 +70,12 @@ export default function HomeScreen() {
             />
           )}
         >
-          {({ toggleSheet, stageTranslateY, sheetProgress, Sheet }) => (
+          {({ toggleSheet, stageTranslateY, stageScale, sheetProgress, Sheet }) => (
             <>
               <GameStage
                 planetImg={engine.currentPlanetImg}
                 stageTranslateY={stageTranslateY}
+                stageScale={stageScale}
                 sheetProgress={sheetProgress}
                 puffScale={anims.puffScale}
                 puffOpacity={anims.puffOpacity}
@@ -103,7 +128,7 @@ export default function HomeScreen() {
               />
               {/* SOL BAR */}
               <SideBarLeft
-                onSettings={() => console.log("Settings")}
+                onSettings={() => setShowSettings(true)}
                 onAchievements={() => console.log("Achievements")}
                 onRelics={() => console.log("Relics")}
                 onClan={() => console.log("Clan")}
@@ -116,6 +141,26 @@ export default function HomeScreen() {
               />
 
               <Sheet />
+
+              {/* Settings Overlay - Sibling, not Wrapper */}
+              <SettingsSheetHost
+                visible={showSettings}
+                onClose={() => setShowSettings(false)}
+                sheetContent={
+                  <SettingsSheet
+                    onClose={() => setShowSettings(false)}
+                    onReset={handleReset}
+                  />
+                }
+              />
+
+              {/* Offline Earnings Modal */}
+              <WelcomeBackModal
+                visible={!!engine.offlineEarnings}
+                earnings={engine.offlineEarnings?.amount || 0}
+                seconds={engine.offlineEarnings?.seconds || 0}
+                onCollect={engine.collectOfflineEarnings}
+              />
             </>
           )}
         </MinersSheetHost>
