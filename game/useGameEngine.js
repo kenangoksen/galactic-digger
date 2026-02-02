@@ -1,3 +1,4 @@
+
 // game/useGameEngine.js
 // Mevcut API korunur, planet görseli sistemi bozulmaz.
 // Sadece ECONOMY (minerals/cost/buy) Decimal-safe yapılır.
@@ -39,12 +40,28 @@ function monsterMineral(zone, step) {
   return Math.max(1, isBossPlanet ? base * 10 : base);
 }
 
+// ---------------- Stellar Rewind Calculation ----------------
+// Formula: ((MaxZone - 50) / 10) ^ 1.5
+export function calculateStellarRewindReward(maxZone) {
+  const z = Number(maxZone || 0);
+  if (z < 60) return 0; // First meaningful reward at 60 (since 50 is base)
+  
+  // (z - 50) / 10
+  const base = (z - 50) / 10;
+  if (base <= 0) return 0;
+  
+  const reward = Math.pow(base, 1.5);
+  return Math.floor(reward);
+}
+
 // ---------------- Economy reducer (atomic buys, Decimal minerals) ----------------
 const ECO_INIT = {
   minerals: D(0), // ✅ Decimal
   ownedMiners: {}, // { miner_01: level, ... }
   ownedSkills: {}, // { miner_01: { skillId: true, ... }, ... }
   unlockedCount: 2,
+  stellarFragments: D(0), // ✅ Prestige Currency
+  cosmicProtocols: {}, // { protocol_id: level }
 };
 
 function ecoReducer(state, action) {
@@ -127,6 +144,35 @@ function ecoReducer(state, action) {
       return { ...ECO_INIT };
     }
 
+    case "PERFORM_STELLAR_REWIND": {
+       // amount: gained shards
+       const gained = D(action.amount || 0);
+       
+       return {
+          ...ECO_INIT, // Reset minerals, miners, unlockedCount, etc.
+          stellarFragments: D(state.stellarFragments).add(gained),
+          cosmicProtocols: state.cosmicProtocols, // Keep protocols!
+       };
+    }
+
+    case "BUY_PROTOCOL": {
+       const { protocolId } = action;
+       const currentLvl = state.cosmicProtocols[protocolId] || 0;
+       // Formula: Cost = Level + 1
+       const cost = currentLvl + 1;
+       
+       if (D(state.stellarFragments).lt(cost)) return state;
+
+       return {
+          ...state,
+          stellarFragments: D(state.stellarFragments).sub(cost),
+          cosmicProtocols: {
+             ...state.cosmicProtocols,
+             [protocolId]: currentLvl + 1
+          }
+       };
+    }
+
     default:
       return state;
   }
@@ -155,6 +201,7 @@ export function useGameEngine() {
       const next = zone + 1;
       setZone(next);
       setStep(1); // Start at step 1 of next zone
+      setMode("progress"); // Force progress mode so we don't get stuck in farm mode
       
       const newHp = monsterHp(next, 1);
       setMaxHp(newHp);
@@ -188,6 +235,7 @@ export function useGameEngine() {
     // 2. Reset Memory
     setMode("progress");
     setZone(1);
+    setMaxUnlockedZone(1); // ✅ Reset max zone too
     setStep(1);
     dispatchEco({ type: "RESET_GAME" });
   }, []);
@@ -701,6 +749,12 @@ export function useGameEngine() {
     dpsRef.current = totalDps;
   }, [totalDps]);
 
+  // ✅ Ref for applyDamage to avoid stale closures in setInterval
+  const applyDamageRef = useRef(applyDamage);
+  useEffect(() => {
+    applyDamageRef.current = applyDamage;
+  }, [applyDamage]);
+
   useEffect(() => {
     const TICK_MS = 250;
 
@@ -709,7 +763,7 @@ export function useGameEngine() {
       if (dps <= 0) return;
 
       const dmg = dps * (TICK_MS / 1000);
-      applyDamage(dmg);
+      applyDamageRef.current(dmg);
     }, TICK_MS);
 
     return () => clearInterval(id);
@@ -806,6 +860,20 @@ export function useGameEngine() {
 
 
 
+
+  // ---------------- Prestige Logic ----------------
+  const [showRewindModal, setShowRewindModal] = useState(false);
+  const prestigeReward = calculateStellarRewindReward(maxUnlockedZone); 
+  
+  const confirmStellarRewind = useCallback(() => {
+     dispatchEco({ type: "PERFORM_STELLAR_REWIND", amount: prestigeReward });
+     setShowRewindModal(false);
+     setMode("progress");
+     setZone(1);
+     setMaxUnlockedZone(1);
+     setStep(1);
+  }, [prestigeReward]);
+
   const buySkill = useCallback((minerId, skillId) => {
     if (buyLockRef.current) return;
 
@@ -817,26 +885,23 @@ export function useGameEngine() {
     const skill = minerDef.skills?.find((s) => s.id === skillId);
     if (!skill) return;
 
+    // ✅ SPECIAL: Prestige Skill Intercept
+    if (skill.kind === "prestige_unlock") {
+        setShowRewindModal(true);
+        return;
+    }
+
     // 3. check level
     const lvl = Number(ownedMiners[minerId] || 0);
     const unlockAt = Number(skill.unlockAt || 9999);
-    if (lvl < unlockAt) {
-        // Not unlocked yet
-        return;
-    }
+    if (lvl < unlockAt) return;
 
     // 4. check cost
     const cost = D(skill.cost || 0);
-    if (D(minerals).lt(cost)) {
-        // Can't afford
-        return;
-    }
+    if (D(minerals).lt(cost)) return;
 
     // 5. check if owned
-    if (ownedSkills?.[minerId]?.[skillId]) {
-        // Already owned
-        return;
-    }
+    if (ownedSkills?.[minerId]?.[skillId]) return;
 
     buyLockRef.current = true;
     dispatchEco({ type: "BUY_SKILL", minerId, skillId, cost });
@@ -852,8 +917,15 @@ export function useGameEngine() {
     const total = offlineEarnings.amount.mul(multiplier);
     dispatchEco({ type: "GAIN_MINERALS", amount: total });
     
-    setOfflineEarnings(null); // Close modal
+    setOfflineEarnings(null); 
   }, [offlineEarnings]);
+
+  // ---------------- Cosmic Store Logic ----------------
+  const [showCosmicStore, setShowCosmicStore] = useState(false);
+
+  const buyProtocol = useCallback((protocolId) => {
+      dispatchEco({ type: "BUY_PROTOCOL", protocolId });
+  }, []);
 
   return {
     // visuals / stage
@@ -900,5 +972,18 @@ export function useGameEngine() {
     maxUnlockedZone,
     goNextZone,
     goPrevZone,
+    
+    // Prestige
+    showRewindModal,
+    setShowRewindModal,
+    confirmStellarRewind,
+    prestigeReward,
+    stellarFragments: eco.stellarFragments,
+    
+    // Cosmic Protocols
+    showCosmicStore,
+    setShowCosmicStore,
+    buyProtocol,
+    cosmicProtocols: eco.cosmicProtocols,
   };
 }

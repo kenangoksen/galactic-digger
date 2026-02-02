@@ -17,8 +17,10 @@ import GameStage from "../../components/game/GameStage";
 import MinersSheetHost from "../../components/game/MinersSheetHost";
 
 import minersDef from "../../assets/config/miners.json";
+import CosmicStoreSheet from "../../components/CosmicStoreSheet";
 import SideBarLeft from "../../components/SideBarLeft";
 import SideBarRight from "../../components/SideBarRight";
+import StellarRewindModal from "../../components/ui/StellarRewindModal";
 import ZoneSwitcher from "../../components/ZoneSwitcher";
 
 const BG_IMG = require("../../assets/images/backgrounds/bg_space_full.png");
@@ -51,26 +53,57 @@ export default function HomeScreen() {
 
   const anims = useStageAnims();
 
+  const [activeSheet, setActiveSheet] = useState(null); // null | "MINERS" | "COSMIC"
+  const [visibleContent, setVisibleContent] = useState("MINERS"); // Persists during close animation
+
+  // Exclusive Toggle Logic
+  const toggleSheet = (name) => {
+      // If opening a new sheet, update content immediately
+      if (name && activeSheet !== name) {
+          setVisibleContent(name);
+      }
+      
+      setActiveSheet(prev => prev === name ? null : name);
+  };
+
+  const handleMiners = () => toggleSheet("MINERS");
+  const handleCosmic = () => toggleSheet("COSMIC");
+
   return (
     <View style={styles.root}>
       <ImageBackground source={BG_IMG} style={styles.bg} resizeMode="cover">
         <MinersSheetHost
-          // ✅ sadece bu değerler değişince sheet içeriği rebuild olur
-          sheetContent={({ closeSheet }) => (
-            <MinersSheet
-              miners={minersDef}
-              owned={engine.ownedMiners}
-              ownedSkills={engine.ownedSkills}
-              minerals={engine.minerals}
-              getNextCost={(def, lvl) => getNextCost(def, lvl)}
-              onBuyOrUpgrade={engine.buyOrUpgradeMiner}
-              onBuySkill={engine.buySkill}
-              onClose={closeSheet}
-              unlockedCount={engine.unlockedCount}
-            />
-          )}
+          visible={activeSheet !== null}
+          onClose={() => setActiveSheet(null)}
+          sheetContent={({ closeSheet }) => {
+            if (visibleContent === "COSMIC") {
+                return (
+                  <CosmicStoreSheet
+                    visible={true} 
+                    stellarFragments={engine.stellarFragments}
+                    cosmicProtocols={engine.cosmicProtocols}
+                    onBuy={engine.buyProtocol}
+                    onClose={closeSheet} 
+                  />
+                );
+            }
+            // Default to MINERS
+            return (
+                <MinersSheet
+                  miners={minersDef}
+                  owned={engine.ownedMiners}
+                  ownedSkills={engine.ownedSkills}
+                  minerals={engine.minerals}
+                  getNextCost={(def, lvl) => getNextCost(def, lvl)}
+                  onBuyOrUpgrade={engine.buyOrUpgradeMiner}
+                  onBuySkill={engine.buySkill}
+                  onClose={closeSheet}
+                  unlockedCount={engine.unlockedCount}
+                />
+            );
+          }}
         >
-          {({ toggleSheet, stageTranslateY, stageScale, sheetProgress, Sheet }) => (
+          {({ stageTranslateY, stageScale, sheetProgress, Sheet }) => (
             <>
               <GameStage
                 planetImg={engine.currentPlanetImg}
@@ -135,11 +168,16 @@ export default function HomeScreen() {
               />
 
               <BottomNav
-                onMiners={toggleSheet} // Upgrades butonuna bastığında miners sheet açılıyor
+                onMiners={handleMiners}
                 onPlanets={() => onPressStub("PLANETS")}
+                onSkills={() => Alert.alert("Skills", "Yakında...")}
+                onGem={() => onPressStub("GEM SHOP")}
+                onQuests={() => onPressStub("QUESTS")}
+                onProtocols={handleCosmic}
+                onBigBang={() => onPressStub("BIG BANG")}
                 onShop={() => onPressStub("SHOP")}
               />
-
+              
               <Sheet />
 
               {/* Settings Overlay - Sibling, not Wrapper */}
@@ -160,6 +198,15 @@ export default function HomeScreen() {
                 earnings={engine.offlineEarnings?.amount || 0}
                 seconds={engine.offlineEarnings?.seconds || 0}
                 onCollect={engine.collectOfflineEarnings}
+              />
+              
+              {/* Prestige Modal */}
+              <StellarRewindModal
+                visible={engine.showRewindModal}
+                rewardAmount={engine.prestigeReward || 0}
+                currentZone={engine.maxUnlockedZone}
+                onClose={() => engine.setShowRewindModal(false)}
+                onConfirm={engine.confirmStellarRewind}
               />
             </>
           )}

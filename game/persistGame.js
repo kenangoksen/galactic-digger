@@ -20,6 +20,8 @@ export function serializeEco(eco) {
     unlockedCount: Number(eco?.unlockedCount || 2),
     ownedMiners: eco?.ownedMiners || {},
     ownedSkills: eco?.ownedSkills || {},
+    stellarFragments: eco?.stellarFragments ? eco.stellarFragments.toString() : "0",
+    cosmicProtocols: eco?.cosmicProtocols || {},
   };
 }
 
@@ -30,6 +32,8 @@ export function normalizeLoadedEco(rawEco) {
     unlockedCount: Number(eco.unlockedCount || 2),
     ownedMiners: eco.ownedMiners || {},
     ownedSkills: eco.ownedSkills || {},
+    stellarFragments: D(eco.stellarFragments || "0"),
+    cosmicProtocols: eco.cosmicProtocols || {},
   };
 }
 
@@ -50,6 +54,7 @@ export function normalizeLoadedEco(rawEco) {
       mode: data?.progress?.mode || "progress",
       zone: Number(data?.progress?.zone || 1),
       step: Number(data?.progress?.step || 1),
+      maxUnlockedZone: Number(data?.progress?.maxUnlockedZone || data?.progress?.zone || 1),
     },
     eco: normalizeLoadedEco(data.eco),
   };

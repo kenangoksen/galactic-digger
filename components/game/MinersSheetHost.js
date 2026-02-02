@@ -4,9 +4,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing } from "react-native";
 
-export default function MinersSheetHost({ sheetContent, children }) {
+export default function MinersSheetHost({ sheetContent, children, visible, onClose }) {
   const sheet = useRef(new Animated.Value(0)).current; // 0 closed / 1 open
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
+
+  // Controlled vs Uncontrolled logic
+  const isControlled = typeof visible !== "undefined";
+  const isOpen = isControlled ? visible : localOpen;
+
+  // React to prop change
+  useEffect(() => {
+    if (isControlled) {
+      Animated.timing(sheet, {
+        toValue: visible ? 1 : 0,
+        duration: visible ? 240 : 220,
+        easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible, isControlled, sheet]);
 
   // sheetContent inline geliyorsa identity sürekli değişir -> ref ile yakala
   const sheetContentRef = useRef(sheetContent);
@@ -15,28 +31,33 @@ export default function MinersSheetHost({ sheetContent, children }) {
   }, [sheetContent]);
 
   const openSheet = useCallback(() => {
-    setSheetOpen(true);
-    Animated.timing(sheet, {
+     if (isControlled) return; // Ignore local calls in controlled mode? Or call callback?
+     setLocalOpen(true);
+     Animated.timing(sheet, {
       toValue: 1,
       duration: 240,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  }, [sheet]);
+  }, [sheet, isControlled]);
 
   const closeSheet = useCallback(() => {
+    if (isControlled) {
+        if (onClose) onClose();
+        return;
+    }
     Animated.timing(sheet, {
       toValue: 0,
       duration: 220,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
-    }).start(() => setSheetOpen(false));
-  }, [sheet]);
+    }).start(() => setLocalOpen(false));
+  }, [sheet, isControlled, onClose]);
 
   const toggleSheet = useCallback(() => {
-    if (sheetOpen) closeSheet();
+    if (isOpen) closeSheet();
     else openSheet();
-  }, [sheetOpen, closeSheet, openSheet]);
+  }, [isOpen, closeSheet, openSheet]);
 
   const stageTranslateY = useMemo(
     () =>
@@ -72,15 +93,15 @@ export default function MinersSheetHost({ sheetContent, children }) {
     return (
       <Animated.View
         style={{ transform: [{ translateY: sheetTranslateY }] }}
-        pointerEvents={sheetOpen ? "auto" : "none"}
+        pointerEvents={isOpen ? "auto" : "none"}
       >
         {sheetContentRef.current({ closeSheet })}
       </Animated.View>
     );
-  }, [sheetOpen, sheetTranslateY, closeSheet]);
+  }, [isOpen, sheetTranslateY, closeSheet]);
 
   return children({
-    sheetOpen,
+    sheetOpen: isOpen,
     openSheet,
     closeSheet,
     toggleSheet,

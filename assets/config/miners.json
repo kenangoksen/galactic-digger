@@ -550,6 +550,14 @@
         "value": 0.02,
         "unlockAt": 100,
         "cost": "150000000000"
+      },
+      {
+        "id": "m10_s100_prestige",
+        "name": "Stellar Rewind",
+        "kind": "prestige_unlock",
+        "value": 1,
+        "unlockAt": 150,
+        "cost": "1000000000000000000"
       }
     ]
   },
