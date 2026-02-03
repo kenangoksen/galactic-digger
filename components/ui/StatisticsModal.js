@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Modal,
     SafeAreaView,
@@ -45,31 +45,34 @@ const SECTION_KEYS = ["lifetime", "thisRewind", "thisSession"];
 
 export default function StatisticsModal({ visible, stats, onClose }) {
   // Force update every 1s to show live stats
+  // Force update every 1s to show live stats
+  // Use a reducer to force update, as standard state might batch or optimize if value doesn't change?
+  // Actually setTick(t => t+1) guarantees change.
   const [_, setTick] = useState(0);
+  
   useEffect(() => {
     if (!visible) return;
-    const i = setInterval(() => setTick((t) => t + 1), 1000);
+    const i = setInterval(() => {
+        setTick((t) => t + 1);
+    }, 1000); // 1 second update
     return () => clearInterval(i);
   }, [visible]);
 
   // Derived "Best 12" for top grid
-  const best12 = useMemo(() => {
-    if (!stats || !stats.lifetime) return [];
-    return [
-      { label: "Max Sector Ever", val: stats.lifetime.highestSector },
-      { label: "Max Sector (Run)", val: stats.thisRewind.highestSector },
-      { label: "Total Rewinds", val: stats.lifetime.totalRewinds },
-      { label: "Play Time", val: fmtTime(stats.lifetime.totalTimePlayed) },
-      { label: "Time (This Run)", val: fmtTime(stats.thisRewind.timePlayed) },
-      { label: "Gold Earned", val: fmt(stats.lifetime.totalGoldEarned) },
-      { label: "Total Taps", val: fmt(stats.lifetime.totalTaps) },
-      { label: "Highest Tap", val: fmt(stats.lifetime.highestTapHit) },
-      { label: "Highest DPS", val: fmt(stats.lifetime.highestDps) },
-      { label: "Bosses Killed (Run)", val: fmt(stats.thisRewind.bossesKilled) },
-      { label: "Fragments Earned", val: fmt(stats.lifetime.totalStellarFragmentsEarned) },
-      { label: "Best Fragment Run", val: fmt(stats.lifetime.biggestSfGainOneRewind) },
-    ];
-  }, [stats, _]);
+  const best12 = [
+      { label: "Max Sector Ever", val: stats?.lifetime?.highestSector },
+      { label: "Max Sector (Run)", val: stats?.thisRewind?.highestSector },
+      { label: "Total Rewinds", val: stats?.lifetime?.totalRewinds },
+      { label: "Play Time", val: fmtTime(stats?.lifetime?.totalTimePlayed) },
+      { label: "Time (This Run)", val: fmtTime(stats?.thisRewind?.timePlayed) },
+      { label: "Gold Earned", val: fmt(stats?.lifetime?.totalGoldEarned) },
+      { label: "Total Taps", val: fmt(stats?.lifetime?.totalTaps) },
+      { label: "Highest Tap", val: fmt(stats?.lifetime?.highestTapHit) },
+      { label: "Highest DPS", val: fmt(stats?.lifetime?.highestDps) },
+      { label: "Bosses Killed (Run)", val: fmt(stats?.thisRewind?.bossesKilled) },
+      { label: "Fragments Earned", val: fmt(stats?.lifetime?.totalStellarFragmentsEarned) },
+      { label: "Best Fragment Run", val: fmt(stats?.lifetime?.biggestSfGainOneRewind) },
+  ];
 
   if (!stats) return null;
 
@@ -84,6 +87,7 @@ export default function StatisticsModal({ visible, stats, onClose }) {
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                 <Text style={styles.closeText}>CLOSE</Text>
               </TouchableOpacity>
+              {/* Force Render Dependency: {_} */}
             </View>
 
             <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -100,13 +104,14 @@ export default function StatisticsModal({ visible, stats, onClose }) {
 
               {/* Sections */}
               {SECTION_KEYS.map((secKey) => (
-                <View key={secKey} style={styles.section}>
+                <View key={`${secKey}_${_}`} style={styles.section}>
                   <Text style={styles.secTitle}>
                     {STAT_CATEGORIES[secKey === "lifetime" ? "LIFETIME" : secKey === "thisRewind" ? "REWIND" : "SESSION"]}
                   </Text>
                   {Object.entries(stats[secKey] || {}).map(([k, v]) => {
-                      // Skip internal keys or objects
-                      if (typeof v === 'object') return null;
+                      // Skip internal keys or nulls, but allow strings/numbers
+                      if (v === null || v === undefined) return null;
+                      if (typeof v === 'object' && v !== null) return null; // Keep filtering objects for now, as stats should be primitive strings/numbers
                       if (k === 'startTime' || k === 'firstPlayDate' || k === 'lastPlayDate') {
                           return (
                               <View key={k} style={styles.row}>

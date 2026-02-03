@@ -57,6 +57,7 @@ export function normalizeLoadedEco(rawEco) {
       maxUnlockedZone: Number(data?.progress?.maxUnlockedZone || data?.progress?.zone || 1),
     },
     eco: normalizeLoadedEco(data.eco),
+    stats: data.stats || {}, // ✅ Load Stats
   };
 }
 
@@ -65,6 +66,7 @@ export async function saveGame(snapshot) {
   const data = {
     ...snapshot,
     savedAt: Date.now(),
+    // stats: snapshot.stats is expected to be passed in snapshot
   };
   await AsyncStorage.setItem(GAME_SAVE_KEY, JSON.stringify(data));
 }

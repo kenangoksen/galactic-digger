@@ -4,12 +4,12 @@
 // Sadece ECONOMY (minerals/cost/buy) Decimal-safe yapılır.
 
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState,
 } from "react";
 
 import protocolsDef from "../assets/config/cosmic_protocols.json";
@@ -248,6 +248,8 @@ export function useGameEngine() {
     setZone(1);
     setMaxUnlockedZone(1); // ✅ Reset max zone too
     setStep(1);
+    // 📊 Reset Memory Stats
+    statsRef.current = initStats({}); 
     dispatchEco({ type: "RESET_GAME" });
   }, []);
 
@@ -564,6 +566,26 @@ export function useGameEngine() {
         } else {
             statsRef.current = initStats({});
         }
+
+        // 🔄 RETROACTIVE SYNC: If stats are fresh but game is advanced, sync them up
+        const s = statsRef.current;
+        if (s && s.lifetime) {
+            // 1. Sync Levels
+            const realTotalLevels = Object.values(loaded.eco.ownedMiners || {}).reduce((a, b) => a + Number(b), 0);
+            if (realTotalLevels > (s.lifetime.totalMinerLevels || 0)) {
+                s.lifetime.totalMinerLevels = realTotalLevels;
+            }
+            // 2. Sync Unlocks
+            const realUnlocked = Number(loaded.eco.unlockedCount || 0);
+            if (realUnlocked > (s.lifetime.totalMinersUnlocked || 0)) {
+                s.lifetime.totalMinersUnlocked = realUnlocked;
+            }
+            // 3. Sync Highest Level
+            const realMaxLvl = Math.max(0, ...Object.values(loaded.eco.ownedMiners || {}).map(Number));
+            if (realMaxLvl > (s.lifetime.highestMinerLevel || 0)) {
+                s.lifetime.highestMinerLevel = realMaxLvl;
+            }
+        }
         
         calcOffline(loaded);
       }
@@ -656,9 +678,26 @@ export function useGameEngine() {
 
     if (isBossPlanet) {
        setBossTimeMsLeft(30_000);
+       
+       // 📊 Stats (Boss Spawned)
+       const s = statsRef.current;
+       if (s && s.lifetime) {
+           s.lifetime.totalBossesSpawned = (s.lifetime.totalBossesSpawned || 0) + 1;
+           if (zone >= 105 && Math.random() < 0.25) { // Primal Check replicated for stats
+               // Note: Actual random check happens below, so verify consistency.
+               // Better is to define "isPrimal" state first.
+               // But isPrimal is state, takes effect next render.
+               // We should calculate primal here locally first.
+           }
+       }
+
        // Primal Check: Zone >= 105 && 25% Chance
-       if (zone >= 105 && Math.random() < 0.25) {
+       const isPrimalNow = zone >= 105 && Math.random() < 0.25;
+       if (isPrimalNow) {
            setIsPrimal(true);
+           if (s && s.lifetime) {
+                s.lifetime.totalAnomalyBossesSpawned = (s.lifetime.totalAnomalyBossesSpawned || 0) + 1;
+           }
        } else {
            setIsPrimal(false);
        }
@@ -871,14 +910,28 @@ export function useGameEngine() {
 
     const id = setInterval(() => {
       const dps = dpsRef.current;
+      
+      // 📊 Stats (Time) - ALWAYS TRACK TIME
+      const s = statsRef.current;
+      if (s && s.lifetime) {
+          s.lifetime.totalTimePlayed = (s.lifetime.totalTimePlayed || 0) + TICK_MS;
+          s.thisRewind.timePlayed = (s.thisRewind.timePlayed || 0) + TICK_MS;
+          // In combat vs idle? Assuming always combat for now
+          s.lifetime.totalTimeInCombat = (s.lifetime.totalTimeInCombat || 0) + TICK_MS;
+          
+          if (dps > 0) {
+             if (D(dps).gt(s.lifetime.highestDps)) s.lifetime.highestDps = D(dps).toString();
+             if (D(dps).gt(s.thisRewind.highestDps)) s.thisRewind.highestDps = D(dps).toString();
+          }
+      }
+
+      // Damage only if DPS > 0
       if (dps <= 0) return;
 
       const dmg = dps * (TICK_MS / 1000);
 
-      // 📊 Stats (DPS + Time)
-      const s = statsRef.current;
+      // 📊 Stats (DPS Damage)
       if (s && s.lifetime) {
-          // Damage
           s.lifetime.totalDpsDamage = D(s.lifetime.totalDpsDamage).add(dmg).toString();
           s.lifetime.totalDamage = D(s.lifetime.totalDamage).add(dmg).toString();
           
@@ -886,16 +939,6 @@ export function useGameEngine() {
           s.thisRewind.damageAll = D(s.thisRewind.damageAll).add(dmg).toString();
           
           s.thisSession.damageAll = D(s.thisSession.damageAll).add(dmg).toString();
-
-          // Time
-          s.lifetime.totalTimePlayed = (s.lifetime.totalTimePlayed || 0) + TICK_MS;
-          s.thisRewind.timePlayed = (s.thisRewind.timePlayed || 0) + TICK_MS;
-          // In combat vs idle? Assuming always combat for now
-          s.lifetime.totalTimeInCombat = (s.lifetime.totalTimeInCombat || 0) + TICK_MS;
-          
-          // Peaks
-          if (D(dps).gt(s.lifetime.highestDps)) s.lifetime.highestDps = D(dps).toString();
-          if (D(dps).gt(s.thisRewind.highestDps)) s.thisRewind.highestDps = D(dps).toString();
       }
 
       applyDamageRef.current(dmg);
@@ -933,7 +976,15 @@ export function useGameEngine() {
     const newMax = monsterHp(zone, 1);
     setMaxHp(newMax);
     setHp(newMax);
+    setHp(newMax);
     setBossTimeMsLeft(30_000);
+    
+    // 📊 Stats (Boss Failed)
+    const s = statsRef.current;
+    if (s && s.lifetime) {
+        s.lifetime.totalBossesFailed = (s.lifetime.totalBossesFailed || 0) + 1;
+        s.thisRewind.bossesFailed = (s.thisRewind.bossesFailed || 0) + 1;
+    }
   }, [bossTimeMsLeft, isBossPlanet, zone]);
 
   // mode toggle
@@ -947,6 +998,48 @@ export function useGameEngine() {
       if (buyLockRef.current) return;
 
       buyLockRef.current = true;
+
+      // 0. Cost Check (to ensure we don't track stats for failed buys)
+      const def = minersDef.find((m) => m.id === minerId);
+      if (def) {
+          const lvl = Number(ownedMiners[minerId] || 0);
+          const cost = getBulkCost(def, lvl, multiplier);
+          
+          if (D(minerals).gte(cost)) {
+              // 📊 Stats
+              if (statsRef.current && statsRef.current.lifetime) {
+                  const s = statsRef.current;
+                  s.lifetime.totalGoldSpent = D(s.lifetime.totalGoldSpent).add(cost).toString();
+                  s.lifetime.totalMinersPurchased = (s.lifetime.totalMinersPurchased || 0) + multiplier;
+                  
+                  s.thisRewind.goldSpent = D(s.thisRewind.goldSpent).add(cost).toString();
+                  
+                  // Purchases Count
+                  s.lifetime.totalPurchasesCount = (s.lifetime.totalPurchasesCount || 0) + 1;
+                  s.lifetime.totalPurchasesCount = (s.lifetime.totalPurchasesCount || 0) + 1;
+                  if (D(cost).gt(s.lifetime.biggestSinglePurchase)) {
+                      s.lifetime.biggestSinglePurchase = D(cost).toString();
+                  }
+
+                  // Levels
+                  s.lifetime.totalMinerLevels = (s.lifetime.totalMinerLevels || 0) + multiplier;
+                  const newLvl = lvl + multiplier;
+                  if (newLvl > (s.lifetime.highestMinerLevel || 0)) {
+                      s.lifetime.highestMinerLevel = newLvl;
+                  }
+                  
+                  // Unlock count check? No, unlock count is separate.
+                  // But miners unlocked is separate. 
+                  // If lvl was 0 and now > 0, it means we "Purchased" a new miner type?
+                  // "Total Miners Unlocked" vs "Total Miners Purchased" (items vs upgrades)
+                  // "Total Miners Purchased" is likely quantity of upgrades.
+                  // "Total Miners Unlocked" is tracked in UNLOCK_UP_TO or manually here if lvl==0.
+                  if (lvl === 0) {
+                       s.lifetime.totalMinersUnlocked = (s.lifetime.totalMinersUnlocked || 0) + 1;
+                  }
+              }
+          }
+      }
 
       // ✅ optimistic update: UI hemen level artmış görsün
       setPendingOwnedMiners((prev) => {
@@ -990,6 +1083,11 @@ export function useGameEngine() {
     // ✅ anlık minerals yeterliyse unlockCount +1 (kalıcı)
     if (D(minerals).gte(threshold)) {
       dispatchEco({ type: "UNLOCK_UP_TO", count: unlockedCount + 1 });
+      
+      // 📊 Stats (Unlock) - Only if we actually increased unlock count
+      if (statsRef.current && statsRef.current.lifetime) {
+          statsRef.current.lifetime.totalMinersUnlocked = (statsRef.current.lifetime.totalMinersUnlocked || 0) + 1;
+      }
     }
   }, [minerals, unlockedCount]);
 
@@ -1057,6 +1155,23 @@ export function useGameEngine() {
     if (ownedSkills?.[minerId]?.[skillId]) return;
 
     buyLockRef.current = true;
+    // 📊 Stats
+    if (statsRef.current && statsRef.current.lifetime) {
+        const s = statsRef.current;
+        s.lifetime.totalGoldSpent = D(s.lifetime.totalGoldSpent).add(cost).toString();
+        s.lifetime.totalSkillsPurchased = (s.lifetime.totalSkillsPurchased || 0) + 1;
+        s.lifetime.totalPurchasesCount = (s.lifetime.totalPurchasesCount || 0) + 1;
+        
+        s.thisRewind.goldSpent = D(s.thisRewind.goldSpent).add(cost).toString();
+        
+        // Skill Levels / Count
+        s.lifetime.totalSkillLevels = (s.lifetime.totalSkillLevels || 0) + 1; // 1 level per buy
+        
+        if (D(cost).gt(s.lifetime.biggestSinglePurchase)) {
+            s.lifetime.biggestSinglePurchase = D(cost).toString();
+        }
+    }
+
     dispatchEco({ type: "BUY_SKILL", minerId, skillId, cost });
 
     requestAnimationFrame(() => {
