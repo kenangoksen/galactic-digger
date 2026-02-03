@@ -1,13 +1,19 @@
+import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { fmtD } from "../game/bn";
+import { D, fmtD } from "../game/bn";
 
 const icons = {
   mineral: require("../assets/images/ui/topbar/mineral.png"),
   fragment: require("../assets/images/ui/topbar/fragment.png"),
   sword: require("../assets/images/ui/topbar/sword.png"),
   dps: require("../assets/images/ui/topbar/dps.png"),
-  click: require("../assets/images/ui/topbar/toggle_click.png"),
-  idle: require("../assets/images/ui/topbar/toggle_idle.png"),
+};
+
+const TOOLTIPS = {
+  mineral: "Used to buy and upgrade miners.",
+  fragment: "Rare currency for cosmic upgrades.\n(Earned by resetting the universe)",
+  sword: "Damage dealt to the monster per tap.",
+  dps: "Total damage per second dealt by miners.",
 };
 
 export default function TopBar({
@@ -15,34 +21,64 @@ export default function TopBar({
   fragments = 0,
   clickDamage = 0,
   dps = 0,
-  mode = "click", // "click" | "idle"
-  onToggleMode,
+  prestigeReward = 0,
 }) {
+  const gain = D(prestigeReward);
+  const showGain = gain.gt(0);
+  const fragText = showGain 
+      ? `${fmtD(fragments)} (+${fmtD(gain)})` 
+      : fmtD(fragments);
+
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
+  const handlePress = (key) => {
+    setActiveTooltip(activeTooltip === key ? null : key);
+  };
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.bar}>
-        <Stat icon={icons.mineral} value={fmtD(minerals)} />
-        <Stat icon={icons.fragment} value={`+${fragments}`} />
-        <Stat icon={icons.sword} value={fmtD(clickDamage)} />
-        <Stat icon={icons.dps} value={fmtD(dps)} />
-
-        <Pressable onPress={onToggleMode} style={styles.toggle}>
-          <Image
-            source={mode === "click" ? icons.click : icons.idle}
-            style={styles.toggleImg}
-          />
-        </Pressable>
+        <Stat 
+          icon={icons.mineral} 
+          value={fmtD(minerals)} 
+          onPress={() => handlePress("mineral")}
+        />
+        <Stat 
+          icon={icons.fragment} 
+          value={fragText} 
+          onPress={() => handlePress("fragment")}
+        />
+        <Stat 
+          icon={icons.sword} 
+          value={fmtD(clickDamage)} 
+          onPress={() => handlePress("sword")}
+        />
+        <Stat 
+          icon={icons.dps} 
+          value={fmtD(dps)} 
+          onPress={() => handlePress("dps")}
+        />
       </View>
+
+      {/* Tooltip Bubble */}
+      {activeTooltip && (
+        <View style={styles.tooltipParams}>
+          <View style={styles.tooltipArrow} />
+          <View style={styles.tooltipBody}>
+             <Text style={styles.tooltipText}>{TOOLTIPS[activeTooltip]}</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
-function Stat({ icon, value }) {
+function Stat({ icon, value, onPress }) {
   return (
-    <View style={styles.stat}>
+    <Pressable onPress={onPress} style={styles.stat}>
       <Image source={icon} style={styles.icon} />
       <Text style={styles.value}>{value}</Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -50,55 +86,79 @@ const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
     top: 52,
-    left: 10,
-    right: 10,
+    left: 8,
+    right: 8,
     zIndex: 100,
+    alignItems: "center", // Center tooltip
   },
 
   bar: {
-    height: 44,
-    borderRadius: 32,
-    paddingHorizontal: 14,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    width: "100%",
+    height: 54, 
+    borderRadius: 27,
+    paddingHorizontal: 16, 
+    backgroundColor: "rgba(0,0,0,0.65)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.15)",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "space-between", 
   },
 
   stat: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    paddingVertical: 5, // Hit slop area
   },
 
   icon: {
-    width: 18,
-    height: 18,
+    width: 28,
+    height: 28,
     resizeMode: "contain",
   },
 
   value: {
-    color: "rgba(255,255,255,0.92)",
-    fontWeight: "900",
-    fontSize: 13,
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 13, 
+    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 
-  toggle: {
-    width: 42,
-    height: 30,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
+  // Tooltip Styles
+  tooltipParams: {
+    marginTop: 8,
     alignItems: "center",
-    justifyContent: "center",
   },
-
-  toggleImg: {
-    width: 22,
-    height: 22,
-    resizeMode: "contain",
+  tooltipArrow: {
+    width: 0,
+    height: 0,
+    backgroundColor: "transparent",
+    borderStyle: "solid",
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "rgba(0,0,0,0.85)", // Arrow color
+    marginBottom: -1, // Overlap slightly
+  },
+  tooltipBody: {
+    backgroundColor: "rgba(0,0,0,0.85)",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    maxWidth: 250,
+  },
+  tooltipText: {
+    color: "#eee",
+    fontSize: 12,
+    textAlign: "center",
+    fontWeight: "600",
+    lineHeight: 16,
   },
 });

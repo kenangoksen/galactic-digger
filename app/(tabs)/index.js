@@ -149,8 +149,7 @@ export default function HomeScreen() {
                 fragments={engine.stellarFragments || 0}
                 clickDamage={engine.calcTapDamage().dmg}
                 dps={engine.totalDps}
-                mode={engine.mode === "idle" ? "idle" : "click"}
-                onToggleMode={engine.toggleMode}
+                prestigeReward={engine.prestigeReward}
               />
               <ZoneSwitcher
                 zone={engine.zone}
