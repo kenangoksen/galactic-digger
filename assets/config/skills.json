@@ -1,0 +1,110 @@
+[
+  {
+    "id": "s_clickstorm",
+    "name": "Rhythm Strike",
+    "description": "Automatically taps 10 times per second.",
+    "minerUnlockId": "miner_01",
+    "effect": "autoTap",
+    "value": 10,
+    "duration": 30000,
+    "cooldown": 600000,
+    "cost": 500,
+    "scaling": { "duration": 1000, "cost": 2.5 }
+  },
+  {
+    "id": "s_powersurge",
+    "name": "Drill Overdrive",
+    "description": "Doubles your total DPS for 30 seconds.",
+    "minerUnlockId": "miner_04",
+    "effect": "dpsMult",
+    "value": 2,
+    "duration": 30000,
+    "cooldown": 600000,
+    "cost": 2500,
+    "scaling": { "duration": 1000, "cost": 2.5 }
+  },
+  {
+    "id": "s_lucky",
+    "name": "Precision Poke",
+    "description": "Increases Critical Click Chance by 50% for 30 seconds.",
+    "minerUnlockId": "miner_08",
+    "effect": "critChance",
+    "value": 0.5,
+    "duration": 30000,
+    "cooldown": 1800000,
+    "cost": 10000,
+    "scaling": { "duration": 1000, "cost": 2.5 }
+  },
+  {
+    "id": "s_metal",
+    "name": "Moon Scan",
+    "description": "Doubles all Mineral drops from enemies for 30 seconds.",
+    "minerUnlockId": "miner_06",
+    "effect": "goldMult",
+    "value": 2,
+    "duration": 30000,
+    "cooldown": 1800000,
+    "cost": 50000,
+    "scaling": { "duration": 1000, "cost": 2.5 }
+  },
+  {
+    "id": "s_goldclicks",
+    "name": "Comet Rush",
+    "description": "Clicks grant 1% of monster gold for 30 seconds.",
+    "minerUnlockId": "miner_10",
+    "effect": "goldClick",
+    "value": 0.01,
+    "duration": 30000,
+    "cooldown": 3600000,
+    "cost": 250000,
+    "scaling": { "duration": 1000, "cost": 2.5 }
+  },
+  {
+    "id": "s_darkritual",
+    "name": "Deep Protocol",
+    "description": "Permanently increases DPS by 5%. (Resets on Prestige)",
+    "minerUnlockId": "miner_12",
+    "effect": "darkRitual",
+    "value": 1.05,
+    "duration": 0,
+    "cooldown": 28800000,
+    "cost": 1000000,
+    "scaling": { "duration": 0, "cost": 2.5 }
+  },
+  {
+    "id": "s_superclicks",
+    "name": "Chisel Impact",
+    "description": "Triples your Click Damage for 30 seconds.",
+    "minerUnlockId": "miner_14",
+    "effect": "tapMult",
+    "value": 3,
+    "duration": 30000,
+    "cooldown": 3600000,
+    "cost": 5000000,
+    "scaling": { "duration": 1000, "cost": 2.5 }
+  },
+  {
+    "id": "s_energize",
+    "name": "Runner Boost",
+    "description": "Doubles the effect of the next skill used.",
+    "minerUnlockId": "miner_16",
+    "effect": "energize",
+    "value": 2,
+    "duration": 0,
+    "cooldown": 3600000,
+    "cost": 25000000,
+    "scaling": { "duration": 0, "cost": 2.5 }
+  },
+  {
+    "id": "s_reload",
+    "name": "Specialist Reset",
+    "description": "Reduces the cooldown of the last used skill by 1 hour.",
+    "minerUnlockId": "miner_18",
+    "effect": "reload",
+    "value": 3600000,
+    "duration": 0,
+    "cooldown": 3600000,
+    "cost": 100000000,
+    "scaling": { "duration": 0, "cost": 2.5 }
+  }
+]

@@ -4,6 +4,7 @@ import { Alert, ImageBackground, StyleSheet, View } from "react-native";
 
 import BottomNav from "../../components/BottomNav";
 import SettingsSheetHost from "../../components/game/SettingsSheetHost";
+import SkillsSheet from "../../components/game/SkillsSheet";
 import MinersSheet from "../../components/MinersSheet";
 import SettingsSheet from "../../components/SettingsSheet";
 import TopBar from "../../components/TopBar";
@@ -72,6 +73,7 @@ export default function HomeScreen() {
 
   const handleMiners = () => toggleSheet("MINERS");
   const handleCosmic = () => toggleSheet("COSMIC");
+  const handleSkills = () => toggleSheet("SKILLS");
 
   return (
     <>
@@ -92,6 +94,14 @@ export default function HomeScreen() {
                   />
                 );
             }
+            if (visibleContent === "SKILLS") {
+                return (
+                    <SkillsSheet 
+                        engine={engine}
+                        onClose={closeSheet}
+                    />
+                );
+            }
             // Default to MINERS
             return (
                 <MinersSheet
@@ -104,12 +114,29 @@ export default function HomeScreen() {
                   onBuySkill={engine.buySkill}
                   onClose={closeSheet}
                   unlockedCount={engine.unlockedCount}
+                  tagsByMinerId={engine.eco.tagsByMinerId} // ✅ Pass Tags
                 />
             );
           }}
         >
           {({ stageTranslateY, stageScale, sheetProgress, Sheet }) => (
             <>
+              {/* --- GLOBAL TOASTS --- */}
+              {engine.tagToast && (
+                <View style={styles.toastContainer} pointerEvents="none">
+                    <View style={styles.toastBox}>
+                        <View style={styles.toastContent}>
+                            <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                                <MaterialCommunityIcons name="star-four-points" size={20} color="#ffd700" />
+                                <Text style={{color: '#ffd700', fontWeight: 'bold', fontSize: 16}}>
+                                    {engine.tagToast.message}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+              )}
+
               <GameStage
                 planetImg={engine.currentPlanetImg}
                 stageTranslateY={stageTranslateY}
@@ -137,9 +164,8 @@ export default function HomeScreen() {
                 isPrimal={engine.isPrimal} // 🟣
                 onTap={() => {
                   anims.runTapFeedback();
-                  const { dmg, isCrit } = engine.calcTapDamage(true); // 📊 Track Stats
+                  const { dmg, isCrit } = engine.handleTap(); // ✅ Use new handler
                   anims.addFloater(`${isCrit ? "CRIT " : ""}+${fmt(dmg)}`);
-                  engine.applyDamage(dmg);
                 }}
               />
 
@@ -150,12 +176,14 @@ export default function HomeScreen() {
                 clickDamage={engine.calcTapDamage().dmg}
                 dps={engine.totalDps}
                 prestigeReward={engine.prestigeReward}
+                streak={engine.uiStreak}
               />
               <ZoneSwitcher
                 zone={engine.zone}
-                maxUnlockedZone={engine.maxUnlockedZone ?? engine.zone} // engine’de yoksa şimdilik zone
+                maxUnlockedZone={engine.maxUnlockedZone ?? engine.zone}
                 onPrev={() => engine.goPrevZone?.()}
                 onNext={() => engine.goNextZone?.()}
+                comboActive={engine.uiStreak > 5} // Push down if combo visible
               />
 
               <SideBarRight
@@ -179,7 +207,7 @@ export default function HomeScreen() {
               <BottomNav
                 onMiners={handleMiners}
                 onPlanets={() => onPressStub("PLANETS")}
-                onSkills={() => Alert.alert("Skills", "Yakında...")}
+                onSkills={handleSkills} // ✅ Connected
                 onGem={() => onPressStub("GEM SHOP")}
                 onQuests={() => onPressStub("QUESTS")}
                 onProtocols={handleCosmic}

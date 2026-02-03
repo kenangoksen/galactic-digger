@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { D, fmtD } from "../game/bn";
+import { DAMAGE_CONFIG } from "../game/config";
 
 const icons = {
   mineral: require("../assets/images/ui/topbar/mineral.png"),
@@ -16,13 +17,14 @@ const TOOLTIPS = {
   dps: "Total damage per second dealt by miners.",
 };
 
-export default function TopBar({
-  minerals = 0,
-  fragments = 0,
-  clickDamage = 0,
-  dps = 0,
-  prestigeReward = 0,
-}) {
+export default function TopBar(props) {
+  const {
+    minerals = 0,
+    fragments = 0,
+    clickDamage = 0,
+    dps = 0,
+    prestigeReward = 0,
+  } = props;
   const gain = D(prestigeReward);
   const showGain = gain.gt(0);
   const fragText = showGain 
@@ -34,6 +36,11 @@ export default function TopBar({
   const handlePress = (key) => {
     setActiveTooltip(activeTooltip === key ? null : key);
   };
+
+  // Streak Display Logic
+  const streak = props.streak || 0; // Receive from props
+  const showStreak = streak > 5; // Don't show for 1-5 taps
+  const streakMult = 1 + Math.min(streak, DAMAGE_CONFIG.STREAK_CAP) * DAMAGE_CONFIG.STREAK_BONUS_PER_TAP;
 
   return (
     <View style={styles.wrapper}>
@@ -59,6 +66,15 @@ export default function TopBar({
           onPress={() => handlePress("dps")}
         />
       </View>
+
+      {/* Streak Badge */}
+      {showStreak && (
+        <View style={styles.streakBadge}>
+            <Text style={styles.streakText}>
+                {streak} Combo (x{streakMult.toFixed(2)})
+            </Text>
+        </View>
+      )}
 
       {/* Tooltip Bubble */}
       {activeTooltip && (
@@ -160,5 +176,23 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600",
     lineHeight: 16,
+  },
+  
+  // Streak
+  streakBadge: {
+    position: 'absolute',
+    bottom: -32, // Push lower into the specific gap between TopBar and ZoneSwitcher
+    backgroundColor: '#ffaa00',
+    paddingVertical: 2,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    zIndex: 90,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.2)',
+  },
+  streakText: {
+    color: '#000',
+    fontWeight: '800',
+    fontSize: 11,
   },
 });

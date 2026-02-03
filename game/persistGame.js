@@ -22,6 +22,10 @@ export function serializeEco(eco) {
     ownedSkills: eco?.ownedSkills || {},
     stellarFragments: eco?.stellarFragments ? eco.stellarFragments.toString() : "0",
     cosmicProtocols: eco?.cosmicProtocols || {},
+    // Starlink Persistence
+    totalStarlinkTags: eco?.totalStarlinkTags || 0,
+    tagsByMinerId: eco?.tagsByMinerId || {},
+    lifetimeTagsEarned: eco?.lifetimeTagsEarned || 0,
   };
 }
 
@@ -34,6 +38,10 @@ export function normalizeLoadedEco(rawEco) {
     ownedSkills: eco.ownedSkills || {},
     stellarFragments: D(eco.stellarFragments || "0"),
     cosmicProtocols: eco.cosmicProtocols || {},
+    // Starlink Rehydration
+    totalStarlinkTags: Number(eco.totalStarlinkTags || 0),
+    tagsByMinerId: eco.tagsByMinerId || {},
+    lifetimeTagsEarned: Number(eco.lifetimeTagsEarned || 0),
   };
 }
 

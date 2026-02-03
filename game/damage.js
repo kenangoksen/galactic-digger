@@ -18,6 +18,7 @@
 // -----------------------------------------------------------------------------
 import Decimal from "break_infinity.js";
 import { D } from "./bn";
+import { DAMAGE_CONFIG } from "./config";
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -218,7 +219,7 @@ export function getMinerContribution(minerDef, level, ownedSkills) {
 // Each layer can read current totals and return updated totals.
 //
 // Layers in order:
-// 1) Base from miners (sum of miner contributions)
+// 1) Base from miners (sum of miner contributions) + Starlink Tags (Local)
 // 2) Miner skills that are GLOBAL (tapMultiplier, globalDpsMultiplier, crit, etc)
 // 3) Cosmic Protocols (placeholder)
 // 4) Universal Constants (placeholder)
@@ -531,6 +532,73 @@ export function computeTotals({
     constantsDef: constantsDef || [],
     ownedConstants: ownedConstants || {},
   });
+
+  // ---------------------------------------------------------------------------
+  // NEW: Base Tap from DPS (Clicker Heroes style)
+  // ---------------------------------------------------------------------------
+  // BaseTap = (Sum of Miner Tap + (TotalDPS * Ratio))
+  // Then multiplied by Global Tap Multipliers (Tap Power)
+  
+  // totals.dps is already fully calculated here (including all multipliers).
+  const dpsPortion = totals.dps * DAMAGE_CONFIG.TAP_FROM_DPS_RATIO;
+  
+  // totals.tapDamage currently holds (Sum of Miner Tap) * (minersSkills.tapMult) ...
+  // Wait, applyGlobalSkillsFromMiners applies mult to totals.tapDamage incrementally.
+  // We need to be careful.
+  // Ideally: base = (MinerFixedSum + DpsPortion)
+  //          final = base * GlobalMultipliers
+  
+  // As structured, 'totals.tapDamage' has already been multiplied by global skills layer by layer.
+  // But 'dpsPortion' is new. It should ALSO be multiplied by global tap multipliers?
+  // User says: "BaseTapFromDPS... TapPowerMultiplier... Streak...".
+  // Formula: (DPS * Ratio) * TapPowerMult.
+  
+  // We can treat the existing `totals.tapDamage` as the "Flat Damage" part.
+  // We need to inject the DPS portion.
+  // Issue: We don't easily know the "Aggregate Global Tap Mult" because it was applied incrementally.
+  // FIX: We tracked it in `totals.breakdown.layers`.
+  
+  // Let's reconstruct Global Multiplier from layers or simplistically:
+  // Since this is a redesign, let's assume `totals.tapDamage` computed so far is the "Miner Base * Multipliers".
+  // We need to Add (DPS * Ratio * Multipliers).
+  // Optimization: If we assume `applyGlobalSkillsFromMiners` tracked `tapMult` in the layer, we can fetch it?
+  
+  // Let's simplify:
+  // 1. We know `totals.dps`.
+  // 2. We calculate `baseTapFromDps = totals.dps * 0.5`.
+  // 3. We assume this "Phantom Base" benefits from the same multipliers the normal tap did.
+  //    But we applied multipliers iteratively.
+  //    This logic is tricky with the current pipeline.
+  
+  // Alternative: Calculate `baseTapFromDps` FIRST? No, DPS depends on multipliers too.
+  //
+  // SOLUTION: We will extract the "Total Tap Multiplier" by maintaining a separate accumulator in `totals`.
+  // Then we can apply it to the DPS portion.
+  
+  // Since I didn't add `tapMultiplierAccumulator` to `totals` structure earlier, 
+  // I will just add `dpsPortion` to `totals.tapDamage` directly, assuming `dpsPortion` is ALREADY "scaling" with progression because `dps` scales.
+  // BUT: `TapPowerMultiplier` (Fragsworth) specifically boosts CLICK, not DPS.
+  // If we just take DPS, it has DPS mults, not Click mults.
+  // So we MUST apply Click Multipliers to the DPS portion.
+  
+  // Hacky but robust for now: 
+  // In `applyGlobalSkillsFromMiners`, we pushed `{ tapMult }`.
+  // We can iterate `totals.breakdown.layers` to find the total tap mult.
+  
+  let totalTapMult = 1;
+  totals.breakdown.layers.forEach(l => {
+      if (l.tapMult) totalTapMult *= l.tapMult;
+  });
+  
+  // The dpsPortion serves as a base. 
+  // So added damage = (totals.dps * Ratio) * totalTapMult.
+  
+  const tapFromDps = dpsPortion * totalTapMult;
+  totals.tapDamage += tapFromDps;
+  
+  totals.breakdown.tapFromDps = tapFromDps; // Debug info
+
+  // ---------------------------------------------------------------------------
 
   // 5) Final sanity
   totals.tapDamage = Math.max(1, Math.floor(totals.tapDamage));

@@ -1,5 +1,6 @@
 // components/MinersSheet.js
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { memo, useMemo, useRef } from "react";
 import {
     Animated,
@@ -14,8 +15,23 @@ import { D, fmtD } from "../game/bn";
 
 const MINER_PLACEHOLDER = require("../assets/images/sprites/miners/miner_01.png");
 
-function getSkillIconName(kind) {
+// Shared Icon Map (Same as SkillsSheet)
+const SKILL_ICONS = {
+    "s_clickstorm": "flash",
+    "s_powersurge": "flame",
+    "s_lucky": "eye",
+    "s_metal": "magnet",
+    "s_goldclicks": "cash",
+    "s_darkritual": "skull",
+    "s_superclicks": "hammer",
+    "s_energize": "battery-charging",
+    "s_reload": "refresh-circle",
+};
+
+function getSkillIconName(kind, value) {
   switch (kind) {
+    case "unlockActiveSkill":
+      return SKILL_ICONS[value] || "star"; // Match active skill icon
     case "tapMultiplier":
       return "finger-print";
     case "dpsMultiplier":
@@ -46,6 +62,7 @@ const MinerRow = memo(function MinerRow({
   onBuyOrUpgrade, // (minerId) => void
   onBuySkill,     // (minerId, skillId) => void
   purchasedSkillsForMiner,
+  tags = 0,       // Starlink Tags
 }) {
   const cost = getNextCost(miner, level);
 
@@ -54,9 +71,18 @@ const MinerRow = memo(function MinerRow({
 
   const action = level <= 0 ? "UNLOCK" : "UPGRADE";
   const dpsPerLvl = minerDpsPerLevel(miner);
-  const totalDps = D(dpsPerLvl).mul(Math.max(1, level));
+  
+  // Base DPS
+  let totalDpsVal = D(dpsPerLvl).mul(Math.max(1, level));
+  
+  // Apply Starlink Multiplier to displayed DPS
+  if (tags > 0) {
+      const tagMult = 1 + tags * 0.50; // hardcoded 0.50 or pass config?
+      totalDpsVal = totalDpsVal.mul(tagMult);
+  }
+  
   const dpsLine = D(dpsPerLvl).gt(0)
-    ? `${fmtD(totalDps)} DPS`
+    ? `${fmtD(totalDpsVal)} DPS`
     : "— DPS";
 
   // Animation ref (Keep subtle press effect)
@@ -77,12 +103,32 @@ const MinerRow = memo(function MinerRow({
       speed: 20,
     }).start();
   };
+  
+  // ✅ SORT SKILLS BY LEVEL
+  const sortedSkills = useMemo(() => {
+     if (!miner.skills) return [];
+     return [...miner.skills].sort((a, b) => (a.unlockAt || 0) - (b.unlockAt || 0));
+  }, [miner.skills]);
 
   return (
-    <View style={styles.item}>
+    <View style={[styles.item, tags > 0 && styles.itemGilded]}>
+      {tags > 0 && (
+        <LinearGradient
+            colors={['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+        />
+      )}
       {/* ICON BOX */}
       <View style={styles.iconBox}>
         <Image source={MINER_PLACEHOLDER} style={styles.icon} />
+        {tags > 0 && (
+             <View style={styles.tagBadge}>
+                 <MaterialCommunityIcons name="star-four-points" size={8} color="#ffd700" />
+                 <Text style={styles.tagBadgeTxt}>{tags}x</Text>
+             </View>
+        )}
         {level > 0 && (
           <View style={styles.lvlBadge}>
             <Text style={styles.lvlBadgeTxt}>{level}</Text>
@@ -96,9 +142,9 @@ const MinerRow = memo(function MinerRow({
         <Text style={styles.dpsText}>{dpsLine}</Text>
         
         {/* SKILLS STRIP - Simplified */}
-        {!!(miner.skills && miner.skills.length) && (
+        {!!(sortedSkills.length > 0) && (
           <View style={styles.skillStrip}>
-            {miner.skills.map((sk) => {
+            {sortedSkills.map((sk) => {
               const unlockAt = Number(sk.unlockAt || 9999);
               const locked = level < unlockAt;
               const purchased = !!purchasedSkillsForMiner?.[sk.id];
@@ -106,7 +152,7 @@ const MinerRow = memo(function MinerRow({
               const canAffordSkill = !locked && !purchased && D(minerals).gte(skCost);
 
               let iconColor = "#ffffff40";
-              const iconName = getSkillIconName(sk.kind);
+              const iconName = getSkillIconName(sk.kind, sk.value); // Use value for mapping match
 
               if (purchased) iconColor = "#4ade80"; // Green
               else if (canAffordSkill) iconColor = "#fbbf24"; // Gold
@@ -160,6 +206,7 @@ function MinersSheetImpl({
   miners = [],
   owned = {},
   ownedSkills = {},
+  tagsByMinerId = {}, // ✅
   minerals = 0,
   getNextCost,
   onBuyOrUpgrade,
@@ -208,6 +255,7 @@ function MinersSheetImpl({
               onBuyOrUpgrade={onBuyOrUpgrade}
               onBuySkill={onBuySkill}
               purchasedSkillsForMiner={purchasedMap}
+              tags={tagsByMinerId[m.id] || 0} // ✅
             />
           );
         }}
@@ -289,6 +337,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.05)",
+    overflow: 'hidden', // For gradient
+  },
+  itemGilded: {
+      borderColor: "rgba(255, 215, 0, 0.3)", // Gold border
+      backgroundColor: "rgba(255, 215, 0, 0.05)", 
   },
   iconBox: {
     width: 36,
@@ -300,6 +353,26 @@ const styles = StyleSheet.create({
     marginRight: 10,
     borderWidth: 1,
     borderColor: "rgba(59, 130, 246, 0.2)",
+  },
+  tagBadge: {
+      position: 'absolute',
+      bottom: -4,
+      left: -4, // Moved to Left
+      backgroundColor: '#000',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#ffd700',
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 3,
+      paddingVertical: 1,
+      zIndex: 10,
+  },
+  tagBadgeTxt: {
+      color: '#ffd700',
+      fontSize: 8,
+      fontWeight: 'bold',
+      marginLeft: 1,
   },
   icon: {
     width: 24,

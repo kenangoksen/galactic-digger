@@ -19,6 +19,14 @@
         "cost": "100"
       },
       {
+        "id": "m01_unlock_s_clickstorm",
+        "name": "Unlock: Rhythm Strike",
+        "kind": "unlockActiveSkill",
+        "value": "s_clickstorm",
+        "unlockAt": 125,
+        "cost": "250"
+      },
+      {
         "id": "m01_s25",
         "name": "Stronger Fingers",
         "kind": "tapMultiplier",
@@ -42,6 +50,7 @@
         "unlockAt": 75,
         "cost": "10000"
       },
+
       {
         "id": "m01_s100",
         "name": "Crit Tap",
@@ -71,6 +80,7 @@
         "unlockAt": 10,
         "cost": "1000"
       },
+
       {
         "id": "m02_s25",
         "name": "Better Fuel",
@@ -175,6 +185,14 @@
       "perLevel": 1.07
     },
     "skills": [
+      {
+        "id": "m04_unlock_s_powersurge",
+        "name": "Unlock: Drill Overdrive",
+        "kind": "unlockActiveSkill",
+        "value": "s_powersurge",
+        "unlockAt": 125,
+        "cost": "1000000"
+      },
       {
         "id": "m04_s10",
         "name": "Heavy Knock",
@@ -288,6 +306,14 @@
     },
     "skills": [
       {
+        "id": "m06_unlock_s_metal",
+        "name": "Unlock: Metal Detector",
+        "kind": "unlockActiveSkill",
+        "value": "s_metal",
+        "unlockAt": 125,
+        "cost": "10000000"
+      },
+      {
         "id": "m06_s10",
         "name": "Drill Oil",
         "kind": "dpsMultiplier",
@@ -400,6 +426,14 @@
     },
     "skills": [
       {
+        "id": "m08_unlock_s_lucky",
+        "name": "Unlock: Precision Poke",
+        "kind": "unlockActiveSkill",
+        "value": "s_lucky",
+        "unlockAt": 125,
+        "cost": "100000000"
+      },
+      {
         "id": "m08_s10",
         "name": "Speed Shoes",
         "kind": "dpsMultiplier",
@@ -511,6 +545,14 @@
       "perLevel": 1.07
     },
     "skills": [
+      {
+        "id": "m10_unlock_s_golden_clicks",
+        "name": "Unlock: Golden Touch",
+        "kind": "unlockActiveSkill",
+        "value": "s_golden_clicks",
+        "unlockAt": 125,
+        "cost": "1000000000"
+      },
       {
         "id": "m10_s10",
         "name": "Captain Command",
@@ -632,6 +674,14 @@
     },
     "skills": [
       {
+        "id": "m12_unlock_s_dark_ritual",
+        "name": "Unlock: Dark Ritual",
+        "kind": "unlockActiveSkill",
+        "value": "s_dark_ritual",
+        "unlockAt": 125,
+        "cost": "10000000000"
+      },
+      {
         "id": "m12_s10",
         "name": "Bore 1",
         "kind": "dpsMultiplier",
@@ -743,6 +793,14 @@
       "perLevel": 1.07
     },
     "skills": [
+      {
+        "id": "m14_unlock_s_superclicks",
+        "name": "Unlock: Super Clicks",
+        "kind": "unlockActiveSkill",
+        "value": "s_superclicks",
+        "unlockAt": 125,
+        "cost": "100000000000"
+      },
       {
         "id": "m14_s10",
         "name": "Heat 1",
@@ -856,6 +914,14 @@
     },
     "skills": [
       {
+        "id": "m16_unlock_s_energize",
+        "name": "Unlock: Energize",
+        "kind": "unlockActiveSkill",
+        "value": "s_energize",
+        "unlockAt": 125,
+        "cost": "1000000000000"
+      },
+      {
         "id": "m16_s10",
         "name": "Cut 1",
         "kind": "dpsMultiplier",
@@ -955,6 +1021,14 @@
       "perLevel": 1.07
     },
     "skills": [
+      {
+        "id": "m18_unlock_s_reload",
+        "name": "Unlock: Reload",
+        "kind": "unlockActiveSkill",
+        "value": "s_reload",
+        "unlockAt": 125,
+        "cost": "10000000000000"
+      },
       {
         "id": "m18_s10",
         "name": "Crit Chance",

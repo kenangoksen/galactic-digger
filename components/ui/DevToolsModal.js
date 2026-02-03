@@ -40,6 +40,24 @@ export default function DevToolsModal({ visible, onClose, engine }) {
      Alert.alert("Star Power", "Added 1000 Fragments");
   };
   
+  const addTags = () => {
+      // Add 5 Random Tags
+      engine.dispatchEco({ type: "GAIN_TAG", amount: 5 });
+      Alert.alert("Gilded!", "Added 5 Random Starlink Tags");
+  };
+
+  const addTagsToFirst5 = () => {
+      // Give 1 tag to each of the first 5 miners (miner_01 to miner_05)
+      // We dispatch ONE by ONE or create a bulk payload?
+      // Our reducer GAIN_TAG takes targetMinerId.
+      // We'll just dispatch 5 times. React batching might handle it, or useGameEngine state updates.
+      // Better: Dispatch separate.
+      ["miner_01", "miner_02", "miner_03", "miner_04", "miner_05"].forEach(id => {
+          engine.dispatchEco({ type: "GAIN_TAG", targetMinerId: id, amount: 1 });
+      });
+      Alert.alert("Gilded!", "Gave 1 Tag to first 5 miners.");
+  };
+  
   const resetGame = () => {
       engine.resetGame();
       onClose();
@@ -90,6 +108,28 @@ export default function DevToolsModal({ visible, onClose, engine }) {
                    <Pressable style={styles.cheatBtn} onPress={addFragments}>
                       <Ionicons name="star" size={18} color="#a855f7" />
                       <Text style={styles.cheatTxt}>+1k Fragments</Text>
+                   </Pressable>
+                   <Pressable style={styles.cheatBtn} onPress={addTags}>
+                      <Ionicons name="star-four-points" size={18} color="#ffd700" />
+                      <Text style={styles.cheatTxt}>+5 Random Tags</Text>
+                   </Pressable>
+                   <Pressable style={styles.cheatBtn} onPress={addTagsToFirst5}>
+                      <Ionicons name="list" size={18} color="#fbbf24" />
+                      <Text style={styles.cheatTxt}>First 5 Tags</Text>
+                   </Pressable>
+                </View>
+              </View>
+
+              {/* SKILLS */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Skills</Text>
+                <View style={styles.grid}>
+                   <Pressable style={styles.cheatBtn} onPress={() => {
+                       engine.resetSkillCooldowns();
+                       Alert.alert("Refreshed", "Skill Cooldowns Reset");
+                   }}>
+                      <Ionicons name="refresh-circle" size={18} color="#fbbf24" />
+                      <Text style={styles.cheatTxt}>Reset Cooldowns</Text>
                    </Pressable>
                 </View>
               </View>

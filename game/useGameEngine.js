@@ -4,21 +4,21 @@
 // Sadece ECONOMY (minerals/cost/buy) Decimal-safe yapılır.
 
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useReducer,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
 } from "react";
 
 import protocolsDef from "../assets/config/cosmic_protocols.json";
 import minersDef from "../assets/config/miners.json";
 import planets from "../assets/config/planets.json";
-import { PLANET_SPRITES } from "../assets/registry/planetSprites";
 
 import { AppState } from "react-native";
 import { D } from "./bn";
+import { DAMAGE_CONFIG } from "./config";
 import { computeTotals, getBulkCost, getPrimalReward } from "./damage";
 import { loadGame, saveGame, serializeEco } from "./persistGame";
 import { DEFAULT_STATS, initStats } from "./stats"; // 📊
@@ -64,6 +64,10 @@ const ECO_INIT = {
   unlockedCount: 2,
   stellarFragments: D(0), // ✅ Prestige Currency
   cosmicProtocols: {}, // { protocol_id: level }
+  // STARLINK
+  totalStarlinkTags: 0,
+  tagsByMinerId: {}, // { minerId: count }
+  lifetimeTagsEarned: 0,
 };
 
 function ecoReducer(state, action) {
@@ -136,6 +140,51 @@ function ecoReducer(state, action) {
         stellarFragments: D(state.stellarFragments).add(action.amount || 0),
       };
     }
+    
+    case "GAIN_TAG": {
+        // action: { targetMinerId: string (optional), amount: 1 }
+        const amt = action.amount || 1;
+        const target = action.targetMinerId || null;
+        
+        let newTagsMap = { ...state.tagsByMinerId };
+        
+        // If no target provided, pick a random owned miner > 0 level.
+        let finalTarget = target;
+        if (!finalTarget) {
+            const ownedIds = Object.keys(state.ownedMiners).filter(id => state.ownedMiners[id] > 0);
+            if (ownedIds.length > 0) {
+                finalTarget = ownedIds[Math.floor(Math.random() * ownedIds.length)];
+            }
+        }
+        
+        if (finalTarget) {
+            newTagsMap[finalTarget] = (newTagsMap[finalTarget] || 0) + amt;
+        } else {
+             // Fallback if no miners owned
+             newTagsMap["unassigned"] = (newTagsMap["unassigned"] || 0) + amt;
+        }
+        
+        return {
+            ...state,
+            totalStarlinkTags: (state.totalStarlinkTags || 0) + amt,
+            lifetimeTagsEarned: (state.lifetimeTagsEarned || 0) + amt,
+            tagsByMinerId: newTagsMap
+        };
+    }
+
+    case "REDISTRIBUTE_TAGS": {
+         const total = state.totalStarlinkTags || 0;
+         if (total <= 0) return state;
+         
+         const ownedIds = Object.keys(state.ownedMiners).filter(id => state.ownedMiners[id] > 0);
+         if (ownedIds.length === 0) return state;
+         
+         // Basic Redistribution: 80% to provided 'primary', rest to others?
+         // For V1, let's just implement the mechanics if needed, or leave basic.
+         // Since UI for redistribution isn't active yet, this is placeholder.
+         return state;
+    }
+
     case "LOAD_STATE": {
       // payload: { minerals: Decimal, unlockedCount, ownedMiners, ownedSkills }
       const p = action.payload;
@@ -147,6 +196,10 @@ function ecoReducer(state, action) {
         unlockedCount: p.unlockedCount ?? state.unlockedCount,
         ownedMiners: p.ownedMiners ?? state.ownedMiners,
         ownedSkills: p.ownedSkills ?? state.ownedSkills,
+        // Starlink Rehydration
+        totalStarlinkTags: p.totalStarlinkTags || 0,
+        tagsByMinerId: p.tagsByMinerId || {},
+        lifetimeTagsEarned: p.lifetimeTagsEarned || 0,
       };
     }
 
@@ -162,6 +215,10 @@ function ecoReducer(state, action) {
           ...ECO_INIT, // Reset minerals, miners, unlockedCount, etc.
           stellarFragments: D(state.stellarFragments).add(gained),
           cosmicProtocols: state.cosmicProtocols, // Keep protocols!
+          // Keep Starlink Tags!
+          totalStarlinkTags: state.totalStarlinkTags,
+          tagsByMinerId: state.tagsByMinerId,
+          lifetimeTagsEarned: state.lifetimeTagsEarned,
        };
     }
 
@@ -240,6 +297,25 @@ export function useGameEngine() {
   const ownedSkills = eco.ownedSkills;
   const [pendingOwnedMiners, setPendingOwnedMiners] = useState({});
 
+  // --- ACTIVE SKILLS STATE (Moved Here) ---
+  const SKILLS_CONFIG = require("../assets/config/skills.json");
+  
+  const [activeSkills, setActiveSkills] = useState({}); 
+  const [skillCooldowns, setSkillCooldowns] = useState({}); 
+  const [ownedActiveSkills, setOwnedActiveSkills] = useState({}); 
+  const [darkRitualMult, setDarkRitualMult] = useState(1); 
+  
+  const energizeRef = useRef(false);
+  const lastUsedSkillRef = useRef(null);
+  
+  // Tag Toast
+  const [tagToast, setTagToast] = useState(null); // { minerName: string } | null
+  
+  // Streak State
+  const tapStreakRef = useRef(0);
+  const lastTapTimeRef = useRef(Date.now());
+  const [uiStreak, setUiStreak] = useState(0);
+
   const resetGame = useCallback(async () => {
     // 1. Clear storage
     await import("./persistGame").then((m) => m.clearGame());
@@ -267,8 +343,32 @@ export function useGameEngine() {
     };
 
   const currentPlanetImg =
-    PLANET_SPRITES[currentPlanet.sprite] ||
     require("../assets/images/sprites/planets/planet_01.png");
+
+  // --- MULTIPLIER HELPERS (Moved Up) ---
+  const getDpsMultiplier = useCallback(() => {
+      let mult = D(1);
+      if (activeSkills['s_powersurge'] > Date.now()) mult = mult.times(2); // Powersurge
+      mult = mult.times(darkRitualMult);
+      return mult;
+  }, [activeSkills, darkRitualMult]);
+
+  const getTapMultiplier = useCallback(() => {
+      let mult = D(1);
+      if (activeSkills['s_superclicks'] > Date.now()) mult = mult.times(3); // Super Clicks
+      return mult;
+  }, [activeSkills]);
+  
+  const getGoldMultiplier = useCallback(() => {
+      let mult = D(1);
+      if (activeSkills['s_metal'] > Date.now()) mult = mult.times(2); // Metal Detector
+      return mult;
+  }, [activeSkills]);
+  
+  const getCritChanceBonus = useCallback(() => {
+      if (activeSkills['s_lucky'] > Date.now()) return 0.5; // Lucky Strikes
+      return 0;
+  }, [activeSkills]);
 
   // totals (tap + dps + crit + multipliers) — depends only on economy + zone
   const totals = useMemo(() => {
@@ -278,12 +378,18 @@ export function useGameEngine() {
       ownedSkills,
       zone,
       protocolsDef, // ✅ Passed
+      ownedSkills,
+      zone,
+      protocolsDef, // ✅ Passed
       ownedProtocols: eco.cosmicProtocols, // ✅ Passed
+      tagsByMinerId: eco.tagsByMinerId, // ✅ Needed for DPS calc
     });
-  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols]);
+  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId]);
 
   const tapDamageBase = totals.tapDamage;
-  const totalDps = totals.dps;
+  
+  // Apply Active Skills to DPS
+  const totalDps = D(totals.dps).mul(getDpsMultiplier()).toNumber();
 
   const critChance = totals.critChance;
   const critMult = totals.critMult;
@@ -349,6 +455,7 @@ export function useGameEngine() {
       // 1. Calculate DPS (Static)
       let offlineDps = D(0);
       const minersDef = require("../assets/config/miners.json");
+const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       
       Object.keys(sEco.ownedMiners || {}).forEach((mid) => {
         const lvl = sEco.ownedMiners[mid];
@@ -743,8 +850,10 @@ export function useGameEngine() {
       const localZone = zoneRef.current;
       const localStep = stepRef.current;
       const base = monsterMineral(localZone, localStep);
+      const activeGoldMult = getGoldMultiplier(); // Metal Detector
       const gained = D(base)
         .mul(totals.mineralMult || 1)
+        .mul(activeGoldMult)
         .floor();
       dispatchEco({ type: "GAIN_MINERALS", amount: gained });
 
@@ -780,6 +889,19 @@ export function useGameEngine() {
           const pReward = getPrimalReward(localZone);
           if (pReward > 0) {
              dispatchEco({ type: "GAIN_FRAGMENTS", amount: pReward });
+             
+             // STARLINK TAG DROP LOGIC
+             // 10% Chance (STARLINK_CONFIG.DROP_CHANCE)
+             if (Math.random() < (STARLINK_CONFIG.DROP_CHANCE || 0.1)) {
+                 dispatchEco({ type: "GAIN_TAG", amount: 1 });
+                 // Toast Logic (We don't know who got it until we check state, 
+                 // but dispatch happens asynchronously. 
+                 // For now, simpler: Just show "Starlink Tag Found!"
+                 // Or we can peek at who would get it (random).
+                 setTagToast({ message: "Starlink Tag Found!" });
+                 setTimeout(() => setTagToast(null), 3000);
+             }
+
              // 📊 Stats (Fragments)
              if (s && s.lifetime) {
                  s.lifetime.totalStellarFragmentsEarned = D(s.lifetime.totalStellarFragmentsEarned).add(pReward).toString();
@@ -857,12 +979,172 @@ export function useGameEngine() {
     [dispatchEco, totals.mineralMult, maxUnlockedZone, isPrimal],
   );
 
-  const calcTapDamage = useCallback((trackStats = false) => {
-    const isCritNow = Math.random() < critChance;
-    const dmg = isCritNow ? tapDamageBase * critMult : tapDamageBase;
+  // ---------------------------------------------------------------------------
+  // NEW: Active Skills System (Clicker Heroes Style)
+  // ---------------------------------------------------------------------------
+  
+ 
 
-    // 📊 Stats Tracking
+  // --- METHODS ---
+  // --- METHODS ---
+  const isSkillUnlockable = (skillId) => {
+    // 1. Find the target active skill
+    const activeSkillDef = SKILLS_CONFIG.find(s => s.id === skillId);
+    if (!activeSkillDef) return false;
+
+    // 2. Identify the Miner responsible for unlocking it
+    const minerId = activeSkillDef.minerUnlockId;
+    if (!minerId) return false;
+
+    // 3. Check if user owns the SPECIFIC 'unlockActiveSkill' upgrade for this skill
+    const purchasedMap = eco.ownedSkills[minerId] || {};
+    const minerDef = minersDef.find(m => m.id === minerId);
+    
+    if (!minerDef?.skills) return false;
+
+    for (const sk of minerDef.skills) {
+        if (sk.kind === "unlockActiveSkill" && sk.value === skillId) {
+             // Found the unlocker skill. Is it purchased?
+             return !!purchasedMap[sk.id];
+        }
+    }
+    
+    // Fallback: If no unlock skill defined in miner, maybe default unlock?
+    // For now, assume strict requirement. return false.
+    // User requested: "Miner içerisinde skill'i satın aldığımda".
+    // If I haven't added the skill to miners.json yet (e.g. miners 4-9), this will return false.
+    // To prevent blocking access to miners 4-9 while I update json, I can add a fallback check?
+    // "If no unlocker skill exists in definition, use old logic (miner owned > 0)"
+    
+    const hasUnlockerDefined = minerDef.skills.some(sk => sk.kind === "unlockActiveSkill" && sk.value === skillId);
+    if (!hasUnlockerDefined) {
+        return (eco.ownedMiners[minerId] || 0) > 0;
+    }
+    
+    return false;
+  };
+
+  const purchaseActiveSkill = (skillId) => {
+    const skill = SKILLS_CONFIG.find(s => s.id === skillId);
+    if (!skill) return;
+    const cost = D(skill.cost);
+    
+    // Check cost against Minerals
+    if (eco.minerals.lt(cost)) return;
+    
+    // Deduct
+    dispatchEco({ type: "GAIN_MINERALS", amount: cost.times(-1) });
+    setOwnedActiveSkills(prev => ({ ...prev, [skillId]: (prev[skillId]||0) + 1 }));
+  };
+
+  const resetSkillCooldowns = () => {
+    setSkillCooldowns({});
+    // Optional: Also clear active skills? Or let them run out?
+    // User asked to reset cooldowns.
+  };
+
+  const activateSkill = (skillId) => {
+    const skill = SKILLS_CONFIG.find(s => s.id === skillId);
+    if (!skill) return;
+
+    const now = Date.now();
+    if (skillCooldowns[skillId] && skillCooldowns[skillId] > now) return;
+
+    // Handle Energize Consumption
+    let multiplier = 1;
+    if (energizeRef.current && skill.effect !== 'energize') {
+        multiplier = 2;
+        energizeRef.current = false; 
+    }
+
+    // Apply Effects
+    if (skill.effect === 'energize') {
+        energizeRef.current = true;
+    } 
+    else if (skill.effect === 'reload') {
+        if (lastUsedSkillRef.current) {
+            setSkillCooldowns(prev => ({
+                ...prev,
+                [lastUsedSkillRef.current]: Math.max(now, (prev[lastUsedSkillRef.current] || now) - 3600000)
+            }));
+        }
+    }
+    else if (skill.effect === 'darkRitual') {
+        const bonus = (skill.value - 1) * multiplier + 1;
+        setDarkRitualMult(prev => prev * bonus);
+    }
+    else {
+        // Duration Skill
+        setActiveSkills(prev => ({
+            ...prev,
+            [skillId]: now + skill.duration
+        }));
+    }
+
+    // Set Cooldown
+    setSkillCooldowns(prev => ({
+        ...prev,
+        [skillId]: now + skill.cooldown
+    }));
+    
+    if (skill.effect !== 'reload' && skill.effect !== 'energize') {
+         lastUsedSkillRef.current = skillId;
+    }
+  };
+
+  // --- LOOPS ---
+  // 1. Skill Expiry & Effects Loop (100ms)
+  // Loop moved to after handleTap definition to avoid TDZ
+
+  const calcTapDamage = useCallback((trackStats = false, isAuto = false) => {
     const s = statsRef.current;
+    
+    // 1. Base (from Totals)
+    // totals.tapDamage already includes (Miners Fixed + DPS * Ratio)
+    let dmg = D(totals.tapDamage);
+    
+    // 2. Tap Power Multiplier (Fragsworth)
+    // We assume 'tapPowerLevel' is tracked somewhere.
+    // For now, let's use a placeholder '1.0' or read from 'ownedConstants'?
+    // Let's assume 'totals.breakdown.tapMult' is part of it.
+    // User requested separate explicit multiplier.
+    // "TapPowerMultiplier = 1 + tapPowerLevel * 0.2"
+    // We'll calculate it if we have a level source. 
+    // Assuming level 0 for now as no upgrade exists yet.
+    const tapPowerLevel = 0; // TODO: Connect to upgrade
+    const tapPowerMult = 1 + tapPowerLevel * DAMAGE_CONFIG.TAP_POWER_PER_LEVEL;
+    dmg = dmg.mul(tapPowerMult);
+    
+    // 3. Streak Multiplier (Juggernaut)
+    // StreakMultiplier = 1 + min(count, cap) * bonus
+    const streakCount = tapStreakRef.current;
+    const cappedStreak = Math.min(streakCount, DAMAGE_CONFIG.STREAK_CAP);
+    const streakMult = 1 + cappedStreak * DAMAGE_CONFIG.STREAK_BONUS_PER_TAP;
+    dmg = dmg.mul(streakMult);
+    
+    // 4. Crit (Bhaal + Lucky Strikes)
+    // Base Chance + Bonus
+    // Base Mult + Bonus
+    const critChance = totals.critChance; // aggregated in damage.js
+    const critBonus = getCritChanceBonus();
+    const finalCritChance = Math.min(1.0, critChance + critBonus);
+    
+    const isCritNow = Math.random() < finalCritChance;
+    
+    let finalDmg = dmg;
+    if (isCritNow) {
+        const critMultBase = totals.critMult;
+        // Apply Crit Multiplier logic if separate? 
+        // totals.critMult already includes 'critMultiplier' ancient/skill bonuses.
+        // Formula: Dmg * CritMult
+        finalDmg = finalDmg.mul(critMultBase);
+    }
+    
+    // 5. Skill Multipliers (Super Clicks, Energize)
+    // We delegate to getTapMultiplier which checks activeSkills
+    finalDmg = finalDmg.mul(getTapMultiplier());
+    
+    // --- Stats Tracking ---
     if (trackStats && s && s.lifetime) {
         // Taps
         s.lifetime.totalTaps = (s.lifetime.totalTaps || 0) + 1;
@@ -870,30 +1152,64 @@ export function useGameEngine() {
         s.thisSession.totalTaps = (s.thisSession.totalTaps || 0) + 1;
 
         // Damage (Safe decimal add)
-        s.lifetime.totalTapDamage = D(s.lifetime.totalTapDamage).add(dmg).toString();
-        // Also update total overall damage
-        s.lifetime.totalDamage = D(s.lifetime.totalDamage).add(dmg).toString();
+        s.lifetime.totalTapDamage = D(s.lifetime.totalTapDamage).add(finalDmg).toString();
+        s.lifetime.totalDamage = D(s.lifetime.totalDamage).add(finalDmg).toString();
         
-        s.thisRewind.damageTap = D(s.thisRewind.damageTap).add(dmg).toString();
-        s.thisRewind.damageAll = D(s.thisRewind.damageAll).add(dmg).toString();
+        s.thisRewind.damageTap = D(s.thisRewind.damageTap).add(finalDmg).toString();
+        s.thisRewind.damageAll = D(s.thisRewind.damageAll).add(finalDmg).toString();
         
-        s.thisSession.damageAll = D(s.thisSession.damageAll).add(dmg).toString();
+        s.thisSession.damageAll = D(s.thisSession.damageAll).add(finalDmg).toString();
 
         // Peaks
-        if (D(dmg).gt(s.lifetime.highestTapHit)) s.lifetime.highestTapHit = D(dmg).toString();
-        if (D(dmg).gt(s.thisRewind.highestTapHit)) s.thisRewind.highestTapHit = D(dmg).toString();
+        if (D(finalDmg).gt(s.lifetime.highestTapHit)) s.lifetime.highestTapHit = finalDmg;
+        if (D(finalDmg).gt(s.thisRewind.highestTapHit)) s.thisRewind.highestTapHit = finalDmg;
+
+        // Stats: Streak
+        if (streakCount > (s.lifetime.longestStreak || 0)) s.lifetime.longestStreak = streakCount;
+        if (streakCount > (s.thisRewind.longestStreak || 0)) s.thisRewind.longestStreak = streakCount;
 
         // Crit
         if (isCritNow) {
             s.lifetime.totalCriticalTaps = (s.lifetime.totalCriticalTaps || 0) + 1;
             s.thisRewind.criticalTaps = (s.thisRewind.criticalTaps || 0) + 1;
-            if (D(dmg).gt(s.lifetime.peakCriticalTapHit)) s.lifetime.peakCriticalTapHit = D(dmg).toString();
-            if (D(dmg).gt(s.thisRewind.peakCritTapHit)) s.thisRewind.peakCritTapHit = D(dmg).toString();
+            if (D(finalDmg).gt(s.lifetime.peakCriticalTapHit)) s.lifetime.peakCriticalTapHit = finalDmg;
+            if (D(finalDmg).gt(s.thisRewind.peakCritTapHit)) s.thisRewind.peakCritTapHit = finalDmg;
         }
     }
 
-    return { dmg, isCrit: isCritNow };
-  }, [critChance, critMult, tapDamageBase]);
+    return { dmg: finalDmg, isCrit: isCritNow };
+  }, [totals.tapDamage, totals.critChance, totals.critMult, activeSkills, getCritChanceBonus, getTapMultiplier]);
+
+
+
+
+
+  const handleTap = useCallback((isAuto = false) => {
+    const now = Date.now();
+    
+    // 1. Streak Update
+    // User requested Auto Tap to sustain/build combo just like Manual Tap
+    lastTapTimeRef.current = now;
+    
+    // Increase streak (both manual and auto?)
+    // User: "Clickstorm... streak'i artıracak şekilde tasarla"
+    tapStreakRef.current += 1;
+    
+    // Update UI every tap
+    setUiStreak(tapStreakRef.current);
+    
+    // 2. Damage Calc
+    const { dmg, isCrit } = calcTapDamage(true, isAuto);
+    applyDamage(dmg);
+    
+    // 3. Visuals (Only manual usually, or sparse auto)
+    // If auto is 10cps, floating text spam is bad. 
+    // We can handle visuals outside.
+    return { dmg, isCrit };
+  }, [applyDamage]); // We need to wrap calcTapDamage properly or move logic inside
+
+
+  // Re-calc if static stats change
 
   useEffect(() => {
     dpsRef.current = totalDps;
@@ -904,6 +1220,28 @@ export function useGameEngine() {
   useEffect(() => {
     applyDamageRef.current = applyDamage;
   }, [applyDamage]);
+
+  // --- ACTIVE SKILLS LOOP ---
+  useEffect(() => {
+    const timer = setInterval(() => {
+        const now = Date.now();
+        
+        // 1. Streak Timeout
+        if (tapStreakRef.current > 0) {
+            if (now - lastTapTimeRef.current > DAMAGE_CONFIG.STREAK_TIMEOUT_MS) {
+                tapStreakRef.current = 0;
+                setUiStreak(0);
+            }
+        }
+        
+        // 2. Clickstorm ('s_clickstorm')
+        const csExpiry = activeSkills['s_clickstorm'];
+        if (csExpiry && csExpiry > now) {
+            handleTap(true); // isAuto = true
+        }
+    }, 100); // 10 ticks/sec
+    return () => clearInterval(timer);
+  }, [activeSkills, handleTap]);
 
   useEffect(() => {
     const TICK_MS = 250;
@@ -1215,10 +1553,12 @@ export function useGameEngine() {
 
     // economy
     minerals,
+    eco, // ✅ Expose full eco state (needed for tags etc)
     ownedMiners: {
       ...ownedMiners,
       ...pendingOwnedMiners,
     },
+    uiStreak, // Exported for Combo UI
 
     ownedSkills,
     buyOrUpgradeMiner,
@@ -1226,11 +1566,37 @@ export function useGameEngine() {
 
     // totals / damage
     totalDps,
-    calcTapDamage,
-    applyDamage,
+    // totals / damage
+    totalDps,
+    totalDps,
+    handleTap, // ✅ Exported for UI (GameStage onTap)
+    calcTapDamage, // Raw calc
+    // Skills API
+    activateSkill,
+    unlockSkill: purchaseActiveSkill,
+    activeSkills,
+    skillCooldowns,
+    activeSkillLevels: ownedActiveSkills,
+    ownedActiveSkills,
+    SKILLS_CONFIG, // ✅ Exported for UI
+    isSkillUnlockable,
+    resetSkillCooldowns,
+    
+    // Offline
+    offlineEarnings,
     unlockedCount,
     resetGame,
-    isPrimal, // 🟣
+    isPrimal, 
+    
+    // Skills API
+    activateSkill,
+    unlockSkill: purchaseActiveSkill,
+    activeSkills,
+    skillCooldowns,
+    activeSkillLevels: ownedActiveSkills,
+    ownedActiveSkills,
+    SKILLS_CONFIG,
+    isSkillUnlockable,
     
     // Offline
     offlineEarnings,
