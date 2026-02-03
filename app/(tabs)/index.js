@@ -7,6 +7,8 @@ import SettingsSheetHost from "../../components/game/SettingsSheetHost";
 import MinersSheet from "../../components/MinersSheet";
 import SettingsSheet from "../../components/SettingsSheet";
 import TopBar from "../../components/TopBar";
+import DevToolsModal from "../../components/ui/DevToolsModal";
+import StatisticsModal from "../../components/ui/StatisticsModal"; // 📊
 import WelcomeBackModal from "../../components/WelcomeBackModal";
 
 import { fmt, getNextCost } from "../../game/damage";
@@ -30,6 +32,8 @@ export default function HomeScreen() {
     Alert.alert(name, "Şimdilik UI. Mekanikler burada.");
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showDevTools, setShowDevTools] = useState(false);
 
   const engine = useGameEngine();
 
@@ -70,6 +74,7 @@ export default function HomeScreen() {
   const handleCosmic = () => toggleSheet("COSMIC");
 
   return (
+    <>
     <View style={styles.root}>
       <ImageBackground source={BG_IMG} style={styles.bg} resizeMode="cover">
         <MinersSheetHost
@@ -129,9 +134,10 @@ export default function HomeScreen() {
                 bossTimeMsLeft={engine.isBossPlanet ? engine.bossTimeMsLeft : 0}
                 bossMsLeft={engine.isBossPlanet ? engine.bossTimeMsLeft : 0}
                 bossTimerMs={engine.isBossPlanet ? engine.bossTimeMsLeft : 0}
+                isPrimal={engine.isPrimal} // 🟣
                 onTap={() => {
                   anims.runTapFeedback();
-                  const { dmg, isCrit } = engine.calcTapDamage();
+                  const { dmg, isCrit } = engine.calcTapDamage(true); // 📊 Track Stats
                   anims.addFloater(`${isCrit ? "CRIT " : ""}+${fmt(dmg)}`);
                   engine.applyDamage(dmg);
                 }}
@@ -140,7 +146,7 @@ export default function HomeScreen() {
               {/* ✅ Zone/Level geri */}
               <TopBar
                 minerals={engine.minerals}
-                fragments={engine.pendingFragments || 0}
+                fragments={engine.stellarFragments || 0}
                 clickDamage={engine.calcTapDamage().dmg}
                 dps={engine.totalDps}
                 mode={engine.mode === "idle" ? "idle" : "click"}
@@ -158,6 +164,10 @@ export default function HomeScreen() {
                 onToggleMode={engine.toggleMode}
                 adReady={true} // şimdilik true, sonra Ads state’ine bağlarız
                 onAdPress={() => onPressStub("GEM AD")}
+                onDevTools={() => {
+                    console.log("Setting showDevTools to TRUE");
+                    setShowDevTools(true);
+                }}
               />
               {/* SOL BAR */}
               <SideBarLeft
@@ -188,8 +198,19 @@ export default function HomeScreen() {
                   <SettingsSheet
                     onClose={() => setShowSettings(false)}
                     onReset={handleReset}
+                    onStats={() => {
+                        setShowSettings(false);
+                        setShowStats(true);
+                    }}
                   />
                 }
+              />
+
+              {/* Statistics Modal 📊 - Fullscreen over everything */}
+              <StatisticsModal
+                  visible={showStats}
+                  stats={engine.stats}
+                  onClose={() => setShowStats(false)}
               />
 
               {/* Offline Earnings Modal */}
@@ -213,6 +234,13 @@ export default function HomeScreen() {
         </MinersSheetHost>
       </ImageBackground>
     </View>
+
+    <DevToolsModal 
+      visible={showDevTools} 
+      onClose={() => setShowDevTools(false)} 
+      engine={engine} 
+    />
+    </>
   );
 }
 

@@ -18,6 +18,7 @@ export default function SideBarRight({
   mode = "progress", // "progress" | "farm"
   onToggleMode,
   onAdPress,
+  onDevTools, // ✅ Prop added
   adReady = true, // reklam hazır mı? true iken parıltı
 }) {
   // ---- Tooltip State ----
@@ -146,6 +147,19 @@ export default function SideBarRight({
                 <Ionicons name={modeIconName} size={22} color={modeColor} />
                 </View>
             </Pressable>
+
+            {/* ---- DEV TOOLS ---- */}
+            <View style={{ marginTop: 8 }}>
+                 <Pressable 
+                    onPress={() => {
+                        console.log("DevTools Button Pressed!");
+                        onDevTools && onDevTools();
+                    }} 
+                    style={[styles.btnBase, { width: 36, height: 36 }]}
+                 >
+                     <Ionicons name="construct" size={16} color="#94a3b8" />
+                 </Pressable>
+            </View>
           </LinearGradient>
         </LinearGradient>
 

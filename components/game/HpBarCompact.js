@@ -1,32 +1,45 @@
-// components/game/HpBarCompact.js
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import { fmt } from "../../game/damage";
 
 export default function HpBarCompact({
   zoneText = "Zone 1 • 1/10",
   hp = 0,
   maxHp = 1,
-  bossMsLeft = 0, // sadece boss'ta > 0
+  bossMsLeft = 0,
 }) {
-  const pct = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
+  const pct = maxHp > 0 ? Math.max(0, Math.min(1, Number(hp) / Number(maxHp))) : 0;
+  
+  // Anim ref
+  const widthAnim = useRef(new Animated.Value(pct)).current;
 
-  // bossMsLeft -> "29.84s"
+  useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: pct,
+      duration: 300, // Smooth transition
+      useNativeDriver: false, // Width animasyonunda false şart
+      easing: Easing.out(Easing.quad),
+    }).start();
+  }, [pct]);
+
+  const widthInterp = widthAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
+  });
+
   const bossTxt =
     bossMsLeft > 0 ? `${(bossMsLeft / 1000).toFixed(2)}s` : "";
 
   return (
     <View pointerEvents="none" style={styles.wrap}>
-      {/* üst bilgi */}
       <Text style={styles.zone}>{zoneText}</Text>
 
-      {/* bar */}
       <View style={styles.barOuter}>
-        <View style={[styles.barFill, { width: `${pct * 100}%` }]} />
-        {/* tek HP sayısı */}
+        {/* Animated Bar Fill */}
+        <Animated.View style={[styles.barFill, { width: widthInterp }]} />
         <Text style={styles.hpText}>{fmt(hp)}</Text>
       </View>
 
-      {/* boss timer sadece boss'ta */}
       {bossMsLeft > 0 && <Text style={styles.timer}>{bossTxt}</Text>}
     </View>
   );

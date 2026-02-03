@@ -12,14 +12,16 @@ import {
   useState,
 } from "react";
 
+import protocolsDef from "../assets/config/cosmic_protocols.json";
 import minersDef from "../assets/config/miners.json";
 import planets from "../assets/config/planets.json";
 import { PLANET_SPRITES } from "../assets/registry/planetSprites";
 
 import { AppState } from "react-native";
 import { D } from "./bn";
-import { computeTotals, getNextCost } from "./damage";
+import { computeTotals, getBulkCost, getPrimalReward } from "./damage";
 import { loadGame, saveGame, serializeEco } from "./persistGame";
+import { DEFAULT_STATS, initStats } from "./stats"; // 📊
 
 // ---------------- Clicker Heroes-style monster HP ----------------
 function baseMonsterHp(zone) {
@@ -73,12 +75,14 @@ function ecoReducer(state, action) {
     }
 
     case "BUY_MINER": {
-      const minerId = action.minerId;
+      const { minerId, amount = 1 } = action;
       const def = minersDef.find((m) => m.id === minerId);
       if (!def) return state;
 
       const lvl = Number(state.ownedMiners[minerId] || 0);
-      const cost = getNextCost(def, lvl); // genelde Decimal döner
+      
+      // Use getBulkCost for N levels
+      const cost = getBulkCost(def, lvl, amount);
 
       // ✅ Decimal compare
       if (!D(state.minerals).gte(cost)) return state;
@@ -86,7 +90,7 @@ function ecoReducer(state, action) {
       return {
         ...state,
         minerals: D(state.minerals).sub(cost),
-        ownedMiners: { ...state.ownedMiners, [minerId]: lvl + 1 },
+        ownedMiners: { ...state.ownedMiners, [minerId]: lvl + amount },
       };
     }
 
@@ -125,6 +129,12 @@ function ecoReducer(state, action) {
       if (next === (state.unlockedCount || 2)) return state;
 
       return { ...state, unlockedCount: next };
+    }
+    case "GAIN_FRAGMENTS": {
+      return {
+        ...state,
+        stellarFragments: D(state.stellarFragments).add(action.amount || 0),
+      };
     }
     case "LOAD_STATE": {
       // payload: { minerals: Decimal, unlockedCount, ownedMiners, ownedSkills }
@@ -184,6 +194,7 @@ export function useGameEngine() {
   const [zone, setZone] = useState(1);
   const [step, setStep] = useState(1);
   const [maxUnlockedZone, setMaxUnlockedZone] = useState(1);
+  const [isPrimal, setIsPrimal] = useState(false);
 
   // Auto-update maxUnlockedZone if we are somehow ahead of it
   useEffect(() => {
@@ -264,8 +275,10 @@ export function useGameEngine() {
       ownedMiners,
       ownedSkills,
       zone,
+      protocolsDef, // ✅ Passed
+      ownedProtocols: eco.cosmicProtocols, // ✅ Passed
     });
-  }, [ownedMiners, ownedSkills, zone]);
+  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols]);
 
   const tapDamageBase = totals.tapDamage;
   const totalDps = totals.dps;
@@ -286,6 +299,9 @@ export function useGameEngine() {
   const hpRef = useRef(hp);
   const maxHpRef = useRef(maxHp);
   const modeRef = useRef(mode);
+  
+  // 📊 Statistics Store
+  const statsRef = useRef(initStats());
 
   useEffect(() => {
     modeRef.current = mode;
@@ -542,6 +558,13 @@ export function useGameEngine() {
         
         dispatchEco({ type: "LOAD_STATE", payload: loaded.eco });
         
+        // 📊 Load Stats
+        if (loaded.stats) {
+            statsRef.current = initStats(loaded.stats);
+        } else {
+            statsRef.current = initStats({});
+        }
+        
         calcOffline(loaded);
       }
       setHydrated(true);
@@ -563,6 +586,7 @@ export function useGameEngine() {
                     maxUnlockedZone: current.maxUnlockedZone 
                 },
                 eco: serializeEco(current.eco),
+                stats: statsRef.current, // 📊
              };
              saveGame(snapshot).catch(e => console.warn("BG Save Failed", e));
         }
@@ -602,6 +626,7 @@ export function useGameEngine() {
             maxUnlockedZone: current.maxUnlockedZone 
         },
         eco: serializeEco(current.eco),
+        stats: statsRef.current, // 📊
       };
 
       saveGame(snapshot).catch(() => {});
@@ -629,8 +654,18 @@ export function useGameEngine() {
     setMaxHp(m);
     setHp(m);
 
-    if (isBossPlanet) setBossTimeMsLeft(30_000);
-    else setBossTimeMsLeft(0);
+    if (isBossPlanet) {
+       setBossTimeMsLeft(30_000);
+       // Primal Check: Zone >= 105 && 25% Chance
+       if (zone >= 105 && Math.random() < 0.25) {
+           setIsPrimal(true);
+       } else {
+           setIsPrimal(false);
+       }
+    } else {
+       setBossTimeMsLeft(0);
+       setIsPrimal(false);
+    }
   }, [zone, step, isBossPlanet]);
 
   const hpPct = useMemo(
@@ -638,110 +673,186 @@ export function useGameEngine() {
     [hp, maxHp],
   );
 
+  const respawningRef = useRef(false);
+
   const applyDamage = useCallback(
     (dmg) => {
+      if (respawningRef.current) return; // 🛑 Respawn sırasında hasar yok
+
       const hit = Number(dmg || 0);
       if (hit <= 0) return;
 
-      // authoritative snapshots
-      let localZone = zoneRef.current;
-      let localStep = stepRef.current;
-
       let currentHp = hpRef.current;
-      let remainingDmg = hit;
+      
+      // HP azal
+      currentHp -= hit;
 
-      // safety: currentHp invalid ise düzelt
-      const cap = monsterHp(localZone, localStep);
-      if (currentHp <= 0 || currentHp > cap) currentHp = cap;
+      // ÖLMEDİ
+      if (currentHp > 0) {
+        hpRef.current = currentHp;
+        setHp(currentHp);
+        return;
+      }
 
-      let kills = 0;
+      // ÖLDÜ (Dead) 💀
+      // 1. Durumu kilitle
+      respawningRef.current = true;
+      hpRef.current = 0;
+      setHp(0); 
 
-      while (remainingDmg > 0) {
-        if (remainingDmg < currentHp) {
-          // mob hayatta kalır
-          currentHp -= remainingDmg;
-          remainingDmg = 0;
-          break;
-        }
+      // 2. Ödül ver
+      const localZone = zoneRef.current;
+      const localStep = stepRef.current;
+      const base = monsterMineral(localZone, localStep);
+      const gained = D(base)
+        .mul(totals.mineralMult || 1)
+        .floor();
+      dispatchEco({ type: "GAIN_MINERALS", amount: gained });
 
-        // mob öldü
-        remainingDmg -= currentHp;
-        kills++;
+      // 📊 Stats (Kill & Eco)
+      const s = statsRef.current;
+      if (s && s.lifetime) {
+          // Kills
+          s.lifetime.totalMonstersKilled = (s.lifetime.totalMonstersKilled || 0) + 1;
+          s.thisRewind.monstersKilled = (s.thisRewind.monstersKilled || 0) + 1;
 
-        // reward (kill başına)
-        const base = monsterMineral(localZone, localStep);
-        const gained = D(base)
-          .mul(totals.mineralMult || 1)
-          .floor();
-        dispatchEco({ type: "GAIN_MINERALS", amount: gained });
+          if (localZone % 5 === 0) {
+             s.lifetime.totalBossesKilled = (s.lifetime.totalBossesKilled || 0) + 1;
+             s.thisRewind.bossesKilled = (s.thisRewind.bossesKilled || 0) + 1;
+             // Anomaly
+             if (isPrimal) {
+                 s.lifetime.totalAnomalyBossesKilled = (s.lifetime.totalAnomalyBossesKilled || 0) + 1;
+                 s.thisRewind.anomalyBossesKilled = (s.thisRewind.anomalyBossesKilled || 0) + 1;
+             }
+          }
 
-        // next step/zone
-        // next step/zone
-        // Use ref for mode to avoid stale closure in game loop
+          // Gold
+          s.lifetime.totalGoldEarned = D(s.lifetime.totalGoldEarned).add(gained).toString();
+          s.thisRewind.goldEarned = D(s.thisRewind.goldEarned).add(gained).toString();
+          s.thisSession.goldEarned = D(s.thisSession.goldEarned).add(gained).toString();
+
+          // Highest Sector
+          if (localZone > (s.lifetime.highestSector || 1)) s.lifetime.highestSector = localZone;
+          if (localZone > (s.thisRewind.highestSector || 1)) s.thisRewind.highestSector = localZone;
+      }
+
+      // Primal Reward
+      if (isPrimal) {
+          const pReward = getPrimalReward(localZone);
+          if (pReward > 0) {
+             dispatchEco({ type: "GAIN_FRAGMENTS", amount: pReward });
+             // 📊 Stats (Fragments)
+             if (s && s.lifetime) {
+                 s.lifetime.totalStellarFragmentsEarned = D(s.lifetime.totalStellarFragmentsEarned).add(pReward).toString();
+                 s.lifetime.totalAnomalySfEarned = D(s.lifetime.totalAnomalySfEarned).add(pReward).toString();
+                 
+                 s.thisRewind.sfGained = D(s.thisRewind.sfGained).add(pReward).toString();
+                 s.thisRewind.sfFromAnomalies = D(s.thisRewind.sfFromAnomalies).add(pReward).toString();
+                 
+                 if (D(pReward).gt(s.lifetime.biggestSfGainOneRewind)) {
+                     // Technically biggest drop, not run total. Naming mismatch?
+                     // "Biggest SF Gain In One Rewind" usually means MAX(sfGained). 
+                     // Or "Biggest Single Drop"? User asked "Biggest Single Loot Drop" separately.
+                     // I'll update "Biggest Single Loot" here.
+                 }
+             }
+          }
+      }
+
+      // 3. Delay (200ms -> "Kısa" dediği için)
+      setTimeout(() => {
+        let nextZone = localZone;
+        let nextStep = localStep;
+        
         const isFarm = modeRef.current === "farm";
         const bossPlanet = localZone % 5 === 0;
 
+        // --- Next Level Logic ---
         if (bossPlanet) {
           // Boss Planet
           if (isFarm) {
-             // Farm Boss: Stay on step 1
-             localStep = 1; 
+             // Farm Boss: Stay on step 1 (Farm modu boss kesince step 1'e atar genelde)
+             nextStep = 1; 
           } else {
              // Progress: Next Zone
-             localZone += 1;
-             localStep = 1;
+             nextZone += 1;
+             nextStep = 1;
           }
         } else {
           // Normal Planet (Steps 1-10)
           if (localStep < 10) {
-              localStep += 1;
+              nextStep += 1;
           } else {
               // End of Zone (Step 10 killed)
               if (isFarm) {
-                  localStep = 1; // Loop back
+                  nextStep = 1; // Loop back
               } else {
-                  localZone += 1; // Next Zone
-                  localStep = 1;
+                  nextZone += 1; // Next Zone
+                  nextStep = 1;
               }
           }
         }
-           
-        // Update Max Unlocked Zone if progressed (only if NOT farming, usually)
-        if (!isFarm) {
-           // We'll update the state after the loop
+
+        // Commit progression
+        if (!isFarm && nextZone > maxUnlockedZone) {
+          setMaxUnlockedZone(nextZone);
         }
 
-        // yeni mobun hp’si
-        currentHp = monsterHp(localZone, localStep);
+        zoneRef.current = nextZone;
+        stepRef.current = nextStep;
+        
+        const newMax = monsterHp(nextZone, nextStep);
+        hpRef.current = newMax;
+        maxHpRef.current = newMax;
 
-        // safety: çok yüksek DPS’te runaway olmasın
-        if (kills > 2000) break;
-      }
+        setZone(nextZone);
+        setStep(nextStep);
+        setMaxHp(newMax);
+        setHp(newMax);
 
-      // commit state ONCE (no race)
-      zoneRef.current = localZone;
-      stepRef.current = localStep;
-      hpRef.current = currentHp;
-
-      const newMax = monsterHp(localZone, localStep);
-      maxHpRef.current = newMax;
-
-      setZone(localZone);
-      setStep(localStep);
-      setMaxHp(newMax);
-      setHp(currentHp);
-      
-      // Update persistent max zone
-      if (localZone > maxUnlockedZone) {
-          setMaxUnlockedZone(localZone);
-      }
+        // Respawn bitti, tekrar vurabiliriz
+        respawningRef.current = false;
+        
+      }, 500); 
     },
-    [dispatchEco, totals.mineralMult, maxUnlockedZone], // Remove mode from dependency
+    [dispatchEco, totals.mineralMult, maxUnlockedZone, isPrimal],
   );
 
-  const calcTapDamage = useCallback(() => {
+  const calcTapDamage = useCallback((trackStats = false) => {
     const isCritNow = Math.random() < critChance;
     const dmg = isCritNow ? tapDamageBase * critMult : tapDamageBase;
+
+    // 📊 Stats Tracking
+    const s = statsRef.current;
+    if (trackStats && s && s.lifetime) {
+        // Taps
+        s.lifetime.totalTaps = (s.lifetime.totalTaps || 0) + 1;
+        s.thisRewind.totalTaps = (s.thisRewind.totalTaps || 0) + 1;
+        s.thisSession.totalTaps = (s.thisSession.totalTaps || 0) + 1;
+
+        // Damage (Safe decimal add)
+        s.lifetime.totalTapDamage = D(s.lifetime.totalTapDamage).add(dmg).toString();
+        // Also update total overall damage
+        s.lifetime.totalDamage = D(s.lifetime.totalDamage).add(dmg).toString();
+        
+        s.thisRewind.damageTap = D(s.thisRewind.damageTap).add(dmg).toString();
+        s.thisRewind.damageAll = D(s.thisRewind.damageAll).add(dmg).toString();
+        
+        s.thisSession.damageAll = D(s.thisSession.damageAll).add(dmg).toString();
+
+        // Peaks
+        if (D(dmg).gt(s.lifetime.highestTapHit)) s.lifetime.highestTapHit = D(dmg).toString();
+        if (D(dmg).gt(s.thisRewind.highestTapHit)) s.thisRewind.highestTapHit = D(dmg).toString();
+
+        // Crit
+        if (isCritNow) {
+            s.lifetime.totalCriticalTaps = (s.lifetime.totalCriticalTaps || 0) + 1;
+            s.thisRewind.criticalTaps = (s.thisRewind.criticalTaps || 0) + 1;
+            if (D(dmg).gt(s.lifetime.peakCriticalTapHit)) s.lifetime.peakCriticalTapHit = D(dmg).toString();
+            if (D(dmg).gt(s.thisRewind.peakCritTapHit)) s.thisRewind.peakCritTapHit = D(dmg).toString();
+        }
+    }
+
     return { dmg, isCrit: isCritNow };
   }, [critChance, critMult, tapDamageBase]);
 
@@ -763,6 +874,30 @@ export function useGameEngine() {
       if (dps <= 0) return;
 
       const dmg = dps * (TICK_MS / 1000);
+
+      // 📊 Stats (DPS + Time)
+      const s = statsRef.current;
+      if (s && s.lifetime) {
+          // Damage
+          s.lifetime.totalDpsDamage = D(s.lifetime.totalDpsDamage).add(dmg).toString();
+          s.lifetime.totalDamage = D(s.lifetime.totalDamage).add(dmg).toString();
+          
+          s.thisRewind.damageDps = D(s.thisRewind.damageDps).add(dmg).toString();
+          s.thisRewind.damageAll = D(s.thisRewind.damageAll).add(dmg).toString();
+          
+          s.thisSession.damageAll = D(s.thisSession.damageAll).add(dmg).toString();
+
+          // Time
+          s.lifetime.totalTimePlayed = (s.lifetime.totalTimePlayed || 0) + TICK_MS;
+          s.thisRewind.timePlayed = (s.thisRewind.timePlayed || 0) + TICK_MS;
+          // In combat vs idle? Assuming always combat for now
+          s.lifetime.totalTimeInCombat = (s.lifetime.totalTimeInCombat || 0) + TICK_MS;
+          
+          // Peaks
+          if (D(dps).gt(s.lifetime.highestDps)) s.lifetime.highestDps = D(dps).toString();
+          if (D(dps).gt(s.thisRewind.highestDps)) s.thisRewind.highestDps = D(dps).toString();
+      }
+
       applyDamageRef.current(dmg);
     }, TICK_MS);
 
@@ -808,7 +943,7 @@ export function useGameEngine() {
 
   // buys (atomic)
   const buyOrUpgradeMiner = useCallback(
-    (minerId) => {
+    (minerId, multiplier = 1) => {
       if (buyLockRef.current) return;
 
       buyLockRef.current = true;
@@ -817,10 +952,10 @@ export function useGameEngine() {
       setPendingOwnedMiners((prev) => {
         const base = Number(ownedMiners[minerId] || 0);
         const alreadyPending = Number(prev[minerId] || 0);
-        return { ...prev, [minerId]: Math.max(base, alreadyPending) + 1 };
+        return { ...prev, [minerId]: Math.max(base, alreadyPending) + multiplier };
       });
 
-      dispatchEco({ type: "BUY_MINER", minerId });
+      dispatchEco({ type: "BUY_MINER", minerId, amount: multiplier });
 
       requestAnimationFrame(() => {
         buyLockRef.current = false;
@@ -867,6 +1002,24 @@ export function useGameEngine() {
   
   const confirmStellarRewind = useCallback(() => {
      dispatchEco({ type: "PERFORM_STELLAR_REWIND", amount: prestigeReward });
+     
+     // 📊 Reset Rewind Stats
+     if (statsRef.current) {
+        // Update Lifetime
+        if (statsRef.current.lifetime) {
+            statsRef.current.lifetime.totalRewinds = (statsRef.current.lifetime.totalRewinds || 0) + 1;
+            if (D(prestigeReward).gt(0)) {
+                 statsRef.current.lifetime.totalRewindsWithGain = (statsRef.current.lifetime.totalRewindsWithGain || 0) + 1;
+            }
+        }
+        
+        // Reset This Rewind
+        statsRef.current.thisRewind = {
+            ...DEFAULT_STATS.thisRewind,
+            startTime: Date.now(),
+        };
+     }
+
      setShowRewindModal(false);
      setMode("progress");
      setZone(1);
@@ -960,9 +1113,9 @@ export function useGameEngine() {
     totalDps,
     calcTapDamage,
     applyDamage,
-    applyDamage,
     unlockedCount,
     resetGame,
+    isPrimal, // 🟣
     
     // Offline
     offlineEarnings,
@@ -985,5 +1138,14 @@ export function useGameEngine() {
     setShowCosmicStore,
     buyProtocol,
     cosmicProtocols: eco.cosmicProtocols,
+
+    // Statistics
+    stats: statsRef.current, // 📊
+
+    // Dev Tools Exports
+    dispatchEco,
+    setZone,
+    setStep,
+    setMaxUnlockedZone,
   };
 }

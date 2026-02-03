@@ -2,25 +2,41 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function SettingsSheet({ onClose, onReset }) {
+export default function SettingsSheet({ onClose, onReset, onStats }) {
   return (
     <View style={styles.container}>
-      {/* Glossy Header */}
+      {/* ... header ... */}
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <MaterialCommunityIcons name="cog" size={20} color="#4dc0ff" />
-          <Text style={styles.title}>SYSTEM</Text>
-        </View>
-
-        <Pressable onPress={onClose} style={styles.closeBtn}>
-          <MaterialCommunityIcons name="close" size={20} color="#fff" />
-        </Pressable>
+        {/* ... */}
       </View>
 
       <View style={styles.content}>
         <Text style={styles.sectionTitle}>GAME DATA</Text>
 
         <View style={styles.row}>
+           {/* STATISTICS */}
+           <View style={styles.itemContainer}>
+            <Pressable
+              onPress={onStats}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                pressed && { opacity: 0.8, transform: [{ scale: 0.96 }] },
+              ]}
+            >
+              <LinearGradient
+                colors={["#00e676", "#00994d"]}
+                style={styles.gradientBg}
+              >
+                <MaterialCommunityIcons
+                  name="chart-bar"
+                  size={32}
+                  color="white"
+                />
+              </LinearGradient>
+            </Pressable>
+            <Text style={styles.itemLabel}>STATS</Text>
+          </View>
+
           {/* Reset Button (Icon Style) */}
           <View style={styles.itemContainer}>
             <Pressable

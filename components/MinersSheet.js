@@ -250,6 +250,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+  },
+  multBtn: {
+      backgroundColor: "rgba(37, 99, 235, 0.2)",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: "rgba(37, 99, 235, 0.5)",
+  },
+  multBtnTxt: {
+      color: "#60a5fa",
+      fontSize: 10,
+      fontWeight: "bold",
+  },
   title: {
     fontSize: 14,
     fontWeight: "bold",

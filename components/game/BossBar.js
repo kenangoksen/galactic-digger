@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { fmt } from "../../game/damage";
 
-export default function BossBar({ hp, maxHp, timeMs }) {
-  const hpPct = useMemo(() => {
+export default function BossBar({ hp, maxHp, timeMs, isPrimal }) {
+  const pct = useMemo(() => {
     const m = Number(maxHp || 0);
     if (m <= 0) return 0;
     return Math.max(0, Math.min(1, Number(hp || 0) / m));
@@ -12,14 +13,35 @@ export default function BossBar({ hp, maxHp, timeMs }) {
     return Math.max(0, Number(timeMs || 0) / 1000);
   }, [timeMs]);
 
-  const isLowHp = hpPct <= 0.25;
+  const isLowHp = pct <= 0.25;
   const isLast10s = secondsLeft > 0 && secondsLeft <= 10;
   const isLast5s = secondsLeft > 0 && secondsLeft <= 5;
+
+  // Colors
+  const themeColor = isPrimal ? "#a359ff" : "#ff3b3b";
+  const glowColor = isPrimal ? "#b300ff" : "#ff2a2a";
+  const labelText = isPrimal ? "☠ PRIMAL BOSS ☠" : "⚠ BOSS ⚠";
 
   // anim values
   const pulse = useRef(new Animated.Value(0)).current;
   const blink = useRef(new Animated.Value(1)).current;
   const shake = useRef(new Animated.Value(0)).current;
+  const widthAnim = useRef(new Animated.Value(pct)).current;
+
+  // Smooth HP Bar
+  useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: pct,
+      duration: 300,
+      useNativeDriver: false,
+      easing: Easing.out(Easing.quad),
+    }).start();
+  }, [pct]);
+
+  const widthInterp = widthAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
+  });
 
   // ---------------- PULSE (low HP)
   useEffect(() => {
@@ -34,7 +56,7 @@ export default function BossBar({ hp, maxHp, timeMs }) {
         Animated.timing(pulse, {
           toValue: 1,
           duration: 520,
-          useNativeDriver: true,
+          useNativeDriver: true, // Scale ve Opacity native driver destekler
         }),
         Animated.timing(pulse, {
           toValue: 0,
@@ -142,19 +164,30 @@ export default function BossBar({ hp, maxHp, timeMs }) {
         style={[
           styles.hpOuter,
           {
+            borderColor: isPrimal ? "rgba(163, 89, 255, 0.5)" : "rgba(255,60,60,0.35)",
+            shadowColor: glowColor,
             transform: [{ scale: pulseScale }],
             opacity: glowOpacity,
           },
         ]}
       >
         <View style={styles.hpBg}>
-          <View
-            style={[styles.hpFill, { width: `${Math.round(hpPct * 100)}%` }]}
+          <Animated.View
+            style={[
+              styles.hpFill, 
+              { 
+                width: widthInterp, 
+                backgroundColor: themeColor 
+              }
+            ]}
           />
           <View style={styles.hpGloss} />
         </View>
 
-        <Text style={styles.bossLabel}>⚠ BOSS ⚠</Text>
+        <Text style={[styles.bossLabel, isPrimal && { color: "#e0c4ff" }]}>
+           {labelText}
+        </Text>
+        <Text style={styles.hpText}>{fmt(hp)}</Text>
       </Animated.View>
     </View>
   );
@@ -162,7 +195,7 @@ export default function BossBar({ hp, maxHp, timeMs }) {
 
 const styles = StyleSheet.create({
   wrap: {
-    width: "86%", // ⬅️ DAHA DAR
+    width: "86%", 
     alignSelf: "center",
     paddingTop: 6,
     gap: 6,
@@ -176,7 +209,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   timerDanger: {
-    color: "#ff2a2a",
+    color: "#ff0000",
+    fontSize: 16,
+    textShadowColor: "#ff0000",
+    textShadowRadius: 10,
+    textShadowOffset: { width: 0, height: 0 },
+    fontWeight: "900",
   },
 
   hpOuter: {
@@ -224,5 +262,15 @@ const styles = StyleSheet.create({
     fontWeight: "1000",
     letterSpacing: 1,
     fontSize: 12,
+  },
+
+  hpText: {
+    marginTop: 2,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: "900",
+    fontSize: 12,
+    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowRadius: 4,
   },
 });

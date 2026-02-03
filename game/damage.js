@@ -44,58 +44,79 @@ export function getNextCost(def, currentLevel) {
   return base.mul(Decimal.pow(growth, lvl)).floor(); // ✅ Decimal döner
 }
 
+// Bulk cost: Buy 'count' levels starting from 'currentLevel'
+// Geometric Series Sum: Base * Growth^L * ( (Growth^N - 1) / (Growth - 1) )
+export function getBulkCost(def, currentLevel, count = 1) {
+  const n = Math.max(1, Number(count));
+  if (n === 1) return getNextCost(def, currentLevel);
+
+  const lvl = Number(currentLevel || 0);
+  const base = D(def.baseCost || 0);
+  const growth = D(def.costGrowth || 1.07);
+  
+  // growth^N - 1
+  const num = Decimal.pow(growth, n).sub(1);
+  // growth - 1
+  const den = growth.sub(1);
+  
+  // multiplier = (growth^N - 1) / (growth - 1)
+  // If growth is 1, cost is simply base * n (linear) but growth defaults to 1.07
+  if (den.eq(0)) return base.mul(n);
+
+  // Partial: Base * Growth^L
+  const currentBase = base.mul(Decimal.pow(growth, lvl));
+  
+  // Total
+  return currentBase.mul(num).div(den).floor();
+}
+
 // -----------------------------------------------------------------------------
 // Number formatting (CH-like, no decimals)
 // -----------------------------------------------------------------------------
 
 // NOTE: You asked for “1K not 1.00K” => integer tiers.
 // This is the same suffix set you already used.
+// CH Suffixes based on Wiki
 const CH_SUFFIXES = [
-  "", // 1
-  "K",
-  "M",
-  "B",
-  "T",
-  "q",
-  "Q",
-  "s",
-  "S",
-  "O",
-  "N",
-  "d",
-  "U",
-  "D",
-  "!",
-  "@",
-  "#",
-  "$",
-  "%",
-  "^",
-  "&",
-  "*",
+  "", "K", "M", "B", "T", "q", "Q", "s", "S", "O", "N", "d", "U", "D",
+  "!", "@", "#", "$", "%", "^", "&", "*"
 ];
 
 export function fmt(n) {
-  const x = Number(n);
-  if (!Number.isFinite(x) || x === 0) return "0";
+  const d = D(n); // Ensure Decimal
+  
+  // Handle 0 or invalid
+  // Handle 0 or invalid
+  if (d.eq(0) || d.abs().lt(1)) return "0";
+  
+  // Handle negatives
+  if (d.lt(0)) return "-" + fmt(d.neg());
 
-  const sign = x < 0 ? "-" : "";
-  let v = Math.abs(Math.floor(x));
-
-  if (v < 1000) return sign + String(v);
-
-  let tier = 0;
-  while (v >= 1000 && tier < CH_SUFFIXES.length - 1) {
-    v = Math.floor(v / 1000);
-    tier++;
+  // < 1000: Integer
+  if (d.lt(1000)) {
+     return Math.floor(d.toNumber()).toString();
   }
 
-  // After the last suffix, show "A lot" (same behavior as before)
-  if (tier >= CH_SUFFIXES.length - 1 && v >= 1000) {
-    return sign + "A lot";
+  // Determine tier (log10 / 3)
+  const exponent = Math.floor(d.log10());
+  const tier = Math.floor(exponent / 3);
+
+  // If within suffix range
+  if (tier < CH_SUFFIXES.length) {
+      const suffix = CH_SUFFIXES[tier];
+      // Divide by 1000^tier
+      // Decimal.pow(10, tier * 3) is safer
+      const divisor = Decimal.pow(10, tier * 3);
+      const value = d.div(divisor);
+      
+      // User wants 3 decimal places for precision
+      // e.g. 1234 -> 1.234K
+      return value.toFixed(3) + suffix;
   }
 
-  return sign + String(v) + CH_SUFFIXES[tier];
+  // Fallback to Scientific Notation for huge numbers (e.g. 1e68+)
+  // format: 1.234e68
+  return d.toExponential(3).replace("+", "");
 }
 
 // -----------------------------------------------------------------------------
@@ -337,37 +358,53 @@ function applyCosmicProtocols({
     const lv = Math.max(0, Math.floor(toNum(ownedProtocols?.[p.id], 0)));
     if (lv <= 0) continue;
 
-    for (const ef of p.effects || []) {
-      const perLevel = toNum(ef.perLevel, 0);
-      const amount = perLevel * lv;
+    const baseVal = toNum(p.baseValue, 0);
+    const amount = baseVal * lv;
 
-      switch (ef.kind) {
-        case "tapMultiplier":
-          tapMult *= 1 + amount;
-          break;
-        case "globalDpsMultiplier":
-          globalDpsMult *= 1 + amount;
-          break;
-        case "critChance":
-          critChanceAdd += amount;
-          break;
-        case "critMultiplier":
-          critMultMul *= 1 + amount;
-          break;
-        case "mineralMultiplier":
-          mineralMult *= 1 + amount;
-          break;
-        default:
-          break;
-      }
+    switch (p.type) {
+      case "tapMultiplier":
+        tapMult *= 1 + amount;
+        break;
+      case "globalDpsMultiplier":
+        globalDpsMult *= 1 + amount;
+        break;
+      case "critEnhancer":
+        // JSON says "critEnhancer" -> usually chance + mult?
+        // Let's assume it adds to chance and multiplies damage slightly?
+        // Or checking description: "Improves critical chance and multiplier"
+        // Let's split it: half to chance, full to mult?
+        // For simplicity: amount -> chance, (1+amount) -> mult
+        critChanceAdd += amount * 0.5; 
+        critMultMul *= 1 + amount;
+        break;
+      case "critChance":
+        critChanceAdd += amount;
+        break;
+      case "critMultiplier":
+        critMultMul *= 1 + amount;
+        break;
+      case "mineralMultiplier":
+        mineralMult *= 1 + amount;
+        break;
+      // TODO: Implement other types:
+      // - minerDpsMultiplier
+      // - bossDpsMultiplier
+      // - idleDpsMultiplier
+      // - dpsScalingReducer
+      // - dpsToTapConversion
+      // - bossRewardMultiplier
+      // - zoneSpeedMultiplier
+      // - hpScalingReducer
+      default:
+        break;
     }
   }
 
-  totals.tapDamage *= tapMult;
-  totals.dps *= globalDpsMult;
+  totals.tapDamage = Math.max(1, totals.tapDamage * tapMult);
+  totals.dps = Math.max(0, totals.dps * globalDpsMult);
   totals.critChance = clamp(totals.critChance + critChanceAdd, 0, 0.75);
-  totals.critMult *= critMultMul;
-  totals.mineralMult *= mineralMult;
+  totals.critMult = Math.max(1.01, totals.critMult * critMultMul);
+  totals.mineralMult = Math.max(0.01, totals.mineralMult * mineralMult);
 
   pushLayer(totals, "cosmicProtocols", {
     tapMult,
@@ -548,4 +585,17 @@ export function monsterMineralReward(zone, step) {
   if (isBoss) reward *= 10;
 
   return Math.max(1, Math.floor(reward));
+}
+
+export function getPrimalReward(zone) {
+  const z = Number(zone || 0);
+  if (z < 100) return 0;
+  
+  // Formula: ((Zone - 80) / 25) ^ 1.3
+  // Z105 -> 1
+  // Z200 -> 8
+  // Z500 -> 39
+  // Z1000 -> 100
+  const val = Math.pow((z - 80) / 25, 1.3);
+  return Math.max(1, Math.floor(val));
 }

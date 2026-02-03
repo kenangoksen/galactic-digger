@@ -21,6 +21,7 @@ export default function GameStage({
   bossMsLeft,
 
   isBossPlanet, // ⬅️ engine’den geliyor
+  isPrimal, // 🟣
 }) {
   return (
     <Animated.View
@@ -117,7 +118,7 @@ export default function GameStage({
               ======================= */}
           <View style={styles.hpDock}>
             {isBossPlanet ? (
-              <BossBar hp={hp} maxHp={maxHp} timeMs={bossMsLeft} />
+              <BossBar hp={hp} maxHp={maxHp} timeMs={bossMsLeft} isPrimal={isPrimal} />
             ) : (
               <HpBarCompact zoneText={zoneText} hp={hp} maxHp={maxHp} />
             )}
