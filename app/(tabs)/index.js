@@ -20,6 +20,7 @@ import GameStage from "../../components/game/GameStage";
 import MinersSheetHost from "../../components/game/MinersSheetHost";
 
 import minersDef from "../../assets/config/miners.json";
+import BigBangSheet from "../../components/BigBangSheet";
 import CosmicStoreSheet from "../../components/CosmicStoreSheet";
 import SideBarLeft from "../../components/SideBarLeft";
 import SideBarRight from "../../components/SideBarRight";
@@ -73,7 +74,9 @@ export default function HomeScreen() {
 
   const handleMiners = () => toggleSheet("MINERS");
   const handleCosmic = () => toggleSheet("COSMIC");
+
   const handleSkills = () => toggleSheet("SKILLS");
+  const handleBigBang = () => toggleSheet("BIGBANG"); // ✅ Handler
 
   return (
     <>
@@ -99,6 +102,20 @@ export default function HomeScreen() {
                     <SkillsSheet 
                         engine={engine}
                         onClose={closeSheet}
+                    />
+                );
+            }
+            if (visibleContent === "BIGBANG") { // ✅ Render Sheet
+                return (
+                    <BigBangSheet
+                        visible={true}
+                        onClose={closeSheet}
+                        cosmicEssence={engine.cosmicEssence}
+                        universalConstantsLevels={engine.universalConstantsLevels}
+                        buyUniversalConstant={engine.buyUniversalConstant}
+                        performBigBang={engine.performBigBang}
+                        stats={engine.stats}
+                        maxUnlockedZone={engine.maxUnlockedZone}
                     />
                 );
             }
@@ -211,7 +228,7 @@ export default function HomeScreen() {
                 onGem={() => onPressStub("GEM SHOP")}
                 onQuests={() => onPressStub("QUESTS")}
                 onProtocols={handleCosmic}
-                onBigBang={() => onPressStub("BIG BANG")}
+                onBigBang={handleBigBang} // ✅ Connect
                 onShop={() => onPressStub("SHOP")}
               />
               

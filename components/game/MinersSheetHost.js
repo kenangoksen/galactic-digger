@@ -102,7 +102,7 @@ export default function MinersSheetHost({ sheetContent, children, visible, onClo
     sheetOpen: isOpen,
     openSheet,
     closeSheet,
-    toggleSheet,
+    closeSheet,
     toggleSheet,
     stageTranslateY,
     stageScale,

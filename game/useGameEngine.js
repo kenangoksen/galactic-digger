@@ -4,21 +4,21 @@
 // Sadece ECONOMY (minerals/cost/buy) Decimal-safe yapılır.
 
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState,
 } from "react";
 
-import protocolsDef from "../assets/config/cosmic_protocols.json";
 import minersDef from "../assets/config/miners.json";
 import planets from "../assets/config/planets.json";
 
 import { AppState } from "react-native";
 import { D } from "./bn";
 import { DAMAGE_CONFIG } from "./config";
+import configCache from "./ConfigCache"; // ✅ Central Config
 import { computeTotals, getBulkCost, getPrimalReward } from "./damage";
 import { loadGame, saveGame, serializeEco } from "./persistGame";
 import { DEFAULT_STATS, initStats } from "./stats"; // 📊
@@ -68,6 +68,12 @@ const ECO_INIT = {
   totalStarlinkTags: 0,
   tagsByMinerId: {}, // { minerId: count }
   lifetimeTagsEarned: 0,
+  // Universal Constants & Essence
+  cosmicEssence: 0,
+  universalConstantsLevels: {},
+  lifetimeEssence: 0,
+  spentEssence: 0,
+  stellarFragmentsSpentLifetime: 0,
 };
 
 function ecoReducer(state, action) {
@@ -240,6 +246,59 @@ function ecoReducer(state, action) {
        };
     }
 
+    case "BUY_UNIVERSAL_CONSTANT": {
+        const { constantId } = action;
+        const def = configCache.getConstantDef(constantId);
+        if (!def) return state;
+
+        const currentLvl = state.universalConstantsLevels[constantId] || 0;
+        const maxLevel = def.leveling?.maxLevel || Infinity;
+        if (currentLvl >= maxLevel) return state;
+
+        // Cost Model
+        let cost = 0;
+        const model = def.leveling?.costModel;
+        if (model === "levelPlus1") cost = currentLvl + 1;
+        else if (model === "flat1") cost = 1;
+        else cost = 999999; // Fallback
+
+        if (state.cosmicEssence < cost) return state;
+
+        return {
+            ...state,
+            cosmicEssence: state.cosmicEssence - cost,
+            spentEssence: (state.spentEssence || 0) + cost,
+            universalConstantsLevels: {
+                ...state.universalConstantsLevels,
+                [constantId]: currentLvl + 1
+            }
+        };
+    }
+
+    case "PERFORM_BIG_BANG": {
+        // payload: { gainedEssence }
+        const gained = action.payload?.gainedEssence || 0;
+        
+        return {
+            ...ECO_INIT, // Reset minerals, miners, unlockedCount
+            // Keep Meta
+            stellarFragments: state.stellarFragments,
+            stellarFragmentsSpentLifetime: state.stellarFragmentsSpentLifetime,
+            cosmicProtocols: state.cosmicProtocols,
+            
+            // Keep Constants & Essence
+            cosmicEssence: (state.cosmicEssence || 0) + gained,
+            universalConstantsLevels: state.universalConstantsLevels,
+            lifetimeEssence: (state.lifetimeEssence || 0) + gained,
+            spentEssence: state.spentEssence,
+            
+            // Keep Starlink Tags
+            totalStarlinkTags: state.totalStarlinkTags,
+            tagsByMinerId: state.tagsByMinerId,
+            lifetimeTagsEarned: state.lifetimeTagsEarned,
+        };
+    }
+
     default:
       return state;
   }
@@ -253,6 +312,8 @@ export function useGameEngine() {
   const [maxUnlockedZone, setMaxUnlockedZone] = useState(1);
   const [isPrimal, setIsPrimal] = useState(false);
   const [isChest, setIsChest] = useState(false); // 📦 Treasure Chest State
+  
+
 
   // Auto-update maxUnlockedZone if we are somehow ahead of it
   useEffect(() => {
@@ -378,14 +439,15 @@ export function useGameEngine() {
       ownedMiners,
       ownedSkills,
       zone,
-      protocolsDef, // ✅ Passed
-      ownedSkills,
-      zone,
-      protocolsDef, // ✅ Passed
-      ownedProtocols: eco.cosmicProtocols, // ✅ Passed
-      tagsByMinerId: eco.tagsByMinerId, // ✅ Needed for DPS calc
+      // Meta
+      universalConstantsLevels: eco.universalConstantsLevels, // ✅ From Eco based on persistence
+      cosmicProtocolLevels: eco.cosmicProtocols,
+      constantsDef: configCache.getUniversalConstants()?.items, // ✅ From Cache
+      protocolsDef: configCache.getCosmicProtocols()?.protocols, // ✅ From Cache
+      tagsByMinerId: eco.tagsByMinerId,
+      stellarFragmentsSpent: eco.stellarFragmentsSpentLifetime // ✅
     });
-  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId]);
+  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime]);
 
   const tapDamageBase = totals.tapDamage;
   
@@ -784,11 +846,19 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     setMaxHp(m);
     setHp(m);
 
+    const s = statsRef.current; // ✅ Moved to top scope
+
+    // 📊 Stats (Boss Spawned)
     if (isBossPlanet) {
-       setBossTimeMsLeft(30_000);
        
-       // 📊 Stats (Boss Spawned)
-       const s = statsRef.current;
+       // Calculate Boss Time based on Constants
+       
+       // Calculate Boss Time based on Constants
+       // Base 30s * (1 + Chronal Margin Effectiveness)
+       const baseTime = 30_000;
+       const timeEff = totals.protocolModifiers?.bossTimerEff || 1;
+       setBossTimeMsLeft(baseTime * timeEff);
+       
        if (s && s.lifetime) {
            s.lifetime.totalBossesSpawned = (s.lifetime.totalBossesSpawned || 0) + 1;
            if (zone >= 105 && Math.random() < 0.25) { // Primal Check replicated for stats
@@ -817,10 +887,16 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
        setBossTimeMsLeft(0);
        setIsPrimal(false);
        
+       
        // CHEST SPAWN LOGIC (non-boss)
        // Base Chance 1-2% + Protocol
-       // Let's say Base 1%
-       const chestChance = 0.01 + (totals.protocolModifiers?.treasureChestChance || 0);
+       // Universal Constant: Treasure Manifest amplifies sources
+       const eff = totals.protocolModifiers?.treasureChanceEff || 1;
+       const baseProtocolChance = (totals.protocolModifiers?.treasureChestChance || 0);
+       
+       // Effective Chance = (Base 0.01 + Protocol) * Effectiveness
+       const chestChance = (0.01 + baseProtocolChance) * eff;
+       
        const isChestNow = Math.random() < chestChance;
        setIsChest(isChestNow);
        
@@ -1612,6 +1688,40 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       dispatchEco({ type: "BUY_PROTOCOL", protocolId });
   }, []);
 
+  // BIG BANG LOGIC
+  // BIG BANG LOGIC
+  const performBigBang = useCallback(() => {
+      // 1. Calculate Essence Gain
+      const highestZone = statsRef.current?.thisRewind?.highestZoneReached || maxUnlockedZone;
+      const spentSF = eco.stellarFragmentsSpentLifetime || 0;
+      
+      let sectorTerm = Math.max(0, Math.floor((highestZone - 100) / 50));
+      let spentTerm = Math.floor(Math.log10(Math.max(1, spentSF)) / 2);
+      
+      let gain = Math.max(0, sectorTerm + spentTerm);
+      if (highestZone >= 150 && gain < 1) gain = 1;
+
+      // 2. Dispatch
+      dispatchEco({ type: "PERFORM_BIG_BANG", payload: { gainedEssence: gain } });
+      
+      // 3. Reset Local State
+      setMode("progress");
+      setZone(1);
+      setStep(1);
+      setMaxUnlockedZone(1);
+      setHp(monsterHp(1,1));
+      setMaxHp(monsterHp(1,1));
+      
+      // Stats Reset if needed
+      if (statsRef.current) {
+          statsRef.current.thisRewind = { startTime: Date.now() };
+      }
+  }, [maxUnlockedZone, eco.stellarFragmentsSpentLifetime]);
+
+  const buyUniversalConstant = useCallback((constantId) => {
+      dispatchEco({ type: "BUY_UNIVERSAL_CONSTANT", constantId });
+  }, []);
+
   return {
     // visuals / stage
     currentPlanet,
@@ -1708,5 +1818,11 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     setZone,
     setStep,
     setMaxUnlockedZone,
+    
+    // Big Bang Exports
+    cosmicEssence: eco.cosmicEssence, // ✅ From eco
+    universalConstantsLevels: eco.universalConstantsLevels, // ✅ From eco
+    performBigBang,
+    buyUniversalConstant,
   };
 }

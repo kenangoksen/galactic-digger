@@ -14,6 +14,7 @@
         "type": "ascendRewardMultiplier",
         "baseValue": 0.25,
         "description": "Increases Stellar Fragment gain on Stellar Rewind.",
+        "effectDisplay": "+{}% Fragment Gain",
         "leveling": {
           "enabled": true,
           "maxLevel": null,
@@ -30,6 +31,7 @@
         "type": "enemyHpGrowthReducer",
         "baseValue": 0.05,
         "description": "Reduces enemy HP growth per sector.",
+        "effectDisplay": "-{}% Enemy HP Growth",
         "leveling": {
           "enabled": true,
           "maxLevel": 150,
@@ -47,6 +49,7 @@
         "type": "idleDominance",
         "baseValue": 0.3,
         "description": "Idle DPS becomes more effective than active play.",
+        "effectDisplay": "+{}% Idle Effectiveness",
         "leveling": {
           "enabled": true,
           "maxLevel": null,
@@ -63,6 +66,7 @@
         "type": "startingPowerBoost",
         "baseValue": 0.5,
         "description": "Increases starting miner power after Big Bang.",
+        "effectDisplay": "+{}% Starting Power",
         "leveling": {
           "enabled": true,
           "maxLevel": null,
@@ -79,6 +83,7 @@
         "type": "clickDpsRatioShift",
         "baseValue": 0.15,
         "description": "Alters balance between click and DPS damage.",
+        "effectDisplay": "+{}% Click/DPS Ratio",
         "leveling": {
           "enabled": true,
           "maxLevel": null,
@@ -95,6 +100,7 @@
         "type": "lateGameSoftCapReducer",
         "baseValue": 0.08,
         "description": "Softens late-game scaling penalties.",
+        "effectDisplay": "-{}% Scaling Penalty",
         "leveling": {
           "enabled": true,
           "maxLevel": null,
@@ -111,6 +117,7 @@
         "type": "bossTimerEffectiveness",
         "baseValue": 0.75,
         "description": "Amplifies the effectiveness of boss timer extensions.",
+        "effectDisplay": "+{}% Timer Effectiveness",
         "leveling": {
           "enabled": true,
           "maxLevel": null,
@@ -127,6 +134,7 @@
         "type": "treasureChanceEffectiveness",
         "baseValue": 1.0,
         "description": "Amplifies the effectiveness of treasure/geode chance sources.",
+        "effectDisplay": "+{}% Treasure Effectiveness",
         "leveling": {
           "enabled": true,
           "maxLevel": null,
@@ -143,6 +151,7 @@
         "type": "bossHpEffectiveness",
         "baseValue": 0.5,
         "description": "Amplifies the effectiveness of boss HP reduction and boss HP scaling reducers.",
+        "effectDisplay": "+{}% HP Reduction Effectiveness",
         "leveling": {
           "enabled": true,
           "maxLevel": null,

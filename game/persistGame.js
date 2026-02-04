@@ -21,11 +21,17 @@ export function serializeEco(eco) {
     ownedMiners: eco?.ownedMiners || {},
     ownedSkills: eco?.ownedSkills || {},
     stellarFragments: eco?.stellarFragments ? eco.stellarFragments.toString() : "0",
+    stellarFragmentsSpentLifetime: Number(eco?.stellarFragmentsSpentLifetime || 0), // ✅ Added
     cosmicProtocols: eco?.cosmicProtocols || {},
     // Starlink Persistence
     totalStarlinkTags: eco?.totalStarlinkTags || 0,
     tagsByMinerId: eco?.tagsByMinerId || {},
     lifetimeTagsEarned: eco?.lifetimeTagsEarned || 0,
+    // Universal Constants
+    cosmicEssence: Number(eco?.cosmicEssence || 0),
+    universalConstantsLevels: eco?.universalConstantsLevels || {},
+    lifetimeEssence: Number(eco?.lifetimeEssence || 0), // (This is earned lifetime)
+    spentEssence: Number(eco?.spentEssence || 0),
   };
 }
 
@@ -37,11 +43,17 @@ export function normalizeLoadedEco(rawEco) {
     ownedMiners: eco.ownedMiners || {},
     ownedSkills: eco.ownedSkills || {},
     stellarFragments: D(eco.stellarFragments || "0"),
+    stellarFragmentsSpentLifetime: Number(eco.stellarFragmentsSpentLifetime || 0), // ✅ Added
     cosmicProtocols: eco.cosmicProtocols || {},
     // Starlink Rehydration
     totalStarlinkTags: Number(eco.totalStarlinkTags || 0),
     tagsByMinerId: eco.tagsByMinerId || {},
     lifetimeTagsEarned: Number(eco.lifetimeTagsEarned || 0),
+    // Universal Constants Rehydration
+    cosmicEssence: Number(eco.cosmicEssence || 0),
+    universalConstantsLevels: eco.universalConstantsLevels || {},
+    lifetimeEssence: Number(eco.lifetimeEssence || 0),
+    spentEssence: Number(eco.spentEssence || 0),
   };
 }
 
