@@ -62,7 +62,7 @@ export default function CosmicStoreSheet({
 
         {/* LIST */}
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-          {protocolsDef.map((proto) => {
+          {(protocolsDef.protocols || protocolsDef).map((proto) => {
             const level = cosmicProtocols[proto.id] || 0;
             const cost = getProtocolCost(level);
             const canAfford = D(stellarFragments).gte(cost);

@@ -1,86 +1,293 @@
-[
-  {
-    "id": "core_singularity",
-    "name": "Core Singularity",
-    "type": "globalDpsMultiplier",
-    "baseValue": 0.08,
-    "description": "Increases all DPS by compressing energy into a single core."
+{
+  "meta": {
+    "design": "GD Cosmic Protocols (CH-like). Active Skills + Starlink Tags + Anomaly enabled.",
+    "currency": "stellar_fragment",
+    "level_cost_n_definition": "n = next level (e.g., 9->10 means n=10)",
+    "unlock_costs_by_index": [1, 2, 4, 8, 16, 35, 70, 125, 250, 500, 800, 1200, 1700, 2200, 2750, 3400, 4100, 5000, 6000, 7500, 10000, 12500, 16000, 25000, 35000, 50000],
+    "notes": [
+      "All multipliers are additive in percent form unless specified. Use BigNumber for damage/gold math.",
+      "Skill-related protocols target the provided skill IDs (s_clickstorm, s_powersurge, s_lucky, s_metal, s_goldclicks, s_darkritual, s_superclicks, s_energize, s_reload).",
+      "Starlink Tags: tagsByMinerId -> tagCount; tagMultiplier = 1 + tagCount * tagPower. tagPower is affected by starlink_tag_amplifier."
+    ]
   },
-  {
-    "id": "quantum_overdrive",
-    "name": "Quantum Overdrive",
-    "type": "minerDpsMultiplier",
-    "baseValue": 0.1,
-    "description": "Boosts miner output via quantum acceleration."
-  },
-  {
-    "id": "entropy_engine",
-    "name": "Entropy Engine",
-    "type": "bossDpsMultiplier",
-    "baseValue": 0.12,
-    "description": "Amplifies damage dealt to Cosmic Thresholds."
-  },
-  {
-    "id": "dark_matter_flow",
-    "name": "Dark Matter Flow",
-    "type": "idleDpsMultiplier",
-    "baseValue": 0.15,
-    "description": "Enhances idle DPS using dark matter currents."
-  },
-  {
-    "id": "stellar_compression",
-    "name": "Stellar Compression",
-    "type": "dpsScalingReducer",
-    "baseValue": 0.05,
-    "description": "Reduces DPS scaling penalty at high zones."
-  },
-  {
-    "id": "photon_strike_matrix",
-    "name": "Photon Strike Matrix",
-    "type": "tapMultiplier",
-    "baseValue": 0.12,
-    "description": "Improves click damage using photon alignment."
-  },
-  {
-    "id": "manual_override",
-    "name": "Manual Override",
-    "type": "dpsToTapConversion",
-    "baseValue": 0.02,
-    "description": "Converts a portion of DPS into click damage."
-  },
-  {
-    "id": "precision_lattice",
-    "name": "Precision Lattice",
-    "type": "critEnhancer",
-    "baseValue": 0.01,
-    "description": "Improves critical chance and multiplier."
-  },
-  {
-    "id": "astro_extraction_grid",
-    "name": "Astro Extraction Grid",
-    "type": "mineralMultiplier",
-    "baseValue": 0.1,
-    "description": "Boosts mineral extraction efficiency."
-  },
-  {
-    "id": "void_harvest_protocol",
-    "name": "Void Harvest Protocol",
-    "type": "bossRewardMultiplier",
-    "baseValue": 0.2,
-    "description": "Increases boss mineral rewards."
-  },
-  {
-    "id": "temporal_acceleration",
-    "name": "Temporal Acceleration",
-    "type": "zoneSpeedMultiplier",
-    "baseValue": 0.08,
-    "description": "Accelerates progression through sectors."
-  },
-  {
-    "id": "reality_stabilizer",
-    "name": "Reality Stabilizer",
-    "type": "hpScalingReducer",
-    "baseValue": 0.04,
-    "description": "Stabilizes enemy HP growth in deep space."
-  }
-]
+
+  "protocols": [
+    {
+      "id": "geode_hunter",
+      "name": "Cosmic Geode Protocol",
+      "type": "treasureChestChance",
+      "baseValue": 0.05,
+      "description": "Adds +5% chance to find a Cosmic Geode (Treasure Chest), which gives 10x minerals.",
+      "maxLevel": 50,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
+    },
+    {
+      "id": "core_singularity",
+      "name": "Core Singularity",
+      "type": "globalDpsMultiplier_perSpentSF",
+      "baseValue": 0.11,
+      "description": "Adds +11% global DPS per Stellar Fragment spent into this protocol (additive stacking).",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "1" }
+    },
+    {
+      "id": "quantum_overdrive",
+      "name": "Quantum Overdrive",
+      "type": "minerDpsMultiplier",
+      "baseValue": 0.10,
+      "description": "Increases miner DPS by +10% per level.",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
+    },
+    {
+      "id": "entropy_engine",
+      "name": "Entropy Engine",
+      "type": "bossDpsMultiplier",
+      "baseValue": 0.12,
+      "description": "Increases damage dealt to boss-type enemies by +12% per level.",
+      "maxLevel": 25,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+
+    {
+      "id": "dark_matter_flow",
+      "name": "Dark Matter Flow",
+      "type": "idleDpsMultiplier_piecewise",
+      "baseValue": 0.25,
+      "description": "Boosts idle DPS per level with diminishing returns (starts strong and gradually softens).",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" },
+      "piecewise": { "startPerLevel": 0.25, "minPerLevel": 0.15, "stepDownEveryLevels": 10, "stepDownAmount": 0.01 }
+    },
+
+    {
+      "id": "photon_strike_matrix",
+      "name": "Photon Strike Matrix",
+      "type": "tapMultiplier",
+      "baseValue": 0.20,
+      "description": "Increases tap/click damage by +20% per level.",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
+    },
+    {
+      "id": "manual_override",
+      "name": "Manual Override",
+      "type": "dpsToTapConversion",
+      "baseValue": 0.02,
+      "description": "Converts 2% of total DPS into added tap damage per level (tap scales with your DPS).",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
+    },
+    {
+      "id": "momentum_combo_core",
+      "name": "Momentum Combo Core",
+      "type": "tapComboBonusPerTap",
+      "baseValue": 0.0001,
+      "description": "Adds a stacking tap combo bonus: each consecutive tap increases tap damage by +0.01% per level. Resets if you stop tapping.",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n^1.5" },
+      "comboRules": {
+        "enabled": true,
+        "timeoutMs": 1200,
+        "capStacks": 500,
+        "resetOnNoTap": true,
+        "autoTapCountsAsTap": true
+      }
+    },
+    {
+      "id": "precision_lattice",
+      "name": "Precision Lattice",
+      "type": "critEnhancer_split",
+      "baseValue": 0.01,
+      "description": "Improves critical taps. Each level adds +1% crit chance and +5% crit multiplier (relative).",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" },
+      "crit": { "critChanceAddPerLevel": 0.01, "critMultAddPerLevel": 0.05 }
+    },
+
+    {
+      "id": "astro_extraction_grid",
+      "name": "Astro Extraction Grid",
+      "type": "mineralMultiplier",
+      "baseValue": 0.05,
+      "description": "Increases all mineral gains by +5% per level.",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
+    },
+    {
+      "id": "void_harvest_protocol",
+      "name": "Void Harvest Protocol",
+      "type": "bossRewardMultiplier",
+      "baseValue": 0.20,
+      "description": "Increases boss mineral rewards by +20% per level.",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
+    },
+
+    {
+      "id": "anomaly_attunement",
+      "name": "Anomaly Attunement",
+      "type": "anomalyBossChanceBonus",
+      "baseValue": 0.01,
+      "description": "Increases anomaly boss spawn chance by +1% per level (applied on top of the base 25% chance).",
+      "maxLevel": 25,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" },
+      "anomalyRules": { "baseChance": 0.25, "bossSectorsOnly": true, "minSector": 100 }
+    },
+    {
+      "id": "anomaly_fragment_yield",
+      "name": "Anomaly Fragment Yield",
+      "type": "anomalyFragmentRewardMultiplier_piecewise",
+      "baseValue": 0.05,
+      "description": "Increases Stellar Fragment rewards from anomaly bosses with diminishing returns (strong early, softer late).",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" },
+      "piecewise": { "startPerLevel": 0.05, "minPerLevel": 0.01, "stepDownEveryLevels": 20, "stepDownAmount": 0.01 }
+    },
+
+    {
+      "id": "temporal_acceleration",
+      "name": "Temporal Acceleration",
+      "type": "zoneSpeedMultiplier",
+      "baseValue": 0.08,
+      "description": "Speeds up sector progression by +8% per level.",
+      "maxLevel": 5,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+
+    {
+      "id": "starlink_tag_amplifier",
+      "name": "Starlink Tag Amplifier",
+      "type": "starlinkTagPowerAdd",
+      "baseValue": 0.05,
+      "description": "Increases Starlink Tag power by +0.05 per level (adds to tagPower).",
+      "maxLevel": 50,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n^1.5" },
+      "starlink": { "baseTagPower": 0.50, "minTagPower": 0.10, "maxTagPower": 2.00 }
+    },
+    {
+      "id": "starlink_tag_foundry",
+      "name": "Starlink Tag Foundry",
+      "type": "starlinkTagDropBonus",
+      "baseValue": 0.01,
+      "description": "Increases the chance to drop a Starlink Tag from anomaly bosses by +1% per level (supports pity timer if implemented).",
+      "maxLevel": 25,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" },
+      "dropRules": { "source": "anomalyBoss", "pityBossCount": 50 }
+    },
+
+    {
+      "id": "skill_rhythm_strike_duration",
+      "name": "Rhythm Strike Stabilizer",
+      "type": "skillDurationBonusMs",
+      "baseValue": 1000,
+      "description": "Increases Rhythm Strike duration by +1s per level.",
+      "targets": ["s_clickstorm"],
+      "maxLevel": 30,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+    {
+      "id": "skill_drill_overdrive_duration",
+      "name": "Drill Overdrive Stabilizer",
+      "type": "skillDurationBonusMs",
+      "baseValue": 1000,
+      "description": "Increases Drill Overdrive duration by +1s per level.",
+      "targets": ["s_powersurge"],
+      "maxLevel": 30,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+    {
+      "id": "skill_precision_poke_duration",
+      "name": "Precision Poke Stabilizer",
+      "type": "skillDurationBonusMs",
+      "baseValue": 1000,
+      "description": "Increases Precision Poke duration by +1s per level.",
+      "targets": ["s_lucky"],
+      "maxLevel": 30,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+    {
+      "id": "skill_moon_scan_duration",
+      "name": "Moon Scan Stabilizer",
+      "type": "skillDurationBonusMs",
+      "baseValue": 1000,
+      "description": "Increases Moon Scan duration by +1s per level.",
+      "targets": ["s_metal"],
+      "maxLevel": 30,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+    {
+      "id": "skill_comet_rush_duration",
+      "name": "Comet Rush Stabilizer",
+      "type": "skillDurationBonusMs",
+      "baseValue": 1000,
+      "description": "Increases Comet Rush duration by +1s per level.",
+      "targets": ["s_goldclicks"],
+      "maxLevel": 30,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+    {
+      "id": "skill_chisel_impact_duration",
+      "name": "Chisel Impact Stabilizer",
+      "type": "skillDurationBonusMs",
+      "baseValue": 1000,
+      "description": "Increases Chisel Impact duration by +1s per level.",
+      "targets": ["s_superclicks"],
+      "maxLevel": 30,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+
+    {
+      "id": "skill_cooldown_dilation",
+      "name": "Cooldown Dilation",
+      "type": "skillCooldownReducer",
+      "baseValue": 0.05,
+      "description": "Reduces cooldowns by 5% per level (multiplicative on remaining cooldown).",
+      "targets": ["s_clickstorm", "s_powersurge", "s_lucky", "s_metal", "s_goldclicks", "s_darkritual", "s_superclicks", "s_energize", "s_reload"],
+      "maxLevel": 15,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+
+    {
+      "id": "skill_energize_efficiency",
+      "name": "Runner Boost Efficiency",
+      "type": "skillValueBonus",
+      "baseValue": 0.05,
+      "description": "Increases Runner Boost's next-skill amplification by +5% per level (adds to the multiplier).",
+      "targets": ["s_energize"],
+      "maxLevel": 25,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n^1.5" }
+    },
+    {
+      "id": "skill_reload_strength",
+      "name": "Specialist Reset Tuning",
+      "type": "skillValueBonusMs",
+      "baseValue": 300000,
+      "description": "Increases Specialist Reset cooldown reduction by +5 minutes per level.",
+      "targets": ["s_reload"],
+      "maxLevel": 12,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n^1.5" }
+    },
+
+    {
+      "id": "deep_protocol_persistence",
+      "name": "Deep Protocol Persistence",
+      "type": "darkRitualStackBonus",
+      "baseValue": 0.01,
+      "description": "Increases Deep Protocol's permanent DPS stack bonus by +1% per level (resets on Prestige/Rewind as designed).",
+      "targets": ["s_darkritual"],
+      "maxLevel": 50,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
+    },
+    {
+      "id": "reality_stabilizer",
+      "name": "Reality Stabilizer",
+      "type": "hpScalingReducer",
+      "baseValue": 0.04,
+      "description": "Reduces enemy HP growth in deep space by 4% per level (optional balancing tool).",
+      "maxLevel": 25,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" },
+      "optional": true
+    }
+  ]
+}

@@ -1,44 +1,181 @@
-[
-  {
-    "id": "prime_continuum",
-    "name": "Prime Continuum",
-    "type": "ascendRewardMultiplier",
-    "baseValue": 0.25,
-    "description": "Increases Stellar Fragment gain on Stellar Rewind."
-  },
-  {
-    "id": "graviton_law",
-    "name": "Graviton Law",
-    "type": "enemyHpGrowthReducer",
-    "baseValue": 0.05,
-    "description": "Reduces enemy HP growth per sector."
-  },
-  {
-    "id": "eternal_drift",
-    "name": "Eternal Drift",
-    "type": "idleDominance",
-    "baseValue": 0.3,
-    "description": "Idle DPS becomes more effective than active play."
-  },
-  {
-    "id": "singular_genesis",
-    "name": "Singular Genesis",
-    "type": "startingPowerBoost",
-    "baseValue": 0.5,
-    "description": "Increases starting miner power after Big Bang."
-  },
-  {
-    "id": "cosmic_inversion",
-    "name": "Cosmic Inversion",
-    "type": "clickDpsRatioShift",
-    "baseValue": 0.15,
-    "description": "Alters balance between click and DPS damage."
-  },
-  {
-    "id": "last_equation",
-    "name": "Last Equation",
-    "type": "lateGameSoftCapReducer",
-    "baseValue": 0.08,
-    "description": "Softens late-game scaling penalties."
+{
+  "universal_constants": {
+    "version": 5,
+    "design": "Universal Constants (levelable meta layer).",
+    "currency": "cosmic_essence",
+    "costModels": {
+      "levelPlus1": "cost = level + 1",
+      "flat1": "cost = 1"
+    },
+    "items": [
+      {
+        "id": "prime_continuum",
+        "name": "Prime Continuum",
+        "type": "ascendRewardMultiplier",
+        "baseValue": 0.25,
+        "description": "Increases Stellar Fragment gain on Stellar Rewind.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": null,
+          "costModel": "levelPlus1",
+          "formula": {
+            "applyAs": "multiplier",
+            "multiplier": "1 + (level^2 * baseValue)"
+          }
+        }
+      },
+      {
+        "id": "graviton_law",
+        "name": "Graviton Law",
+        "type": "enemyHpGrowthReducer",
+        "baseValue": 0.05,
+        "description": "Reduces enemy HP growth per sector.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": 150,
+          "costModel": "levelPlus1",
+          "formula": {
+            "applyAs": "growthMultiplier",
+            "growthMultiplier": "0.95^level",
+            "clamp": { "minGrowthPerSector": 1.01 }
+          }
+        }
+      },
+      {
+        "id": "eternal_drift",
+        "name": "Eternal Drift",
+        "type": "idleDominance",
+        "baseValue": 0.3,
+        "description": "Idle DPS becomes more effective than active play.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": null,
+          "costModel": "levelPlus1",
+          "formula": {
+            "applyAs": "effectivenessMultiplier",
+            "multiplier": "1 + ((1.5^level - 1) * (baseValue / 0.30))"
+          }
+        }
+      },
+      {
+        "id": "singular_genesis",
+        "name": "Singular Genesis",
+        "type": "startingPowerBoost",
+        "baseValue": 0.5,
+        "description": "Increases starting miner power after Big Bang.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": null,
+          "costModel": "flat1",
+          "formula": {
+            "applyAs": "multiplier",
+            "multiplier": "1 + (level * baseValue)"
+          }
+        }
+      },
+      {
+        "id": "cosmic_inversion",
+        "name": "Cosmic Inversion",
+        "type": "clickDpsRatioShift",
+        "baseValue": 0.15,
+        "description": "Alters balance between click and DPS damage.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": null,
+          "costModel": "levelPlus1",
+          "formula": {
+            "applyAs": "tapRatioMultiplier",
+            "multiplier": "1 + (level * baseValue)"
+          }
+        }
+      },
+      {
+        "id": "last_equation",
+        "name": "Last Equation",
+        "type": "lateGameSoftCapReducer",
+        "baseValue": 0.08,
+        "description": "Softens late-game scaling penalties.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": null,
+          "costModel": "levelPlus1",
+          "formula": {
+            "applyAs": "penaltyReducer",
+            "penaltyMultiplier": "1 - min(0.9, level * baseValue)"
+          }
+        }
+      },
+      {
+        "id": "chronal_margin",
+        "name": "Chronal Margin",
+        "type": "bossTimerEffectiveness",
+        "baseValue": 0.75,
+        "description": "Amplifies the effectiveness of boss timer extensions.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": null,
+          "costModel": "levelPlus1",
+          "formula": {
+            "applyAs": "effectivenessMultiplier",
+            "multiplier": "1 + (level * baseValue)"
+          }
+        }
+      },
+      {
+        "id": "treasure_manifest",
+        "name": "Treasure Manifest",
+        "type": "treasureChanceEffectiveness",
+        "baseValue": 1.0,
+        "description": "Amplifies the effectiveness of treasure/geode chance sources.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": null,
+          "costModel": "levelPlus1",
+          "formula": {
+            "applyAs": "effectivenessMultiplier",
+            "multiplier": "1 + (level * baseValue)"
+          }
+        }
+      },
+      {
+        "id": "kairic_dampener",
+        "name": "Kairic Dampener",
+        "type": "bossHpEffectiveness",
+        "baseValue": 0.5,
+        "description": "Amplifies the effectiveness of boss HP reduction and boss HP scaling reducers.",
+        "leveling": {
+          "enabled": true,
+          "maxLevel": null,
+          "costModel": "levelPlus1",
+          "formula": {
+            "applyAs": "effectivenessMultiplier",
+            "multiplier": "1 + (level * baseValue)"
+          }
+        }
+      }
+    ],
+    "cosmicEssenceEarning": {
+      "trigger": "bigBang",
+      "inputs": [
+        "highestSectorThisRun",
+        "stellarFragmentsSpentLifetime"
+      ],
+      "formula": {
+        "sectorTerm": "max(0, floor((highestSectorThisRun - 100) / 50))",
+        "spentTerm": "floor(log10(max(1, stellarFragmentsSpentLifetime)) / 2)",
+        "raw": "sectorTerm + spentTerm",
+        "essenceGain": "max(0, raw)"
+      },
+      "minimumGuarantee": {
+        "enabled": true,
+        "minSector": 150,
+        "minGain": 1
+      },
+      "pity": {
+        "enabled": false,
+        "failCount": 3,
+        "grant": 1
+      }
+    }
   }
-]
+}

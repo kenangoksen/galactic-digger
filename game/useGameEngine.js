@@ -252,6 +252,7 @@ export function useGameEngine() {
   const [step, setStep] = useState(1);
   const [maxUnlockedZone, setMaxUnlockedZone] = useState(1);
   const [isPrimal, setIsPrimal] = useState(false);
+  const [isChest, setIsChest] = useState(false); // 📦 Treasure Chest State
 
   // Auto-update maxUnlockedZone if we are somehow ahead of it
   useEffect(() => {
@@ -798,8 +799,9 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
            }
        }
 
-       // Primal Check: Zone >= 105 && 25% Chance
-       const isPrimalNow = zone >= 105 && Math.random() < 0.25;
+        // Primal Check: Zone >= 105 && 25% Chance + Protocol Bonus
+        const chance = 0.25 + (totals.protocolModifiers?.anomalyChanceBonus || 0);
+        const isPrimalNow = zone >= 105 && Math.random() < chance;
        if (isPrimalNow) {
            setIsPrimal(true);
            if (s && s.lifetime) {
@@ -808,9 +810,29 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
        } else {
            setIsPrimal(false);
        }
+        
+        // No Chests on Boss Levels (usually rule is: Chests replace monsters, not bosses)
+        setIsChest(false);
     } else {
        setBossTimeMsLeft(0);
        setIsPrimal(false);
+       
+       // CHEST SPAWN LOGIC (non-boss)
+       // Base Chance 1-2% + Protocol
+       // Let's say Base 1%
+       const chestChance = 0.01 + (totals.protocolModifiers?.treasureChestChance || 0);
+       const isChestNow = Math.random() < chestChance;
+       setIsChest(isChestNow);
+       
+       if (isChestNow) {
+           // Toast? 
+           // setTagToast({ message: "Cosmic Geode Found!" }); // Too spammy if frequent?
+           // Maybe only distinct visual later.
+           
+           if (s && s.lifetime) {
+                // Track total chests?
+           }
+       }
     }
   }, [zone, step, isBossPlanet]);
 
@@ -825,8 +847,17 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     (dmg) => {
       if (respawningRef.current) return; // 🛑 Respawn sırasında hasar yok
 
-      const hit = Number(dmg || 0);
-      if (hit <= 0) return;
+      const rawHit = Number(dmg || 0);
+      if (rawHit <= 0) return;
+      
+      let hit = rawHit;
+      
+      // BOSS DPS BONUS
+      const isBoss = zoneRef.current % 5 === 0; // Safe read from ref or use isBossPlanet from scope if reliable
+      if (isBoss) {
+          const bossMul = totals.protocolModifiers?.bossDpsMult || 1;
+          hit *= bossMul;
+      }
 
       let currentHp = hpRef.current;
       
@@ -851,8 +882,23 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       const localStep = stepRef.current;
       const base = monsterMineral(localZone, localStep);
       const activeGoldMult = getGoldMultiplier(); // Metal Detector
+      
+      // BOSS REWARD BONUS
+      let bossRewardMul = 1;
+      if (localZone % 5 === 0) {
+           bossRewardMul = totals.protocolModifiers?.bossRewardMult || 1;
+      }
+      
+      // CHEST REWARD BONUS (10x)
+      let chestMul = 1;
+      if (isChest) {
+          chestMul = 10;
+      }
+      
       const gained = D(base)
         .mul(totals.mineralMult || 1)
+        .mul(bossRewardMul)
+        .mul(chestMul) // 📦
         .mul(activeGoldMult)
         .floor();
       dispatchEco({ type: "GAIN_MINERALS", amount: gained });
@@ -886,13 +932,17 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
 
       // Primal Reward
       if (isPrimal) {
-          const pReward = getPrimalReward(localZone);
-          if (pReward > 0) {
+          const rawPReward = getPrimalReward(localZone);
+          if (rawPReward > 0) {
+             const fragMult = totals.protocolModifiers?.anomalyFragmentMult || 1;
+             const pReward = Math.floor(rawPReward * fragMult);
+             
              dispatchEco({ type: "GAIN_FRAGMENTS", amount: pReward });
              
-             // STARLINK TAG DROP LOGIC
-             // 10% Chance (STARLINK_CONFIG.DROP_CHANCE)
-             if (Math.random() < (STARLINK_CONFIG.DROP_CHANCE || 0.1)) {
+              // STARLINK TAG DROP LOGIC
+              // 10% Chance + Protocol Bonus
+              const dropChance = (STARLINK_CONFIG.DROP_CHANCE || 0.1) + (totals.protocolModifiers?.starlinkTagDropBonus || 0);
+              if (Math.random() < dropChance) {
                  dispatchEco({ type: "GAIN_TAG", amount: 1 });
                  // Toast Logic (We don't know who got it until we check state, 
                  // but dispatch happens asynchronously. 
@@ -1053,7 +1103,9 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     // Handle Energize Consumption
     let multiplier = 1;
     if (energizeRef.current && skill.effect !== 'energize') {
-        multiplier = 2;
+        // Base 2x, plus protocol bonus (s_energize)
+        const energizeBonus = totals.protocolModifiers?.skillValueBonus?.['s_energize'] || 0;
+        multiplier = 2 + energizeBonus;
         energizeRef.current = false; 
     }
 
@@ -1063,28 +1115,40 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     } 
     else if (skill.effect === 'reload') {
         if (lastUsedSkillRef.current) {
+            const baseReduction = 3600000;
+            const extraRed = totals.protocolModifiers?.skillValueBonus?.['s_reload'] || 0;
             setSkillCooldowns(prev => ({
                 ...prev,
-                [lastUsedSkillRef.current]: Math.max(now, (prev[lastUsedSkillRef.current] || now) - 3600000)
+                [lastUsedSkillRef.current]: Math.max(now, (prev[lastUsedSkillRef.current] || now) - (baseReduction + extraRed))
             }));
         }
     }
     else if (skill.effect === 'darkRitual') {
-        const bonus = (skill.value - 1) * multiplier + 1;
+        const extraVal = totals.protocolModifiers?.skillValueBonus?.['s_darkritual'] || 0;
+        const baseVal = skill.value + extraVal;
+        const bonus = (baseVal - 1) * multiplier + 1;
         setDarkRitualMult(prev => prev * bonus);
     }
     else {
         // Duration Skill
+        // Apply Protocol Duration Bonus
+        const bonusMs = totals.protocolModifiers?.skillDurationBonusMs?.[skillId] || 0;
         setActiveSkills(prev => ({
             ...prev,
-            [skillId]: now + skill.duration
+            [skillId]: now + skill.duration + bonusMs
         }));
     }
 
     // Set Cooldown
+    // Apply Protocol Cooldown Reduction (multiplicative)
+    // Formula: cooldown * (1 - reduction) ... we stored 'mult' in modifiers (e.g. 0.95^lvl)
+    const cdMult = totals.protocolModifiers?.skillCooldownMult?.[skillId];
+    // Default 1 if undefined
+    const finalCdMult = (cdMult !== undefined) ? cdMult : 1;
+    
     setSkillCooldowns(prev => ({
         ...prev,
-        [skillId]: now + skill.cooldown
+        [skillId]: now + (skill.cooldown * finalCdMult)
     }));
     
     if (skill.effect !== 'reload' && skill.effect !== 'energize') {
@@ -1121,6 +1185,21 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     const cappedStreak = Math.min(streakCount, DAMAGE_CONFIG.STREAK_CAP);
     const streakMult = 1 + cappedStreak * DAMAGE_CONFIG.STREAK_BONUS_PER_TAP;
     dmg = dmg.mul(streakMult);
+    
+    // 3.5. Protocol Combo Bonus (Momentum Combo Core)
+    // "Adds a stacking tap combo bonus... per level"
+    // Formula: (BonusPerTap * Level) * Count
+    // We calculated (BonusPerTap * Level) in modifiers as 'comboBonusPerTap'.
+    const pComboBonus = totals.protocolModifiers?.comboBonusPerTap || 0;
+    if (pComboBonus > 0) {
+        // Linear stacking? "each consecutive tap increases ... by +0.01%".
+        // It implies (1 + count * bonus).
+        // Similar to streakMult but separate or additive to it?
+        // User: "Additive in percent form". 
+        // Let's multiply dmg by (1 + count * pComboBonus).
+        const pStreakMult = 1 + streakCount * pComboBonus;
+        dmg = dmg.mul(pStreakMult);
+    }
     
     // 4. Crit (Bhaal + Lucky Strikes)
     // Base Chance + Bonus
@@ -1544,6 +1623,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     zone,
     step,
     isBossPlanet,
+    isChest, // ✅ Exported for UI (e.g. show different sprite)
 
     // combat
     maxHp,

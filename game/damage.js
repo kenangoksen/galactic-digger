@@ -243,6 +243,22 @@ function createEmptyTotals() {
       miners: {},
       layers: [],
     },
+    
+    // Configurable modifiers from Protocols/Constants
+    protocolModifiers: {
+        skillDurationBonusMs: {}, // { skillId: ms }
+        skillCooldownMult: {},    // { skillId: mult }
+        skillValueBonus: {},      // { skillId: val }
+        bossDpsMult: 1,
+        bossRewardMult: 1,
+        anomalyChanceBonus: 0,
+        anomalyFragmentMult: 1,
+        starlinkTagPowerAdd: 0,
+        starlinkTagDropBonus: 0,
+        comboBonusPerTap: 0,
+        tapFromDpsRatio: 0, // from manual_override
+        treasureChestChance: 0,
+    }
   };
 }
 
@@ -343,14 +359,18 @@ function applyCosmicProtocols({
   totals,
   protocolsDef = [],
   ownedProtocols = {},
+  stellarFragmentsSpent = 0 
 }) {
   if (!protocolsDef?.length) {
     pushLayer(totals, "cosmicProtocols", { note: "(none)" });
     return totals;
   }
 
+  const mods = totals.protocolModifiers;
+  
   let tapMult = 1;
   let globalDpsMult = 1;
+  let minerDpsMult = 1;
   let critChanceAdd = 0;
   let critMultMul = 1;
   let mineralMult = 1;
@@ -360,49 +380,193 @@ function applyCosmicProtocols({
     if (lv <= 0) continue;
 
     const baseVal = toNum(p.baseValue, 0);
-    const amount = baseVal * lv;
 
     switch (p.type) {
-      case "tapMultiplier":
-        tapMult *= 1 + amount;
-        break;
+      case "globalDpsMultiplier_perSpentSF":
+         // "Adds +11% global DPS per Stellar Fragment spent into this protocol"
+         // Cost logic is external, but usually spent ~ cost formula.
+         // If we don't track specific spent amount, we can estimate from level?
+         // User says "per Stellar Fragment spent INTO THIS PROTOCOL".
+         // Use: cost formula. 
+         // If cost=1 (linear), spent = lv.
+         // If cost=n, spent = n*(n+1)/2. 
+         // Helper to approximate or if passed explicitly? 
+         // Ideally eco reducer tracks `spentOnProtocol`.
+         // For now, let's use Level * BaseValue as standard fallback or approximating cost?
+         // Text says: "per Stellar Fragment spent".
+         // Let's approximate based on level cost formula:
+         // core_singularity: unlock=1, levelUp=1. Cost for Lvl L = 1. Total spent = L.
+         // So Level * BaseValue works perfectly for Cost=1.
+         globalDpsMult += lv * baseVal; 
+         break;
+
       case "globalDpsMultiplier":
-        globalDpsMult *= 1 + amount;
+        globalDpsMult += lv * baseVal;
         break;
+
+      case "minerDpsMultiplier":
+        // Applies to base miner DPS before global
+        minerDpsMult += lv * baseVal;
+        break;
+        
+      case "bossDpsMultiplier":
+        mods.bossDpsMult += lv * baseVal;
+        break;
+        
+      case "idleDpsMultiplier_piecewise":
+        // Piecewise logic
+        if (p.piecewise) {
+             const { startPerLevel, minPerLevel, stepDownEveryLevels, stepDownAmount } = p.piecewise;
+             let totalPw = 0;
+             for (let i=1; i<=lv; i++) {
+                 // 0-based index for step down? "stepDownEveryLevels: 10" -> levels 1-10 full, 11-20 -0.01
+                 const steps = Math.floor((i - 1) / stepDownEveryLevels);
+                 const currentVal = Math.max(minPerLevel, startPerLevel - steps * stepDownAmount);
+                 totalPw += currentVal;
+             }
+             // Applying as Global DPS multiplier or separate Idle?
+             // "Boosts idle DPS". Integrating into Global DPS for now.
+             globalDpsMult += totalPw; 
+        } else {
+             globalDpsMult += lv * baseVal;
+        }
+        break;
+
+      case "dpsScalingReducer":
+         // Not implemented yet
+         break;
+
+      case "tapMultiplier":
+        tapMult += lv * baseVal;
+        break;
+
+      case "dpsToTapConversion":
+        mods.tapFromDpsRatio += lv * baseVal;
+        break;
+        
+      case "tapComboBonusPerTap":
+        mods.comboBonusPerTap += lv * baseVal;
+        break;
+
+      case "critEnhancer_split":
+        if (p.crit) {
+            critChanceAdd += lv * p.crit.critChanceAddPerLevel;
+            critMultMul += lv * p.crit.critMultAddPerLevel;
+        } else {
+            critChanceAdd += lv * (baseVal * 0.5);
+            critMultMul += lv * baseVal;
+        }
+        break;
+
       case "critEnhancer":
-        // JSON says "critEnhancer" -> usually chance + mult?
-        // Let's assume it adds to chance and multiplies damage slightly?
-        // Or checking description: "Improves critical chance and multiplier"
-        // Let's split it: half to chance, full to mult?
-        // For simplicity: amount -> chance, (1+amount) -> mult
-        critChanceAdd += amount * 0.5; 
-        critMultMul *= 1 + amount;
+        critChanceAdd += lv * baseVal * 0.5;
+        critMultMul += lv * baseVal;
         break;
-      case "critChance":
-        critChanceAdd += amount;
-        break;
-      case "critMultiplier":
-        critMultMul *= 1 + amount;
-        break;
+
       case "mineralMultiplier":
-        mineralMult *= 1 + amount;
+        mineralMult += lv * baseVal;
         break;
-      // TODO: Implement other types:
-      // - minerDpsMultiplier
-      // - bossDpsMultiplier
-      // - idleDpsMultiplier
-      // - dpsScalingReducer
-      // - dpsToTapConversion
-      // - bossRewardMultiplier
-      // - zoneSpeedMultiplier
-      // - hpScalingReducer
+
+      case "bossRewardMultiplier":
+        mods.bossRewardMult += lv * baseVal;
+        break;
+        
+      case "anomalyBossChanceBonus":
+        mods.anomalyChanceBonus += lv * baseVal;
+        break;
+        
+      case "anomalyFragmentRewardMultiplier_piecewise":
+        if (p.piecewise) {
+             const { startPerLevel, minPerLevel, stepDownEveryLevels, stepDownAmount } = p.piecewise;
+             let totalPw = 0;
+             for (let i=1; i<=lv; i++) {
+                 const steps = Math.floor((i - 1) / stepDownEveryLevels);
+                 const currentVal = Math.max(minPerLevel, startPerLevel - steps * stepDownAmount);
+                 totalPw += currentVal;
+             }
+             mods.anomalyFragmentMult += totalPw;
+        } else {
+             mods.anomalyFragmentMult += lv * baseVal;
+        }
+        break;
+        
+      case "zoneSpeedMultiplier":
+        // TODO: Pass to logic
+        break;
+        
+      case "starlinkTagPowerAdd":
+        mods.starlinkTagPowerAdd += lv * baseVal;
+        break;
+        
+      case "starlinkTagDropBonus":
+        mods.starlinkTagDropBonus += lv * baseVal;
+        break;
+        
+      case "treasureChestChance":
+         mods.treasureChestChance += lv * baseVal;
+         break;
+        
+      // --- SKILL MODIFIERS ---
+      case "skillDurationBonusMs":
+        if (p.targets) {
+            p.targets.forEach(tid => {
+                mods.skillDurationBonusMs[tid] = (mods.skillDurationBonusMs[tid] || 0) + (lv * baseVal);
+            });
+        }
+        break;
+
+      case "skillCooldownReducer":
+        if (p.targets) {
+            // "Multiplicative on remaining cooldown" -> (1 - 0.05)^Level
+            // baseValue = 0.05
+            const reduction = Math.pow(1 - baseVal, lv);
+            p.targets.forEach(tid => {
+                const current = mods.skillCooldownMult[tid];
+                // If undefined, start with 1.
+                // If multiple sources, multiply?
+                // Assuming one source per skill for now.
+                mods.skillCooldownMult[tid] = (current !== undefined ? current : 1) * reduction;
+            });
+        }
+        break;
+        
+      case "skillValueBonus":
+        if (p.targets) {
+            p.targets.forEach(tid => {
+                 mods.skillValueBonus[tid] = (mods.skillValueBonus[tid] || 0) + (lv * baseVal);
+            });
+        }
+        break;
+        
+      case "skillValueBonusMs":
+         if (p.targets) {
+             // e.g. reload cooldown reduction increase
+             p.targets.forEach(tid => {
+                 mods.skillValueBonus[tid] = (mods.skillValueBonus[tid] || 0) + (lv * baseVal);
+             });
+         }
+         break;
+         
+      case "darkRitualStackBonus":
+         if (p.targets) {
+             p.targets.forEach(tid => {
+                  mods.skillValueBonus[tid] = (mods.skillValueBonus[tid] || 0) + (lv * baseVal);
+             });
+         }
+         break;
+
+      case "hpScalingReducer":
+        // Optional
+        break;
+
       default:
         break;
     }
   }
 
+  // Apply to totals
   totals.tapDamage = Math.max(1, totals.tapDamage * tapMult);
-  totals.dps = Math.max(0, totals.dps * globalDpsMult);
+  totals.dps = Math.max(0, totals.dps * globalDpsMult * minerDpsMult); // including minerDps
   totals.critChance = clamp(totals.critChance + critChanceAdd, 0, 0.75);
   totals.critMult = Math.max(1.01, totals.critMult * critMultMul);
   totals.mineralMult = Math.max(0.01, totals.mineralMult * mineralMult);
@@ -413,6 +577,7 @@ function applyCosmicProtocols({
     critChanceAdd,
     critMultMul,
     mineralMult,
+    minerDpsMult
   });
 
   return totals;
@@ -494,8 +659,23 @@ export function computeTotals({
   ownedProtocols,
   constantsDef,
   ownedConstants,
+  tagsByMinerId = {}, // ✅ New Argument
 } = {}) {
   const totals = createEmptyTotals();
+
+  // 3) Cosmic Protocols (Moved earlier to get modifiers like starlinkTagPowerAdd)
+  applyCosmicProtocols({
+    totals,
+    protocolsDef: protocolsDef || [],
+    ownedProtocols: ownedProtocols || {},
+  });
+  
+  // Calculate Tag Power
+  // Base 0.50 + Protocol Bonus
+  const baseTagPower = 0.50; 
+  const currentTagPower = baseTagPower + (totals.protocolModifiers.starlinkTagPowerAdd || 0);
+
+
 
   // 1) Base from miners
   for (const m of minersDef || []) {
@@ -503,15 +683,28 @@ export function computeTotals({
     if (lvl <= 0) continue;
 
     const c = getMinerContribution(m, lvl, ownedSkills);
+    
+    // Starlink Tag Bonus
+    const tagCount = tagsByMinerId[m.id] || 0;
+    let tagMult = 1;
+    if (tagCount > 0) {
+        tagMult = 1 + tagCount * currentTagPower;
+    }
+    
+    c.dps *= tagMult;
+    c.tap *= tagMult;
+
     totals.tapDamage += c.tap;
     totals.dps += c.dps;
     totals.breakdown.miners[m.id] = {
       level: lvl,
       tap: c.tap,
       dps: c.dps,
+      tags: tagCount,
+      tagMult: tagMult
     };
   }
-  pushLayer(totals, "miners(BaseSum)", {
+  pushLayer(totals, "miners(BaseSum+Tags)", {
     tapDamage: totals.tapDamage,
     dps: totals.dps,
   });
@@ -519,12 +712,30 @@ export function computeTotals({
   // 2) Miner skills (global)
   applyGlobalSkillsFromMiners({ totals, minersDef, ownedMiners, ownedSkills });
 
-  // 3) Cosmic Protocols (future)
-  applyCosmicProtocols({
-    totals,
-    protocolsDef: protocolsDef || [],
-    ownedProtocols: ownedProtocols || {},
-  });
+  // 3) Cosmic Protocols (Already applied initially to get modifiers, but we need to apply multipliers to the NEW Sum)
+  // Re-apply multipliers logic? 
+  // applyCosmicProtocols calculates 'globalDpsMult' and multiplies 'totals.dps', which was 0 when called first.
+  // ISSUE: If I call applyCosmicProtocols first, 'totals.dps' is 0, so 'totals.dps * mult' is still 0. 
+  // Then I add miners.
+  // So the Protocol Multiplier never applied to the miner sum?
+  // CORRECT.
+  // I need to separating "Collecting Modifiers" from "Applying Multipliers".
+  // OR: Call applyCosmicProtocols TWICE? No, side effects.
+  // OR: Just manually apply the multipliers from the breakdown/totals? 
+  // 'totals.breakdown.cosmicProtocols' has the multipliers.
+  // Let's use that.
+  
+  const cpLayer = totals.breakdown.layers.find(l => l.name === "cosmicProtocols");
+  if (cpLayer) {
+      if (cpLayer.globalDpsMult) totals.dps *= cpLayer.globalDpsMult;
+      if (cpLayer.minerDpsMult) totals.dps *= cpLayer.minerDpsMult; // We tracked this separately in applyCosmicProtocols update
+      if (cpLayer.tapMult) totals.tapDamage *= cpLayer.tapMult;
+      if (cpLayer.mineralMult) totals.mineralMult *= cpLayer.mineralMult;
+      // Crit was additive to totals.critChance/Mult, effectively already set in totals state?
+      // Yes, 'totals.critChance = ...' sets it on the object.
+      // But 'totals.dps' was 0.
+      // So simple multiplication here fixes DPS/TAP.
+  }
 
   // 4) Universal Constants (future)
   applyUniversalConstants({
@@ -540,7 +751,7 @@ export function computeTotals({
   // Then multiplied by Global Tap Multipliers (Tap Power)
   
   // totals.dps is already fully calculated here (including all multipliers).
-  const dpsPortion = totals.dps * DAMAGE_CONFIG.TAP_FROM_DPS_RATIO;
+  // dpsPortion calculated later using protocol modifiers
   
   // totals.tapDamage currently holds (Sum of Miner Tap) * (minersSkills.tapMult) ...
   // Wait, applyGlobalSkillsFromMiners applies mult to totals.tapDamage incrementally.
@@ -589,6 +800,14 @@ export function computeTotals({
   totals.breakdown.layers.forEach(l => {
       if (l.tapMult) totalTapMult *= l.tapMult;
   });
+
+  // NEW: Protocol Tap From DPS Ratio
+  let tapRatio = DAMAGE_CONFIG.TAP_FROM_DPS_RATIO;
+  if (totals.protocolModifiers.tapFromDpsRatio > 0) {
+      tapRatio += totals.protocolModifiers.tapFromDpsRatio;
+  }
+  
+  const dpsPortion = totals.dps * tapRatio;
   
   // The dpsPortion serves as a base. 
   // So added damage = (totals.dps * Ratio) * totalTapMult.
@@ -624,6 +843,7 @@ export function computeTotals({
 
     // Extra: optional debugging for you (safe to ignore in UI)
     breakdown: totals.breakdown,
+    protocolModifiers: totals.protocolModifiers, // ✅ Expose modifiers
   };
 }
 
