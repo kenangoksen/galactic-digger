@@ -1,10 +1,12 @@
 // components/game/GameStage.js
 import { Animated, Pressable, StyleSheet, View } from "react-native";
+import SpriteAnimation from "../ui/SpriteAnimation";
 import BossBar from "./BossBar";
 import HpBarCompact from "./HpBarCompact";
 
 export default function GameStage({
   planetImg,
+  planetData, // New prop for animation metadata
   stageTranslateY,
   stageScale = 1, // default
   puffScale,
@@ -135,26 +137,44 @@ export default function GameStage({
           </View>
 
           {/* miner */}
-          <Animated.Image
-            source={require("../../assets/images/sprites/miners/miner_01.png")}
+          <Animated.View
             style={[
               styles.miner,
               {
+                // Override dimensions for the large sprite
+                width: 192, 
+                height: 1024,
+                // Adjust centering offset since dimensions changed?
+                // styles.miner uses top:50%, left:50% which centers the top-left corner usually?
+                // No, usually requires marginTop: -height/2.
+                // styles.miner doesn't have margin offsets. It assumes simple placement.
+                // Actually styles.miner has top: 50%, left: 50%.
+                // To center it, RN default anchor is top-left.
+                // So (0,0) of view is at 50%,50% of parent.
+                // We likely need `marginTop: -512`, `marginLeft: -96`.
+                marginTop: -512,
+                marginLeft: -96,
+                
                 transform: [
-                  { translateX: -145 },
-                  {
-                    translateY: minerIdle.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [-135, -129],
-                    }),
-                  },
-                  { rotate: "-24deg" },
+                  { translateX: -50 }, // Moved Right (was -85)
+                  { translateY: -55 }, // Moved Down (was -90)
+                  { rotate: "-15deg" }, // Adjusted rotation
+                  { scale: 0.15625 }, // 1024 * 0.15625 = 160px exact
                 ],
               },
             ]}
-            resizeMode="contain"
-          />
+          >
+             <SpriteAnimation 
+                source={require("../../assets/images/sprites/miners/miner_animate.png")}
+                frameWidth={192}
+                frameHeight={1024}
+                frameCount={8}
+                framesToPlay={5} // Skip last 3 frames (Play 0-4)
+                fps={8}
+             />
+          </Animated.View>
 
+          {/* drone */}
           {/* drone */}
           {(activeDroneCount > 0) && (
              <View style={{
