@@ -72,10 +72,11 @@
     {
       "id": "manual_override",
       "name": "Manual Override",
-      "type": "dpsToTapConversion",
+      "type": "dpsToTapMilestoneEffectiveness",
       "baseValue": 0.02,
-      "description": "Converts 2% of total DPS into added tap damage per level (tap scales with your DPS).",
-      "maxLevel": null,
+      "description": "Increases the effectiveness of DPS conversion milestones by 2% per level (capped).",
+      "maxLevel": 50,
+      "effectivenessCap": 2.0,
       "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
     },
     {

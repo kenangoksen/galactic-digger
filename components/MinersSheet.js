@@ -1,7 +1,7 @@
 // components/MinersSheet.js
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { memo, useMemo, useRef } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import {
     Animated,
     FlatList,
@@ -12,6 +12,7 @@ import {
     View
 } from "react-native";
 import { D, fmtD } from "../game/bn";
+import { getBulkCost } from "../game/damage";
 
 const MINER_PLACEHOLDER = require("../assets/images/sprites/miners/miner_01.png");
 
@@ -63,8 +64,9 @@ const MinerRow = memo(function MinerRow({
   onBuySkill,     // (minerId, skillId) => void
   purchasedSkillsForMiner,
   tags = 0,       // Starlink Tags
+  buyAmount = 1,  // ✅ Default 1
 }) {
-  const cost = getNextCost(miner, level);
+  const cost = getBulkCost(miner, level, buyAmount); // ✅ Use bulk cost
 
   // Decimal-safe compare
   const canBuy = D(minerals).gte(cost);
@@ -215,6 +217,15 @@ function MinersSheetImpl({
   unlockedCount = 2,
 }) {
   const listRef = useRef(null);
+  const [buyMultiplier, setBuyMultiplier] = useState(1);
+
+  const toggleMult = () => {
+      setBuyMultiplier(prev => {
+          const opts = [1, 10, 25, 100, 1000, 10000];
+          const idx = opts.indexOf(prev);
+          return opts[(idx + 1) % opts.length];
+      });
+  };
 
   const data = useMemo(() => {
     const count = Math.max(2, Number(unlockedCount || 2));
@@ -230,9 +241,14 @@ function MinersSheetImpl({
           <Text style={styles.title}>MINING OPERATIONS</Text>
         </View>
         
-        <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={20} color="#fff" />
-        </Pressable>
+        <View style={styles.headerRight}>
+            <Pressable onPress={toggleMult} style={styles.multBtn}>
+                <Text style={styles.multBtnTxt}>{buyMultiplier}x</Text>
+            </Pressable>
+            <Pressable onPress={onClose} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color="#fff" />
+            </Pressable>
+        </View>
       </View>
 
       <FlatList
@@ -252,10 +268,11 @@ function MinersSheetImpl({
               level={lvl}
               minerals={minerals}
               getNextCost={getNextCost}
-              onBuyOrUpgrade={onBuyOrUpgrade}
+              onBuyOrUpgrade={(mid) => onBuyOrUpgrade(mid, buyMultiplier)}
               onBuySkill={onBuySkill}
               purchasedSkillsForMiner={purchasedMap}
-              tags={tagsByMinerId[m.id] || 0} // ✅
+              tags={tagsByMinerId[m.id] || 0} 
+              buyAmount={buyMultiplier}
             />
           );
         }}
@@ -269,22 +286,24 @@ export default memo(MinersSheetImpl);
 const styles = StyleSheet.create({
   sheet: {
     position: "absolute",
-    left: 10,
-    right: 10,
+    left: 0,
+    right: 0,
     bottom: 74,
-    height: 260, // Standard height per user request
-    borderRadius: 20,
+    height: 280, // Reduced to Reveal HP Bar
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     backgroundColor: "rgba(12, 16, 28, 0.98)",
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 0, // No bottom border
     borderColor: "rgba(59, 130, 246, 0.3)", // Blue border
     paddingTop: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16, // More internal padding since full width
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: -4 }, // Shadow upwards
     shadowOpacity: 0.5,
     shadowRadius: 10,
-    elevation: 10,
+    elevation: 20,
     zIndex: 100,
   },
   header: {

@@ -1,9 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons"; // Added MaterialCommunityIcons for consistence if needed, or just Text
 import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import protocolsDef from "../assets/config/cosmic_protocols.json";
 import { D } from "../game/bn";
-import { fmt } from "../game/damage";
+import { fmt, getProtocolBulkCost } from "../game/damage"; // ✅ Added helper
 import SummonProtocolModal from "./game/SummonProtocolModal";
 
 // Helper for cost calculation (Upgrade cost, distinct from unlock)
@@ -43,7 +43,15 @@ export default function CosmicStoreSheet({
   getNextUnlockCost
 }) {
   const [showSummon, setShowSummon] = useState(false);
-  // Removed internal hook usage
+  const [buyMultiplier, setBuyMultiplier] = useState(1); // ✅
+
+  const toggleMult = () => {
+      setBuyMultiplier(prev => {
+          const opts = [1, 10, 25, 100, 1000, 10000];
+          const idx = opts.indexOf(prev);
+          return opts[(idx + 1) % opts.length];
+      });
+  };
   
   if (!visible) return null;
 
@@ -65,9 +73,14 @@ export default function CosmicStoreSheet({
             <Text style={styles.title}>COSMIC PROTOCOLS</Text>
           </View>
           
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-             <Ionicons name="close" size={20} color="#fff" />
-          </Pressable>
+          <View style={styles.headerRight}>
+              <Pressable onPress={toggleMult} style={styles.multBtn}>
+                  <Text style={styles.multBtnTxt}>{buyMultiplier}x</Text>
+              </Pressable>
+              <Pressable onPress={onClose} style={styles.closeBtn}>
+                 <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
+          </View>
         </View>
 
         {/* CURRENCY */}
@@ -97,7 +110,9 @@ export default function CosmicStoreSheet({
           ) : (
               ownedList.map((proto) => {
                 const level = cosmicProtocols[proto.id] || 0;
-                const cost = getUpgradeCost(level);
+                // ✅ Use Bulk Cost Helper
+                const cost = getProtocolBulkCost(level, buyMultiplier);
+                
                 const canAfford = D(stellarFragments).gte(cost);
                 const iconName = ICONS[proto.id] || "cube";
     
@@ -117,10 +132,10 @@ export default function CosmicStoreSheet({
     
                     <Pressable
                       style={[styles.buyBtn, !canAfford && styles.buyBtnDisabled]}
-                      onPress={() => onBuy(proto.id)} // Pass ID, upgrades use internal cost check too or pre-check
+                      onPress={() => onBuy(proto.id, buyMultiplier)} 
                       disabled={!canAfford}
                     >
-                      <Text style={styles.costText}>{cost}</Text>
+                      <Text style={styles.costText}>{fmt(cost)}</Text>
                       <Ionicons name="arrow-up-circle" size={12} color={canAfford ? "#fff" : "#ffffff50"} />
                     </Pressable>
                   </View>
@@ -148,18 +163,24 @@ export default function CosmicStoreSheet({
 const styles = StyleSheet.create({
   sheet: {
     position: "absolute",
-    left: 10,
-    right: 10,
+    left: 0,
+    right: 0,
     bottom: 74,
-    height: 260, // Standardized height
-    borderRadius: 20,
+    height: 280, // Standardized height
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     backgroundColor: "rgba(12, 16, 28, 0.98)",
-    borderWidth: 1,
+    borderTopWidth: 1,
     borderColor: "rgba(168, 85, 247, 0.3)",
     paddingTop: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     overflow: "hidden",
     zIndex: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 20,
   },
   header: {
     flexDirection: "row",
@@ -171,6 +192,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+  },
+  multBtn: {
+      backgroundColor: "rgba(168, 85, 247, 0.2)", // Purple tint
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: "rgba(168, 85, 247, 0.5)",
+  },
+  multBtnTxt: {
+      color: "#d8b4fe",
+      fontSize: 10,
+      fontWeight: "bold",
   },
   headerIcon: {
     width: 24,

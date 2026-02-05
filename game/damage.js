@@ -42,6 +42,15 @@ export function getBulkCost(def, currentLevel, count = 1) {
   return currentBase.mul(num).div(den).floor();
 }
 
+// Helper for Protocol Bulk Cost (Arithmetic Series: Cost = Level + 1)
+export function getProtocolBulkCost(currentLevel, amount) {
+    if (amount <= 0) return 0;
+    // Sum of (L+1) ... (L+amount)
+    // = amount * L + Sum(1..amount)
+    // = amount * L + amount*(amount+1)/2
+    return (amount * currentLevel) + (amount * (amount + 1)) / 2;
+}
+
 // -----------------------------------------------------------------------------
 // Miner Contribution (Base Layer)
 // -----------------------------------------------------------------------------
@@ -104,7 +113,7 @@ function createEmptyTotals() {
     bossDpsMult: 1,
     bossRewardMult: 1,
     
-    tapFromDpsRatio: 0, // Manual Override
+    milestoneEffectiveness: 1, // Manual Override Protocol
     comboBonusPerTap: 0, // Momentum Combo Core
     treasureChestChance: 0, // Geode Protocol
     
@@ -212,8 +221,13 @@ function applyCosmicProtocols(totals, protocolsDef, ownedProtocols, stellarFragm
             case "tapMultiplier": // Photon Strike Matrix
                 totals.tapMult += (lv * base);
                 break;
-            case "dpsToTapConversion": // Manual Override
-                totals.tapFromDpsRatio += (lv * base);
+            case "dpsToTapMilestoneEffectiveness": // Manual Override
+                // Base 0.02. L=50 => 1 + 50*0.02 = 2.0. Cap 2.0.
+                {
+                    const rawEff = 1 + (lv * base);
+                    const cap = p.effectivenessCap || 999;
+                    totals.milestoneEffectiveness = Math.min(cap, rawEff);
+                }
                 break;
             case "tapComboBonusPerTap": // Momentum Combo Core
                 totals.comboBonusPerTap += (lv * base);
@@ -295,7 +309,9 @@ export function computeTotals({
   tagsByMinerId,
   // Other
   stellarFragmentsSpent,
-  stellarFragments // ✅ Passed in for passive DPS
+  stellarFragments, // ✅ Passed in for passive DPS
+  dpsToTapMilestonesUnlocked, // ✅ Progress
+  mineralBonusActive, // ✅ Ad Bonus
 }) {
     const totals = createEmptyTotals();
 
@@ -370,20 +386,39 @@ export function computeTotals({
     // DPS
     totals.dps = baseDps * totals.globalDpsMult;
     
-    // Tap - Base + Conversion
-    // Base Tap * Tap Mult
-    let finalTap = baseTap * totals.tapMult;
+    // Add DPS->Tap Conversion (Progressive Milestones)
+    const unlockedCount = Object.keys(dpsToTapMilestonesUnlocked || {}).length;
+    const ratioPerMilestoneBase = 0.005;
+    const maxRatio = 0.035;
+
+    // Step 1: Effectiveness (Calculated in modifiers, capped there)
+    const effMult = totals.milestoneEffectiveness; // Default 1
+
+    // Step 2: Compute Ratio
+    // Cosmic Inversion also affects the ratio if present (tapRatioMult)
+    let ratioUnclamped = unlockedCount * ratioPerMilestoneBase * effMult;
     
-    // Add DPS->Tap Conversion (Manual Override)
-    // Added AFTER mults usually, or before? "Converts 2% of total DPS"
-    // Usually: Tap = (BaseTap * Mult) + (DPS * Ratio)
-    let dpsToTap = totals.dps * totals.tapFromDpsRatio;
+    // Apply Cosmic Inversion here if it's meant to scale the ratio further
+    ratioUnclamped *= totals.tapRatioMult;
+
+    let dpsToTapRatio = Math.min(maxRatio, ratioUnclamped);
     
-    // Cosmic Inversion (Ratio Shift) - Multiplies the ratio
-    dpsToTap *= totals.tapRatioMult;
+    // Step 3: Convert DPS to Tap Base
+    let tapBaseFromDps = totals.dps * dpsToTapRatio;
     
-    totals.tapDamage = finalTap + dpsToTap;
+    // Step 4: Full Tap Damage Order
+    // (MinerBase + DPS_Base) * Multipliers
+    let totalBaseTap = baseTap + tapBaseFromDps;
+    
+    // Apply Multipliers
+    totals.tapDamage = totalBaseTap * totals.tapMult;
+    
     if (totals.tapDamage < 1) totals.tapDamage = 1;
+
+    // ✅ Mineral Bonus (Ad)
+    if (mineralBonusActive) {
+        totals.mineralMult *= 2;
+    }
 
     // Clamps
     if (totals.critChance > 0.75) totals.critChance = 0.75;

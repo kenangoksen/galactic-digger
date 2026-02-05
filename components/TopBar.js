@@ -14,7 +14,7 @@ const TOOLTIPS = {
   mineral: "Used to buy and upgrade miners.",
   fragment: "Rare currency for cosmic upgrades.\n(Earned by resetting the universe)",
   sword: "Damage dealt to the monster per tap.",
-  dps: "Total damage per second dealt by miners.",
+  dps: "Total DPS dealt by miners.",
 };
 
 export default function TopBar(props) {

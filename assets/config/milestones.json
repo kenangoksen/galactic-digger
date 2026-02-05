@@ -1,0 +1,16 @@
+{
+  "dpsToTapMilestones": {
+    "enabled": true,
+    "maxRatio": 0.035,
+    "ratioPerMilestone": 0.005,
+    "milestones": [
+      { "id": "m_dps2tap_01", "minerId": "miner_01", "requirement": { "type": "minerLevelAtLeast", "value": 25 } },
+      { "id": "m_dps2tap_02", "minerId": "miner_02", "requirement": { "type": "minerLevelAtLeast", "value": 25 } },
+      { "id": "m_dps2tap_03", "minerId": "miner_04", "requirement": { "type": "minerLevelAtLeast", "value": 25 } },
+      { "id": "m_dps2tap_04", "minerId": "miner_06", "requirement": { "type": "minerLevelAtLeast", "value": 25 } },
+      { "id": "m_dps2tap_05", "minerId": "miner_08", "requirement": { "type": "minerLevelAtLeast", "value": 25 } },
+      { "id": "m_dps2tap_06", "minerId": "miner_10", "requirement": { "type": "minerLevelAtLeast", "value": 25 } },
+      { "id": "m_dps2tap_07", "minerId": "miner_12", "requirement": { "type": "minerLevelAtLeast", "value": 25 } }
+    ]
+  }
+}

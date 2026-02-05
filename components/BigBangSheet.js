@@ -158,22 +158,23 @@ export default function BigBangSheet({
 const styles = StyleSheet.create({
   sheet: {
     position: "absolute",
-    left: 10,
-    right: 10,
+    left: 0,
+    right: 0,
     bottom: 74,
-    height: 300, // Standard-ish (slightly taller for content)
-    borderRadius: 20,
+    height: 280, // Standardized height
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     backgroundColor: "rgba(12, 16, 28, 0.98)",
-    borderWidth: 1,
+    borderTopWidth: 1,
     borderColor: "rgba(96, 165, 250, 0.3)",
     paddingTop: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.5,
     shadowRadius: 10,
-    elevation: 10,
+    elevation: 20,
     zIndex: 100,
   },
   header: {
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
       color: '#ffffff60',
-      fontSize: 12,
+      fontSize: 10, // Smaller
       fontWeight: 'bold',
   },
   activeTabText: {
@@ -316,41 +317,45 @@ const styles = StyleSheet.create({
   resetContainer: {
       padding: 10,
       alignItems: 'center',
+      paddingTop: 4, // Minimal
   },
   resetTitle: {
       color: '#fff',
-      fontSize: 16,
+      fontSize: 12, // Smaller
       fontWeight: 'bold',
-      marginBottom: 4,
+      marginBottom: 2,
   },
   resetDesc: {
       color: '#ffffff80',
       textAlign: 'center',
-      fontSize: 12,
-      marginBottom: 16,
+      fontSize: 10, // Smaller
+      marginBottom: 8,
   },
   formulaBox: {
       width: '100%',
       backgroundColor: 'rgba(0,0,0,0.3)',
-      padding: 12,
+      padding: 8, // Thinner
       borderRadius: 12,
-      marginBottom: 20,
+      marginBottom: 12,
       alignItems: 'center',
       borderWidth: 1,
       borderColor: 'rgba(239, 68, 68, 0.3)',
+      flexDirection: 'row', // inline? No, stack is fine but smaller
+      justifyContent: 'center',
+      gap: 10,
   },
   fLabel: {
       color: '#ffffff80',
-      fontSize: 12,
+      fontSize: 10, // Tiny
   },
   fVal: {
       color: '#fff',
       fontWeight: 'bold',
-      fontSize: 14,
+      fontSize: 18, // Not huge
   },
   bigBangBtn: {
       backgroundColor: '#7f1d1d', // Dark Red
-      paddingVertical: 12,
+      paddingVertical: 10, // Slimmer
       paddingHorizontal: 32,
       borderRadius: 12,
       width: '100%',
@@ -360,7 +365,7 @@ const styles = StyleSheet.create({
   },
   bigBangBtnText: {
       color: '#f87171',
-      fontSize: 14,
+      fontSize: 12, // Compact
       fontWeight: 'bold',
       letterSpacing: 1,
   }

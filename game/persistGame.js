@@ -35,6 +35,12 @@ export function serializeEco(eco) {
     universalConstantsLevels: eco?.universalConstantsLevels || {},
     lifetimeEssence: Number(eco?.lifetimeEssence || 0), // (This is earned lifetime)
     spentEssence: Number(eco?.spentEssence || 0),
+    // Milestones
+    dpsToTapMilestonesUnlocked: eco?.dpsToTapMilestonesUnlocked || {},
+    // SHARD SHOP
+    shards: Number(eco?.shards || 0),
+    droneCount: Number(eco?.droneCount || 0),
+    activeDroneCount: Number(eco?.activeDroneCount || 0),
   };
 }
 
@@ -59,6 +65,12 @@ export function normalizeLoadedEco(rawEco) {
     universalConstantsLevels: eco.universalConstantsLevels || {},
     lifetimeEssence: Number(eco.lifetimeEssence || 0),
     spentEssence: Number(eco.spentEssence || 0),
+    // Milestones
+    dpsToTapMilestonesUnlocked: eco.dpsToTapMilestonesUnlocked || {},
+    // SHARD SHOP
+    shards: Number(eco.shards || 0),
+    droneCount: Number(eco.droneCount || (eco.autoClickerActive ? 1 : 0)),
+    activeDroneCount: Number(eco.activeDroneCount || 0),
   };
 }
 

@@ -1,188 +1,116 @@
-import { useEffect, useState } from "react";
-import {
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fmt } from "../../game/damage";
-import { STAT_CATEGORIES } from "../../game/stats";
 
-// Helper to format duration ms -> "12h 30m 10s"
-function fmtTime(ms) {
-    if (!ms || ms < 0) return "0s";
-    const s = Math.floor(ms / 1000);
-    if (s < 60) return `${s}s`;
+export default function StatisticsModal({ visible, onClose, stats, eco }) {
+    if (!visible) return null;
+
+    // Helper to format large numbers using existing valid formatter
+    const f = (n) => fmt(n);
+
+    // Milestones Logic
+    const milestones = eco?.dpsToTapMilestonesUnlocked || {};
+    const unlockedCount = Object.keys(milestones).length;
+    const maxMilestones = 7;
+    const ratio = Math.min(0.035, unlockedCount * 0.005);
+    const protocolBonus = eco?.cosmicProtocols?.["manual_override"] ? (eco.cosmicProtocols["manual_override"] * 0.10) : 0;
+    const effectiveRatio = ratio * (1 + protocolBonus);
     
-    const m = Math.floor(s / 60);
-    const h = Math.floor(m / 60);
-    const d = Math.floor(h / 24);
-
-    if (d > 0) return `${d}d ${h % 24}h`;
-    if (h > 0) return `${h}h ${m % 60}m`;
-    return `${m}m ${s % 60}s`;
-}
-
-// Helper to format general values
-function fmtVal(key, val) {
-    if (key.toLowerCase().includes("time")) return fmtTime(val);
-    if (typeof val === "string") {
-        // Assume BN string if it looks like a number
-        if (!isNaN(parseFloat(val))) return fmt(val);
-        return val;
-    }
-    if (typeof val === "number") {
-        if (key.includes("total") || key.includes("highest")) return fmt(val);
-        return val.toLocaleString();
-    }
-    return String(val);
-}
-
-const SECTION_KEYS = ["lifetime", "thisRewind", "thisSession"];
-
-export default function StatisticsModal({ visible, stats, onClose }) {
-  // Force update every 1s to show live stats
-  // Force update every 1s to show live stats
-  // Use a reducer to force update, as standard state might batch or optimize if value doesn't change?
-  // Actually setTick(t => t+1) guarantees change.
-  const [_, setTick] = useState(0);
-  
-  useEffect(() => {
-    if (!visible) return;
-    const i = setInterval(() => {
-        setTick((t) => t + 1);
-    }, 1000); // 1 second update
-    return () => clearInterval(i);
-  }, [visible]);
-
-  // Derived "Best 12" for top grid
-  const best12 = [
-      { label: "Max Sector Ever", val: stats?.lifetime?.highestSector },
-      { label: "Max Sector (Run)", val: stats?.thisRewind?.highestSector },
-      { label: "Total Rewinds", val: stats?.lifetime?.totalRewinds },
-      { label: "Play Time", val: fmtTime(stats?.lifetime?.totalTimePlayed) },
-      { label: "Time (This Run)", val: fmtTime(stats?.thisRewind?.timePlayed) },
-      { label: "Gold Earned", val: fmt(stats?.lifetime?.totalGoldEarned) },
-      { label: "Total Taps", val: fmt(stats?.lifetime?.totalTaps) },
-      { label: "Highest Tap", val: fmt(stats?.lifetime?.highestTapHit) },
-      { label: "Highest DPS", val: fmt(stats?.lifetime?.highestDps) },
-      { label: "Bosses Killed (Run)", val: fmt(stats?.thisRewind?.bossesKilled) },
-      { label: "Fragments Earned", val: fmt(stats?.lifetime?.totalStellarFragmentsEarned) },
-      { label: "Best Fragment Run", val: fmt(stats?.lifetime?.biggestSfGainOneRewind) },
-  ];
-
-  if (!stats) return null;
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>STATISTICS</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Text style={styles.closeText}>CLOSE</Text>
-              </TouchableOpacity>
-              {/* Force Render Dependency: {_} */}
-            </View>
-
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-              
-              {/* Best 12 Grid */}
-              <View style={styles.grid}>
-                {best12.map((item, idx) => (
-                  <View key={idx} style={styles.gridItem}>
-                     <Text style={styles.gridLabel}>{item.label}</Text>
-                     <Text style={styles.gridVal}>{item.val}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Sections */}
-              {SECTION_KEYS.map((secKey) => (
-                <View key={`${secKey}_${_}`} style={styles.section}>
-                  <Text style={styles.secTitle}>
-                    {STAT_CATEGORIES[secKey === "lifetime" ? "LIFETIME" : secKey === "thisRewind" ? "REWIND" : "SESSION"]}
-                  </Text>
-                  {Object.entries(stats[secKey] || {}).map(([k, v]) => {
-                      // Skip internal keys or nulls, but allow strings/numbers
-                      if (v === null || v === undefined) return null;
-                      if (typeof v === 'object' && v !== null) return null; // Keep filtering objects for now, as stats should be primitive strings/numbers
-                      if (k === 'startTime' || k === 'firstPlayDate' || k === 'lastPlayDate') {
-                          return (
-                              <View key={k} style={styles.row}>
-                                  <Text style={styles.rowLabel}>{k.replace(/([A-Z])/g, ' $1').trim()}</Text>
-                                  <Text style={styles.rowVal}>{new Date(v).toLocaleDateString()}</Text>
-                              </View>
-                          )
-                      }
-                      
-                      return (
-                        <View key={k} style={styles.row}>
-                            <Text style={styles.rowLabel}>
-                                {k.replace(/([A-Z])/g, ' $1').replace(/^total /, '').trim()}
-                            </Text>
-                            <Text style={styles.rowVal}>{fmtVal(k, v)}</Text>
+    return (
+        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+            <View style={styles.overlay}>
+                <View style={styles.modalContainer}>
+                    <LinearGradient colors={["#1a1d2e", "#10121b"]} style={styles.bg}>
+                        {/* Header */}
+                        <View style={styles.header}>
+                            <Text style={styles.title}>STATISTICS</Text>
+                            <Pressable onPress={onClose} style={styles.closeBtn}>
+                                <MaterialCommunityIcons name="close" size={24} color="#aaa" />
+                            </Pressable>
                         </View>
-                      );
-                  })}
-                </View>
-              ))}
 
-            </ScrollView>
-          </View>
-        </SafeAreaView>
-      </View>
-    </Modal>
-  );
+                        <ScrollView contentContainerStyle={styles.content}>
+                            
+                            {/* Milestone Section */}
+                            <View style={styles.section}>
+                                <Text style={styles.sectionHeader}>DPS → TAP MASTERY</Text>
+                                <View style={styles.statRow}>
+                                    <View>
+                                        <Text style={styles.statLabel}>Conversion Ratio</Text>
+                                        <Text style={styles.statSub}>Base: {(ratio * 100).toFixed(1)}% | Bonus: +{(protocolBonus * 100).toFixed(0)}%</Text>
+                                    </View>
+                                    <Text style={styles.statValue}>{(effectiveRatio * 100).toFixed(2)}%</Text>
+                                </View>
+                                
+                                <View style={styles.progressBarBg}>
+                                    <View style={[styles.progressBarFill, { width: `${(unlockedCount / maxMilestones) * 100}%` }]} />
+                                </View>
+                                <Text style={styles.progressText}>{unlockedCount} / {maxMilestones} Milestones Unlocked</Text>
+                            </View>
+
+                            <View style={styles.divider} />
+
+                            {/* General Stats */}
+                            <View style={styles.section}>
+                                <Text style={styles.sectionHeader}>LIFETIME</Text>
+                                {stats?.lifetime && (
+                                    <>
+                                        <StatRow label="Trips" value={stats.lifetime.ascensions || 0} />
+                                        <StatRow label="Total Taps" value={f(stats.lifetime.totalTaps || 0)} />
+                                        <StatRow label="Crit Taps" value={f(stats.lifetime.totalCriticalTaps || 0)} />
+                                        <StatRow label="Total Damage" value={f(stats.lifetime.totalDamage || 0)} />
+                                        <StatRow label="Highest Tap" value={f(stats.lifetime.highestTapHit || 0)} />
+                                        <StatRow label="Gold Spent" value={f(stats.lifetime.totalGoldSpent || 0)} />
+                                    </>
+                                )}
+                            </View>
+
+                            <View style={styles.divider} />
+
+                            <View style={styles.section}>
+                                <Text style={styles.sectionHeader}>SESSION</Text>
+                                {stats?.thisSession && (
+                                    <>
+                                        <StatRow label="Damage Dealt" value={f(stats.thisSession.damageAll || 0)} />
+                                        <StatRow label="Taps" value={f(stats.thisSession.totalTaps || 0)} />
+                                    </>
+                                )}
+                            </View>
+
+                        </ScrollView>
+                    </LinearGradient>
+                </View>
+            </View>
+        </Modal>
+    );
+}
+
+function StatRow({ label, value }) {
+    return (
+        <View style={styles.statRow}>
+            <Text style={styles.statLabel}>{label}</Text>
+            <Text style={styles.statValue}>{value}</Text>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.9)" },
-  safeArea: { flex: 1 },
-  container: { flex: 1, backgroundColor: "#121214", borderRadius: 16, overflow: "hidden", margin: 10, borderWidth: 1, borderColor: "#333" },
-  header: {
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#333",
-    backgroundColor: "#1a1a1e",
-  },
-  title: { color: "#fff", fontSize: 20, fontWeight: "900", letterSpacing: 1 },
-  closeBtn: { padding: 8, backgroundColor: "#333", borderRadius: 8 },
-  closeText: { color: "#fff", fontWeight: "bold", fontSize: 12 },
-
-  scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
-
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 24,
-  },
-  gridItem: {
-    width: "31%",
-    backgroundColor: "#222",
-    padding: 8,
-    borderRadius: 8,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  gridLabel: { color: "#888", fontSize: 10, textAlign: "center", marginBottom: 4 },
-  gridVal: { color: "#4dffb5", fontSize: 13, fontWeight: "bold", textAlign: "center" },
-
-  section: { marginBottom: 24 },
-  secTitle: { color: "#ffa500", fontSize: 16, fontWeight: "900", marginBottom: 12, textTransform: "uppercase" },
-  
-  row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6, borderBottomWidth: 1, borderBottomColor: "#1f1f1f", paddingBottom: 4 },
-  rowLabel: { color: "#ccc", fontSize: 14, textTransform: "capitalize" },
-  rowVal: { color: "#fff", fontSize: 14, fontWeight: "bold" },
+    overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "center", padding: 20 },
+    modalContainer: { borderRadius: 16, overflow: "hidden", maxHeight: "80%", width: "100%" },
+    bg: { flex: 1 },
+    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, backgroundColor: "rgba(255,255,255,0.05)" },
+    title: { color: "gold", fontSize: 18, fontWeight: "bold", letterSpacing: 1 },
+    closeBtn: { padding: 4 },
+    content: { padding: 20 },
+    section: { marginBottom: 20 },
+    sectionHeader: { color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: "bold", marginBottom: 10, letterSpacing: 1 },
+    statRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+    statLabel: { color: "#ccc", fontSize: 14 },
+    statSub: { color: "#666", fontSize: 10 },
+    statValue: { color: "#fff", fontWeight: "bold", fontSize: 14 },
+    divider: { height: 1, backgroundColor: "rgba(255,255,255,0.1)", marginBottom: 20 },
+    progressBarBg: { height: 8, backgroundColor: "#333", borderRadius: 4, marginTop: 8, overflow: "hidden" },
+    progressBarFill: { height: "100%", backgroundColor: "gold" },
+    progressText: { color: "#888", fontSize: 10, marginTop: 4, textAlign: "right" }
 });

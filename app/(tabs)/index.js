@@ -1,6 +1,6 @@
 // app/(tabs)/index.js
 import { useState } from "react";
-import { Alert, ImageBackground, StyleSheet, View } from "react-native";
+import { Alert, Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 
 import BottomNav from "../../components/BottomNav";
 import SettingsSheetHost from "../../components/game/SettingsSheetHost";
@@ -23,6 +23,7 @@ import MinersSheetHost from "../../components/game/MinersSheetHost";
 import minersDef from "../../assets/config/miners.json";
 import BigBangSheet from "../../components/BigBangSheet";
 import CosmicStoreSheet from "../../components/CosmicStoreSheet";
+import ShardShopSheet from "../../components/ShardShopSheet";
 import SideBarLeft from "../../components/SideBarLeft";
 import SideBarRight from "../../components/SideBarRight";
 import BigBangModal from "../../components/ui/BigBangModal";
@@ -74,11 +75,31 @@ export default function HomeScreen() {
       setActiveSheet(prev => prev === name ? null : name);
   };
 
+  // Helper to expand the sheet (assuming it's passed from MinersSheetHost)
+  // This function needs to be provided by MinersSheetHost or derived from its state.
+  // For now, we'll assume a placeholder `expandSheet` is available or will be passed.
+  // In a real scenario, `expandSheet` would likely be `() => setActiveSheet(visibleContent)`
+  // or a more sophisticated function from the sheet host.
+  const expandSheet = useCallback(() => {
+    setActiveSheet(visibleContent);
+  }, [visibleContent]);
+
+
   const handleMiners = () => toggleSheet("MINERS");
   const handleCosmic = () => toggleSheet("COSMIC");
 
   const handleSkills = () => toggleSheet("SKILLS");
-  const handleBigBang = () => toggleSheet("BIGBANG"); // ✅ Handler
+  const handleBigBang = useCallback(() => {
+      setVisibleContent("BIGBANG");
+      expandSheet();
+  }, [expandSheet]);
+
+  const handleShop = useCallback(() => {
+    setVisibleContent("SHOP");
+    expandSheet();
+  }, [expandSheet]);
+
+  // DevTools Mock Helper
 
   return (
     <>
@@ -88,6 +109,20 @@ export default function HomeScreen() {
           visible={activeSheet !== null}
           onClose={() => setActiveSheet(null)}
           sheetContent={({ closeSheet }) => {
+            if (visibleContent === "SHOP") {
+                return (
+                    <ShardShopSheet
+                        visible={true}
+                        onClose={closeSheet}
+                        shards={engine.shards}
+                        buyShopItem={engine.buyShopItem}
+                        watchAdForShards={engine.watchAdForShards}
+                        droneCount={engine.droneCount}
+                        totalDps={engine.totalDps}
+                    />
+                );
+            }
+
             if (visibleContent === "COSMIC") {
                 return (
                   <CosmicStoreSheet
@@ -195,6 +230,7 @@ export default function HomeScreen() {
                   const { dmg, isCrit } = engine.handleTap(); // ✅ Use new handler
                   anims.addFloater(`${isCrit ? "CRIT " : ""}+${fmt(dmg)}`);
                 }}
+                activeDroneCount={engine.activeDroneCount}
               />
 
               <TopBar
@@ -214,6 +250,24 @@ export default function HomeScreen() {
                 onNext={() => engine.goNextZone?.()}
                 comboActive={engine.uiStreak > 5} // Push down if combo visible
               />
+
+              {/* DRONE CONTROL */}
+              {engine.droneCount > 0 && (
+                  <Pressable 
+                    onPress={engine.toggleDrone}
+                    style={styles.droneCtrl}
+                  >
+                      <Image 
+                        source={require("../../assets/images/sprites/drones/drone_01.png")}
+                        style={styles.droneIcon}
+                      />
+                      <View style={styles.droneBadge}>
+                          <Text style={styles.droneText}>
+                              {engine.droneCount - engine.activeDroneCount}/{engine.droneCount}
+                          </Text>
+                      </View>
+                  </Pressable>
+              )}
               
               <ActiveBuffTray cosmicProtocols={engine.cosmicProtocols} />
 
@@ -221,7 +275,7 @@ export default function HomeScreen() {
                 mode={engine.mode} // "progress" | "farm"
                 onToggleMode={engine.toggleMode}
                 adReady={true} // şimdilik true, sonra Ads state’ine bağlarız
-                onAdPress={() => onPressStub("GEM AD")}
+                onAdPress={handleShop} // ✅ Link to Shard Shop
                 onDevTools={() => {
                     console.log("Setting showDevTools to TRUE");
                     setShowDevTools(true);
@@ -239,11 +293,11 @@ export default function HomeScreen() {
                 onMiners={handleMiners}
                 onPlanets={() => onPressStub("PLANETS")}
                 onSkills={handleSkills} // ✅ Connected
-                onGem={() => onPressStub("GEM SHOP")}
+                onGem={handleShop} // ✅ Link to Shop
                 onQuests={() => onPressStub("QUESTS")}
                 onProtocols={handleCosmic}
                 onBigBang={handleBigBang} // ✅ Connect
-                onShop={() => onPressStub("SHOP")}
+                onShop={handleShop} // ✅ Link to Shop
               />
               
               <Sheet />
@@ -268,6 +322,7 @@ export default function HomeScreen() {
               <StatisticsModal
                   visible={showStats}
                   stats={engine.stats}
+                  eco={engine.eco} // ✅ Pass Eco for Milestones
                   onClose={() => setShowStats(false)}
               />
 
@@ -314,4 +369,34 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
   bg: { flex: 1 },
+  droneCtrl: {
+      position: 'absolute',
+      left: 16,
+      top: 120, // Top Left, below TopBar
+      width: 50,
+      height: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 40,
+  },
+  droneIcon: {
+      width: 48,
+      height: 48,
+  },
+  droneBadge: {
+      position: 'absolute',
+      bottom: -4,
+      right: -4,
+      backgroundColor: '#10b981',
+      borderRadius: 10,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderWidth: 1,
+      borderColor: '#064e3b',
+  },
+  droneText: {
+      color: '#fff',
+      fontSize: 10,
+      fontWeight: 'bold',
+  },
 });

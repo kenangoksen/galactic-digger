@@ -24,6 +24,7 @@ export default function GameStage({
   isPrimal, // 🟣
   isIdle,
   activeProtocols, // { "silent_observer": 5, ... }
+  activeDroneCount,
 }) {
   const hasZenMode = isIdle && (activeProtocols?.['silent_observer'] || 0) > 0;
   const hasHighEnergy = (activeProtocols?.['photon_strike_matrix'] || 0) > 0;
@@ -155,30 +156,66 @@ export default function GameStage({
           />
 
           {/* drone */}
-          <Animated.Image
-            source={require("../../assets/images/sprites/drones/drone_01.png")}
-            style={[
-              styles.drone,
-              {
-                transform: [
-                  { translateX: -45 },
-                  {
-                    translateY: hover.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [-160, -172],
-                    }),
-                  },
-                  {
-                    rotate: hover.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["1deg", "-1deg"],
-                    }),
-                  },
-                ],
-              },
-            ]}
-            resizeMode="contain"
-          />
+          {(activeDroneCount > 0) && (
+             <View style={{
+                 position: 'absolute',
+                 width: 120, height: 120,
+                 top: '50%', left: '50%',
+                 zIndex: 4, elevation: 4,
+                 pointerEvents: 'none' // Click through to planet
+             }}>
+                <Animated.Image
+                    source={require("../../assets/images/sprites/drones/drone_01.png")}
+                    style={[
+                    styles.drone,
+                    {
+                        // Reset absolute positioning in style since we wrapped it
+                        top: 0, left: 0,
+                        transform: [
+                        { translateX: -45 },
+                        {
+                            translateY: hover.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-160, -172],
+                            }),
+                        },
+                        {
+                            rotate: hover.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ["1deg", "-1deg"],
+                            }),
+                        },
+                        ],
+                    },
+                    ]}
+                    resizeMode="contain"
+                />
+                
+                {/* Active Count Badge */}
+                <Animated.View style={{
+                    position: 'absolute',
+                    top: 0, 
+                    left: 0,
+                    transform: [
+                        { translateX: 40 }, // Offset relative to wrapper
+                        { translateY: -170 } // Near drone
+                    ],
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#10b981',
+                }}>
+                    <Animated.Text style={{
+                        color: '#fff', fontSize: 10, fontWeight: 'bold'
+                    }}>
+                        {activeDroneCount}x
+                    </Animated.Text>
+                </Animated.View>
+             </View>
+          )}
+
         </View>
       </Pressable>
     </Animated.View>
@@ -223,13 +260,9 @@ const styles = StyleSheet.create({
   },
 
   drone: {
-    position: "absolute",
     width: 120,
     height: 120,
-    top: "50%",
-    left: "50%",
-    zIndex: 4,
-    elevation: 4,
+    // Positioning handled by wrapper view
   },
 
   hpDock: {
@@ -238,7 +271,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    transform: [{ translateY: 120 }],
+    transform: [{ translateY: 85 }], // Moved closer to planet (was 95)
     zIndex: 10,
   },
   zenOverlay: {

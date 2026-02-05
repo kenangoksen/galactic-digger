@@ -12,6 +12,7 @@ import {
     useState,
 } from "react";
 
+import milestonesDef from "../assets/config/milestones.json";
 import minersDef from "../assets/config/miners.json";
 import planets from "../assets/config/planets.json";
 
@@ -19,7 +20,7 @@ import { AppState } from "react-native";
 import { D } from "./bn";
 import { DAMAGE_CONFIG } from "./config";
 import configCache from "./ConfigCache"; // ✅ Central Config
-import { computeTotals, getBulkCost, getPrimalReward } from "./damage";
+import { computeTotals, getBulkCost, getPrimalReward, getProtocolBulkCost } from "./damage";
 import { loadGame, saveGame, serializeEco } from "./persistGame";
 import { DEFAULT_STATS, initStats } from "./stats"; // 📊
 
@@ -85,6 +86,11 @@ const ECO_INIT = {
   lifetimeEssence: 0,
   spentEssence: 0,
   stellarFragmentsSpentLifetime: 0,
+  mineralBonusEndTime: 0, // ✅ Ad Bonus
+  // SHARD SHOP
+  shards: 0,
+  droneCount: 0,
+  activeDroneCount: 0,
 };
 
 function ecoReducer(state, action) {
@@ -93,6 +99,46 @@ function ecoReducer(state, action) {
       const add = D(action.amount || 0);
       if (add.lte(0)) return state;
       return { ...state, minerals: D(state.minerals).add(add) };
+    }
+
+    case "GAIN_SHARDS": {
+      return { ...state, shards: (state.shards || 0) + (action.amount || 0) };
+    }
+
+    case "TOGGLE_DRONE": {
+        const total = state.droneCount || 0;
+        const current = state.activeDroneCount || 0;
+        let next = current + 1;
+        if (next > total) next = 0; // Loop back to 0 (Recall all)
+        return { ...state, activeDroneCount: next };
+    }
+
+    case "BUY_SHOP_ITEM": {
+      const { id, cost, payload } = action;
+      if (!id || !cost) return state;
+      if ((state.shards || 0) < cost) return state; // Check afford
+
+      let newState = { ...state, shards: state.shards - cost };
+
+      // Effects
+      if (id.startsWith("timelapse_")) {
+          const seconds = payload?.seconds || 3600;
+          const dps = payload?.currentDps || D(0);
+          const income = D(dps).mul(seconds);
+          if (income.gt(0)) {
+              newState.minerals = D(newState.minerals).add(income);
+          }
+      } else if (id === "auto_tapper") {
+          newState.droneCount = (newState.droneCount || 0) + 1;
+      } else if (id === "pack_fragments") {
+          const amount = payload?.amount || 0;
+          newState.stellarFragments = D(newState.stellarFragments).add(amount);
+      } else if (id === "pack_tags") {
+          const amount = payload?.amount || 0;
+          newState.totalStarlinkTags = (newState.totalStarlinkTags || 0) + amount;
+      }
+
+      return newState;
     }
 
     case "BUY_MINER": {
@@ -152,6 +198,33 @@ function ecoReducer(state, action) {
       return { ...state, unlockedCount: next };
     }
 
+    case "CHECK_MILESTONES": {
+       if (!milestonesDef.dpsToTapMilestones?.enabled) return state;
+       
+       let changed = false;
+       const newUnlocked = { ...state.dpsToTapMilestonesUnlocked };
+       
+       for (const ms of milestonesDef.dpsToTapMilestones.milestones) {
+          if (newUnlocked[ms.id]) continue; // Already unlocked
+          
+          if (ms.requirement.type === "minerLevelAtLeast") {
+             const mId = ms.requirement.minerId || ms.minerId;
+             const lvl = Number(state.ownedMiners[mId] || 0);
+             if (lvl >= ms.requirement.value) {
+                newUnlocked[ms.id] = true;
+                changed = true;
+             }
+          }
+       }
+       
+       if (!changed) return state;
+       
+       // Toast logic could go here
+       return { 
+          ...state, 
+          dpsToTapMilestonesUnlocked: newUnlocked 
+       };
+    }
     // Summoning Logic
     case "GENERATE_SUMMON_POOL": {
         if (state.summonPool && state.summonPool.length > 0) return state;
@@ -284,6 +357,13 @@ function ecoReducer(state, action) {
         lifetimeEssence: p.lifetimeEssence || 0,
         spentEssence: p.spentEssence || 0,
         stellarFragmentsSpentLifetime: p.stellarFragmentsSpentLifetime || 0,
+        
+        // SHARD SHOP REHYDRATION
+        shards: p.shards ?? state.shards,
+        droneCount: p.droneCount ?? state.droneCount,
+        // Active drones reset on load or persist? User didn't specify, but safer to persist or reset?
+        // Let's persist.
+        activeDroneCount: p.activeDroneCount ?? 0,
       };
     }
 
@@ -339,19 +419,14 @@ function ecoReducer(state, action) {
         };
     }
 
-    case "UPGRADE_PROTOCOL": { // Renamed from BUY_PROTOCOL for clarity
-       const { protocolId } = action;
+    case "UPGRADE_PROTOCOL": {
+       const { protocolId, amount = 1 } = action; // Support bulk
        const currentLvl = state.cosmicProtocols[protocolId] || 0;
-       if (currentLvl <= 0) return state; // Must drive unlock first
+       if (currentLvl <= 0) return state; // Must unlock first
        
-       // Upgrade Cost Logic (n ... or tailored)
-       // Using cosmic_protocols.json definitions...
-       // For now, simple fallback: Level + 1
-       // But wait, user wants CH style.
-       // JSON has "cost": { "levelUp": "n" } etc.
-       // Let's rely on JSON logic via helper later, or simple N+1 here for V1.
-       // Default JSON says "n" -> next level.
-       const cost = currentLvl + 1; // Level 1->2 costs 2. Level 9->10 costs 10.
+       // Bulk Cost Logic using new helper
+       // Cost = Sum of (L+1)...(L+amount)
+       const cost = getProtocolBulkCost(currentLvl, amount);
        
        if (D(state.stellarFragments).lt(cost)) return state;
 
@@ -360,7 +435,7 @@ function ecoReducer(state, action) {
           stellarFragments: D(state.stellarFragments).sub(cost),
           cosmicProtocols: {
              ...state.cosmicProtocols,
-             [protocolId]: currentLvl + 1
+             [protocolId]: currentLvl + amount
           }
        };
     }
@@ -416,6 +491,10 @@ function ecoReducer(state, action) {
             tagsByMinerId: state.tagsByMinerId,
             lifetimeTagsEarned: state.lifetimeTagsEarned,
         };
+    }
+
+    case "EXTEND_MINERAL_BONUS": {
+        return { ...state, mineralBonusEndTime: action.endTime };
     }
 
     default:
@@ -546,9 +625,11 @@ export function useGameEngine() {
       protocolsDef: configCache.getCosmicProtocols()?.protocols, // ✅ From Cache
       tagsByMinerId: eco.tagsByMinerId,
       stellarFragmentsSpent: eco.stellarFragmentsSpentLifetime, // ✅
-      stellarFragments: eco.stellarFragments // ✅ For Passive DPS
+      stellarFragments: eco.stellarFragments, // ✅ For Passive DPS
+      dpsToTapMilestonesUnlocked: eco.dpsToTapMilestonesUnlocked, // ✅ Progress
+      mineralBonusActive: Date.now() < (eco.mineralBonusEndTime || 0), // ✅ Ad Bonus Status
     });
-  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime, eco.stellarFragments]);
+  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime, eco.stellarFragments, eco.dpsToTapMilestonesUnlocked, eco.mineralBonusEndTime]);
 
   const tapDamageBase = totals.tapDamage;
   
@@ -1491,20 +1572,26 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     const now = Date.now();
     
     // 1. Streak Update
-    // User requested Auto Tap to sustain/build combo just like Manual Tap
     lastTapTimeRef.current = now;
     
-    // Increase streak (both manual and auto?)
-    // User: "Clickstorm... streak'i artıracak şekilde tasarla"
-    // Increase streak (both manual and auto?)
-    // User: "Clickstorm... streak'i artıracak şekilde tasarla"
-    tapStreakRef.current += 1;
+    // Check for Momentum Combo Core (Protocol ID: momentum_combo_core)
+    const hasComboProtocol = (eco.cosmicProtocols?.['momentum_combo_core'] || 0) > 0;
+
+    if (hasComboProtocol) {
+        tapStreakRef.current += 1;
+        setUiStreak(tapStreakRef.current);
+    } else {
+        // Reset if they mistakenly click or protocol is locked
+        if (tapStreakRef.current > 0) {
+            tapStreakRef.current = 0;
+            setUiStreak(0);
+        }
+    }
     
     // Reset Idle Logic
-    setIsIdle(false); // ✅ Force reset without stale check
+    setIsIdle(false);
     
-    // Update UI every tap
-    setUiStreak(tapStreakRef.current);
+    // 2. Damage Calc
     
     // 2. Damage Calc
     const { dmg, isCrit } = calcTapDamage(true, isAuto);
@@ -1514,7 +1601,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     // If auto is 10cps, floating text spam is bad. 
     // We can handle visuals outside.
     return { dmg, isCrit };
-  }, [applyDamage, calcTapDamage]); // ✅ Added calcTapDamage dependency
+  }, [applyDamage, calcTapDamage, eco.cosmicProtocols]);
 
 
   // Re-calc if static stats change
@@ -1707,6 +1794,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       });
 
       dispatchEco({ type: "BUY_MINER", minerId, amount: multiplier });
+      dispatchEco({ type: "CHECK_MILESTONES" }); // ✅ Check unlock milestones
 
       requestAnimationFrame(() => {
         buyLockRef.current = false;
@@ -1837,6 +1925,22 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     });
   }, [minerals, ownedMiners, ownedSkills]);
 
+  // ---------------- Auto Tapper Loop ----------------
+  useEffect(() => {
+    // Only ACTIVE drones tap
+    const count = eco.activeDroneCount || 0;
+    if (count <= 0) return;
+    
+    // 10 clicks per second = 100ms interval
+    const interval = setInterval(() => {
+        for(let i=0; i<count; i++) {
+             handleTap(true); // isAuto = true
+        }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [eco.activeDroneCount, handleTap]);
+
   const collectOfflineEarnings = useCallback((multiplier = 1) => {
     if (!offlineEarnings) return;
     
@@ -1894,6 +1998,18 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
   const buyUniversalConstant = useCallback((constantId) => {
       dispatchEco({ type: "BUY_UNIVERSAL_CONSTANT", constantId });
   }, []);
+
+  const watchAdForMinerals = useCallback(() => {
+      // 4 hours in ms
+      const DURATION = 4 * 60 * 60 * 1000;
+      const now = Date.now();
+      const currentEnd = eco.mineralBonusEndTime || 0;
+      
+      // If active, add to end. If not, start from now.
+      const newEnd = Math.max(now, currentEnd) + DURATION;
+      
+      dispatchEco({ type: "EXTEND_MINERAL_BONUS", endTime: newEnd });
+  }, [eco.mineralBonusEndTime]);
 
   return {
     // visuals / stage
@@ -2003,7 +2119,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     unlockProtocol: (id) => dispatchEco({ type: "UNLOCK_PROTOCOL", protocolId: id }),
     rerollSlot: (idx) => dispatchEco({ type: "REROLL_SLOT", slotIndex: idx }),
     generateSummonPool: () => dispatchEco({ type: "GENERATE_SUMMON_POOL" }),
-    upgradeProtocol: (id) => dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId: id }),
+    upgradeProtocol: (id, amount = 1) => dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId: id, amount }),
 
     // Statistics
     stats: statsRef.current, // 📊
@@ -2022,5 +2138,18 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     showBigBangModal,
     setShowBigBangModal,
     calcBigBangGain,
+    
+    // Ads
+    mineralBonusEndTime: eco.mineralBonusEndTime,
+    watchAdForMinerals,
+
+    // SHARD SHOP
+    shards: eco.shards,
+    droneCount: eco.droneCount || 0,
+    watchAdForShards: (amount = 25) => dispatchEco({ type: "GAIN_SHARDS", amount }),
+    buyShopItem: (id, cost, payload) => dispatchEco({ type: "BUY_SHOP_ITEM", id, cost, payload }),
+    toggleDrone: () => dispatchEco({ type: "TOGGLE_DRONE" }),
+    activeDroneCount: eco.activeDroneCount || 0,
+    droneCount: eco.droneCount || 0,
   };
 }
