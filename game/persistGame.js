@@ -21,8 +21,11 @@ export function serializeEco(eco) {
     ownedMiners: eco?.ownedMiners || {},
     ownedSkills: eco?.ownedSkills || {},
     stellarFragments: eco?.stellarFragments ? eco.stellarFragments.toString() : "0",
-    stellarFragmentsSpentLifetime: Number(eco?.stellarFragmentsSpentLifetime || 0), // ✅ Added
+    stellarFragmentsSpentLifetime: Number(eco?.stellarFragmentsSpentLifetime || 0), 
     cosmicProtocols: eco?.cosmicProtocols || {},
+    // Summoning
+    summonPool: eco?.summonPool || null,
+    rerollCount: Number(eco?.rerollCount || 0),
     // Starlink Persistence
     totalStarlinkTags: eco?.totalStarlinkTags || 0,
     tagsByMinerId: eco?.tagsByMinerId || {},
@@ -43,8 +46,10 @@ export function normalizeLoadedEco(rawEco) {
     ownedMiners: eco.ownedMiners || {},
     ownedSkills: eco.ownedSkills || {},
     stellarFragments: D(eco.stellarFragments || "0"),
-    stellarFragmentsSpentLifetime: Number(eco.stellarFragmentsSpentLifetime || 0), // ✅ Added
+    stellarFragmentsSpentLifetime: Number(eco.stellarFragmentsSpentLifetime || 0), 
     cosmicProtocols: eco.cosmicProtocols || {},
+    summonPool: eco.summonPool || null,
+    rerollCount: Number(eco.rerollCount || 0),
     // Starlink Rehydration
     totalStarlinkTags: Number(eco.totalStarlinkTags || 0),
     tagsByMinerId: eco.tagsByMinerId || {},

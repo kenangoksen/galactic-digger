@@ -24,6 +24,7 @@ import BigBangSheet from "../../components/BigBangSheet";
 import CosmicStoreSheet from "../../components/CosmicStoreSheet";
 import SideBarLeft from "../../components/SideBarLeft";
 import SideBarRight from "../../components/SideBarRight";
+import BigBangModal from "../../components/ui/BigBangModal";
 import StellarRewindModal from "../../components/ui/StellarRewindModal";
 import ZoneSwitcher from "../../components/ZoneSwitcher";
 
@@ -92,8 +93,16 @@ export default function HomeScreen() {
                     visible={true} 
                     stellarFragments={engine.stellarFragments}
                     cosmicProtocols={engine.cosmicProtocols}
-                    onBuy={engine.buyProtocol}
+                    onBuy={engine.upgradeProtocol} // ✅ Use proper upgrade method
                     onClose={closeSheet} 
+                    
+                    // Summoning Props (Single Source of Truth)
+                    summonPool={engine.summonPool}
+                    rerollCount={engine.rerollCount}
+                    unlockProtocol={engine.unlockProtocol}
+                    rerollSlot={engine.rerollSlot}
+                    generateSummonPool={engine.generateSummonPool}
+                    getNextUnlockCost={engine.getNextUnlockCost}
                   />
                 );
             }
@@ -116,6 +125,7 @@ export default function HomeScreen() {
                         performBigBang={engine.performBigBang}
                         stats={engine.stats}
                         maxUnlockedZone={engine.maxUnlockedZone}
+                        onOpenModal={() => engine.setShowBigBangModal(true)}
                     />
                 );
             }
@@ -186,7 +196,6 @@ export default function HomeScreen() {
                 }}
               />
 
-              {/* ✅ Zone/Level geri */}
               <TopBar
                 minerals={engine.minerals}
                 fragments={engine.stellarFragments || 0}
@@ -194,6 +203,8 @@ export default function HomeScreen() {
                 dps={engine.totalDps}
                 prestigeReward={engine.prestigeReward}
                 streak={engine.uiStreak}
+                isIdle={engine.isIdle} 
+                hasIdleBonus={engine.hasIdleBonus} // ✅ Check eligibility
               />
               <ZoneSwitcher
                 zone={engine.zone}
@@ -272,6 +283,15 @@ export default function HomeScreen() {
                 currentZone={engine.maxUnlockedZone}
                 onClose={() => engine.setShowRewindModal(false)}
                 onConfirm={engine.confirmStellarRewind}
+              />
+
+              {/* Big Bang Modal */}
+              <BigBangModal 
+                  visible={engine.showBigBangModal}
+                  onClose={() => engine.setShowBigBangModal(false)}
+                  onConfirm={engine.performBigBang}
+                  gainedEssence={engine.calcBigBangGain?.().gain || 0}
+                  highestZone={engine.calcBigBangGain?.().highestZone || 0}
               />
             </>
           )}

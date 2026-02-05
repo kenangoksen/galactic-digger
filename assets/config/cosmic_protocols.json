@@ -288,6 +288,24 @@
       "maxLevel": 25,
       "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" },
       "optional": true
+    },
+    {
+      "id": "warp_drive",
+      "name": "Warp Drive",
+      "type": "zoneMonsterReducer",
+      "baseValue": 1,
+      "description": "Reduces the number of monsters required per zone by 1 per level (Minimum 2 monsters).",
+      "maxLevel": 8,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "2^n" }
+    },
+    {
+      "id": "silent_observer",
+      "name": "Silent Observer",
+      "type": "idleDpsMultiplier",
+      "baseValue": 0.25,
+      "description": "Increases DPS by +25% per level when Idle (no clicks for 60 seconds).",
+      "maxLevel": null,
+      "cost": { "unlock": "unlock_costs_by_index", "levelUp": "n" }
     }
   ]
 }

@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import protocolsDef from "../assets/config/cosmic_protocols.json";
 import { D } from "../game/bn";
 import { fmt } from "../game/damage";
+import SummonProtocolModal from "./game/SummonProtocolModal";
 
-// Helper for cost calculation
-export function getProtocolCost(level) {
+// Helper for cost calculation (Upgrade cost, distinct from unlock)
+export function getUpgradeCost(level) {
   // Simple formula: Cost = Level + 1
-  // Level 0 -> Cost 1
-  // Level 10 -> Cost 11
   return level + 1;
 }
 
@@ -33,9 +33,25 @@ export default function CosmicStoreSheet({
   onClose,
   stellarFragments,
   cosmicProtocols, // { "core_singularity": 5, ... }
-  onBuy,
+  onBuy, // This is actually onUpgrade now
+  // Summoning Props
+  summonPool,
+  rerollCount,
+  unlockProtocol,
+  rerollSlot,
+  generateSummonPool,
+  getNextUnlockCost
 }) {
+  const [showSummon, setShowSummon] = useState(false);
+  // Removed internal hook usage
+  
   if (!visible) return null;
+
+  const nextUnlockCost = getNextUnlockCost ? getNextUnlockCost() : 0;
+  const canSummon = D(stellarFragments).gte(nextUnlockCost);
+
+  // Filter owned protocols
+  const ownedList = (protocolsDef.protocols || protocolsDef).filter(p => (cosmicProtocols[p.id] || 0) > 0);
 
   return (
     <View style={styles.sheet}>
@@ -59,41 +75,78 @@ export default function CosmicStoreSheet({
           <Text style={styles.balanceLabel}>AVAILABLE FRAGMENTS</Text>
           <Text style={styles.balanceValue}>{fmt(stellarFragments)}</Text>
         </View>
+        
+        {/* SUMMON BANNER */}
+        <Pressable 
+            style={[styles.summonBanner]}
+            onPress={() => setShowSummon(true)}
+            // Always enabled to view
+        >
+            <View style={styles.summonContent}>
+                <Ionicons name="sparkles" size={16} color="#00ffaa" />
+                <Text style={styles.summonTitle}>
+                    SUMMON NEW PROTOCOL
+                </Text>
+            </View>
+            <View style={styles.summonCostBadge}>
+                <Text style={styles.summonCostText}>{fmt(nextUnlockCost)} SF</Text>
+            </View>
+        </Pressable>
 
         {/* LIST */}
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-          {(protocolsDef.protocols || protocolsDef).map((proto) => {
-            const level = cosmicProtocols[proto.id] || 0;
-            const cost = getProtocolCost(level);
-            const canAfford = D(stellarFragments).gte(cost);
-            const iconName = ICONS[proto.id] || "cube";
-
-            return (
-              <View key={proto.id} style={styles.item}>
-                <View style={styles.iconBox}>
-                  <Ionicons name={iconName} size={20} color="#d8b4fe" />
-                </View>
-
-                <View style={styles.info}>
-                  <Text style={styles.name}>{proto.name}</Text>
-                  <Text style={styles.desc}>{proto.description}</Text>
-                  <Text style={styles.stat}>
-                    Lvl <Text style={styles.val}>{level}</Text> • +{Math.floor(level * proto.baseValue * 100)}%
-                  </Text>
-                </View>
-
-                <Pressable
-                  style={[styles.buyBtn, !canAfford && styles.buyBtnDisabled]}
-                  onPress={() => onBuy(proto.id, cost)}
-                  disabled={!canAfford}
-                >
-                  <Text style={styles.costText}>{cost}</Text>
-                  <Ionicons name="diamond-outline" size={10} color={canAfford ? "#fff" : "#ffffff50"} />
-                </Pressable>
+          {ownedList.length === 0 ? (
+              <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No Active Protocols</Text>
+                  <Text style={styles.emptySub}>Summon an ancient protocol to begin.</Text>
               </View>
-            );
-          })}
+          ) : (
+              ownedList.map((proto) => {
+                const level = cosmicProtocols[proto.id] || 0;
+                const cost = getUpgradeCost(level);
+                const canAfford = D(stellarFragments).gte(cost);
+                const iconName = ICONS[proto.id] || "cube";
+    
+                return (
+                  <View key={proto.id} style={styles.item}>
+                    <View style={styles.iconBox}>
+                      <Ionicons name={iconName} size={20} color="#d8b4fe" />
+                    </View>
+    
+                    <View style={styles.info}>
+                      <Text style={styles.name}>{proto.name}</Text>
+                      <Text style={styles.desc} numberOfLines={2}>{proto.description}</Text>
+                      <Text style={styles.stat}>
+                        Lvl <Text style={styles.val}>{level}</Text> • +{Math.floor(level * proto.baseValue * 100)}%
+                      </Text>
+                    </View>
+    
+                    <Pressable
+                      style={[styles.buyBtn, !canAfford && styles.buyBtnDisabled]}
+                      onPress={() => onBuy(proto.id)} // Pass ID, upgrades use internal cost check too or pre-check
+                      disabled={!canAfford}
+                    >
+                      <Text style={styles.costText}>{cost}</Text>
+                      <Ionicons name="arrow-up-circle" size={12} color={canAfford ? "#fff" : "#ffffff50"} />
+                    </Pressable>
+                  </View>
+                );
+              })
+          )}
         </ScrollView>
+        
+        {/* SUMMON MODAL */}
+        <SummonProtocolModal 
+            visible={showSummon} 
+            onClose={() => setShowSummon(false)} 
+            summonPool={summonPool}
+            rerollCount={rerollCount}
+            stellarFragments={stellarFragments}
+            unlockProtocol={unlockProtocol}
+            rerollSlot={rerollSlot}
+            generateSummonPool={generateSummonPool}
+            getNextUnlockCost={getNextUnlockCost}
+        />
     </View>
   );
 }
@@ -104,7 +157,7 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     bottom: 74,
-    height: 260, // Match MinersSheet (Minimal)
+    height: 400, // Increased height for summon banner + list
     borderRadius: 20,
     backgroundColor: "rgba(12, 16, 28, 0.98)",
     borderWidth: 1,
@@ -160,11 +213,67 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
   },
+  
+  // Summon Banner
+  summonBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: 'rgba(0, 255, 170, 0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(0, 255, 170, 0.3)',
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 10,
+  },
+  summonDisabled: {
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderColor: 'rgba(255,255,255,0.1)',
+  },
+  summonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+  },
+  summonTitle: {
+      color: '#00ffaa',
+      fontWeight: '800',
+      fontSize: 12,
+      letterSpacing: 0.5,
+  },
+  summonCostBadge: {
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 4,
+  },
+  summonCostText: {
+      color: '#ffd700',
+      fontWeight: 'bold',
+      fontSize: 12,
+  },
+
   list: {
     flex: 1,
   },
   listContent: {
     paddingBottom: 10,
+  },
+  emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 40,
+      opacity: 0.6,
+  },
+  emptyText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: 'bold',
+  },
+  emptySub: {
+      color: '#aaa',
+      fontSize: 12,
+      marginTop: 4,
   },
   item: {
     flexDirection: "row",
@@ -195,8 +304,9 @@ const styles = StyleSheet.create({
   },
   desc: {
     color: "rgba(255,255,255,0.5)",
-    fontSize: 10,
+    fontSize: 9, // Smaller font for description
     marginBottom: 2,
+    marginRight: 8,
   },
   stat: {
     color: "#a855f7",
@@ -214,14 +324,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    minWidth: 60,
+    justifyContent: 'center',
   },
   buyBtnDisabled: {
     backgroundColor: "rgba(255,255,255,0.05)",
     opacity: 0.5,
   },
   costText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
 });

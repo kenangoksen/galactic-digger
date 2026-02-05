@@ -24,13 +24,17 @@ import { loadGame, saveGame, serializeEco } from "./persistGame";
 import { DEFAULT_STATS, initStats } from "./stats"; // 📊
 
 // ---------------- Clicker Heroes-style monster HP ----------------
-function baseMonsterHp(zone) {
+// ---------------- Clicker Heroes-style monster HP ----------------
+function baseMonsterHp(zone, hpMult = 1) {
   const z = Math.max(1, Math.floor(zone));
-  return Math.floor(10 * (z - 1 + Math.pow(1.55, z - 1)));
+  // Apply HP Growth Multiplier (Graviton Law)
+  // If hpMult < 1, it reduces the effective HP.
+  const rawHp = 10 * (z - 1 + Math.pow(1.55, z - 1));
+  return Math.floor(rawHp * hpMult);
 }
 
-function monsterHp(zone, step) {
-  const hp = baseMonsterHp(zone);
+function monsterHp(zone, step, hpMult = 1) {
+  const hp = baseMonsterHp(zone, hpMult);
   const isBossPlanet = zone % 5 === 0;
   return isBossPlanet ? hp * 10 : hp;
 }
@@ -44,7 +48,7 @@ function monsterMineral(zone, step) {
 
 // ---------------- Stellar Rewind Calculation ----------------
 // Formula: ((MaxZone - 50) / 10) ^ 1.5
-export function calculateStellarRewindReward(maxZone) {
+export function calculateStellarRewindReward(maxZone, rewardMult = 1) {
   const z = Number(maxZone || 0);
   if (z < 60) return 0; // First meaningful reward at 60 (since 50 is base)
   
@@ -53,7 +57,14 @@ export function calculateStellarRewindReward(maxZone) {
   if (base <= 0) return 0;
   
   const reward = Math.pow(base, 1.5);
-  return Math.floor(reward);
+  return Math.floor(reward * rewardMult);
+}
+
+// ---------------- Protocol Costs ----------------
+export function getNextUnlockCost(ownedCount = 0) {
+    const costs = [1, 2, 4, 8, 16, 35, 70, 125, 250, 500];
+    if (ownedCount < costs.length) return costs[ownedCount];
+    return Math.floor(500 * Math.pow(1.2, ownedCount - costs.length + 1)); 
 }
 
 // ---------------- Economy reducer (atomic buys, Decimal minerals) ----------------
@@ -140,6 +151,61 @@ function ecoReducer(state, action) {
 
       return { ...state, unlockedCount: next };
     }
+
+    // Summoning Logic
+    case "GENERATE_SUMMON_POOL": {
+        if (state.summonPool && state.summonPool.length > 0) return state;
+        
+        const protocols = configCache.getCosmicProtocols()?.protocols || [];
+        const ownedIds = Object.keys(state.cosmicProtocols).filter(id => state.cosmicProtocols[id] > 0);
+        
+        // Random 4 not owned
+        const available = protocols.filter(p => !ownedIds.includes(p.id));
+        // Simple shuffle
+        for (let i = available.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [available[i], available[j]] = [available[j], available[i]];
+        }
+        const newPool = available.slice(0, 4).map(p => p.id);
+        
+        return {
+            ...state,
+            summonPool: newPool
+        };
+    }
+    
+    case "REROLL_SLOT": {
+        const { slotIndex } = action;
+        const protocols = configCache.getCosmicProtocols()?.protocols || [];
+        const ownedIds = Object.keys(state.cosmicProtocols).filter(id => state.cosmicProtocols[id] > 0);
+        
+        // Cost: 1.5 ^ rerollCount (min 1)
+        const cost = Math.floor(Math.max(1, Math.pow(1.5, state.rerollCount || 0)));
+        
+        if (D(state.stellarFragments).lt(cost)) return state;
+        
+        const currentPool = [...(state.summonPool || [])];
+        const exclude = [...currentPool]; // Avoid dupes in view
+        
+        const available = protocols.filter(p => !ownedIds.includes(p.id) && !exclude.includes(p.id));
+         // Simple shuffle
+        for (let i = available.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [available[i], available[j]] = [available[j], available[i]];
+        }
+        
+        if (available.length > 0) {
+            currentPool[slotIndex] = available[0].id;
+        }
+        
+        return {
+            ...state,
+            stellarFragments: D(state.stellarFragments).sub(cost),
+            summonPool: currentPool,
+            rerollCount: (state.rerollCount || 0) + 1
+        };
+    }
+
     case "GAIN_FRAGMENTS": {
       return {
         ...state,
@@ -202,10 +268,22 @@ function ecoReducer(state, action) {
         unlockedCount: p.unlockedCount ?? state.unlockedCount,
         ownedMiners: p.ownedMiners ?? state.ownedMiners,
         ownedSkills: p.ownedSkills ?? state.ownedSkills,
+        // ✅ Rehydrate Meta Currencies
+        stellarFragments: p.stellarFragments ?? state.stellarFragments,
+        cosmicProtocols: p.cosmicProtocols ?? state.cosmicProtocols,
+        summonPool: p.summonPool ?? state.summonPool,
+        rerollCount: p.rerollCount ?? state.rerollCount,
+
         // Starlink Rehydration
         totalStarlinkTags: p.totalStarlinkTags || 0,
         tagsByMinerId: p.tagsByMinerId || {},
         lifetimeTagsEarned: p.lifetimeTagsEarned || 0,
+        // Universal Constants & Essence Rehydration
+        cosmicEssence: p.cosmicEssence || 0,
+        universalConstantsLevels: p.universalConstantsLevels || {},
+        lifetimeEssence: p.lifetimeEssence || 0,
+        spentEssence: p.spentEssence || 0,
+        stellarFragmentsSpentLifetime: p.stellarFragmentsSpentLifetime || 0,
       };
     }
 
@@ -225,14 +303,55 @@ function ecoReducer(state, action) {
           totalStarlinkTags: state.totalStarlinkTags,
           tagsByMinerId: state.tagsByMinerId,
           lifetimeTagsEarned: state.lifetimeTagsEarned,
+          // Keep Universal Constants & Essence!
+          cosmicEssence: state.cosmicEssence,
+          universalConstantsLevels: state.universalConstantsLevels,
+          lifetimeEssence: state.lifetimeEssence,
+          spentEssence: state.spentEssence,
+          stellarFragmentsSpentLifetime: state.stellarFragmentsSpentLifetime,
+          // Keep Summoning State
+          summonPool: state.summonPool,
+          rerollCount: state.rerollCount,
+          nextUnlockCostIndex: state.nextUnlockCostIndex,
        };
     }
 
-    case "BUY_PROTOCOL": {
+    case "UNLOCK_PROTOCOL": {
+        const { protocolId } = action;
+        // Cost is based on OWNED COUNT
+        const ownedCount = Object.keys(state.cosmicProtocols).filter(k => state.cosmicProtocols[k] > 0).length;
+        const cost = getNextUnlockCost(ownedCount);
+        
+        if (D(state.stellarFragments).lt(cost)) {
+            console.log("Unlock failed: Not enough SF", state.stellarFragments, cost);
+            return state;
+        }
+        
+        return {
+            ...state,
+            stellarFragments: D(state.stellarFragments).sub(cost),
+            cosmicProtocols: {
+                ...state.cosmicProtocols,
+                [protocolId]: 1 // Unlock at level 1
+            },
+            summonPool: null, // Reset pool
+            rerollCount: 0 // Reset reroll cost scaling
+        };
+    }
+
+    case "UPGRADE_PROTOCOL": { // Renamed from BUY_PROTOCOL for clarity
        const { protocolId } = action;
        const currentLvl = state.cosmicProtocols[protocolId] || 0;
-       // Formula: Cost = Level + 1
-       const cost = currentLvl + 1;
+       if (currentLvl <= 0) return state; // Must drive unlock first
+       
+       // Upgrade Cost Logic (n ... or tailored)
+       // Using cosmic_protocols.json definitions...
+       // For now, simple fallback: Level + 1
+       // But wait, user wants CH style.
+       // JSON has "cost": { "levelUp": "n" } etc.
+       // Let's rely on JSON logic via helper later, or simple N+1 here for V1.
+       // Default JSON says "n" -> next level.
+       const cost = currentLvl + 1; // Level 1->2 costs 2. Level 9->10 costs 10.
        
        if (D(state.stellarFragments).lt(cost)) return state;
 
@@ -324,33 +443,7 @@ export function useGameEngine() {
 
   const isBossPlanet = zone % 5 === 0;
   
-  const goNextZone = useCallback(() => {
-    // SIMPLE LOGIC: If we are not at the max unlocked zone, we can go next.
-    // This allows skipping steps/bosses if we already beat them before.
-    if (zone < maxUnlockedZone) {
-      const next = zone + 1;
-      setZone(next);
-      setStep(1); // Start at step 1 of next zone
-      setMode("progress"); // Force progress mode so we don't get stuck in farm mode
-      
-      const newHp = monsterHp(next, 1);
-      setMaxHp(newHp);
-      setHp(newHp);
-    }
-  }, [zone, maxUnlockedZone]);
-
-  const goPrevZone = useCallback(() => {
-    if (zone > 1) {
-       const prev = zone - 1;
-       setZone(prev);
-       setStep(1);
-       setMode("farm"); // Automatically switch to farm mode when going back
-       
-       const newHp = monsterHp(prev, 1);
-       setMaxHp(newHp);
-       setHp(newHp);
-    }
-  }, [zone, setMode]);
+  // MOVED goNextZone and goPrevZone below totals to avoid ReferenceError
 
   // economy (atomic)
   const [eco, dispatchEco] = useReducer(ecoReducer, ECO_INIT);
@@ -377,6 +470,7 @@ export function useGameEngine() {
   const tapStreakRef = useRef(0);
   const lastTapTimeRef = useRef(Date.now());
   const [uiStreak, setUiStreak] = useState(0);
+  const [isIdle, setIsIdle] = useState(false); // Siyalatas / Silent Observer check
 
   const resetGame = useCallback(async () => {
     // 1. Clear storage
@@ -404,8 +498,14 @@ export function useGameEngine() {
       sprite: "planet_01.png",
     };
 
-  const currentPlanetImg =
-    require("../assets/images/sprites/planets/planet_01.png");
+  const PLANET_IMAGES = useMemo(() => ({
+    "planet_01.png": require("../assets/images/sprites/planets/planet_01.png"),
+    "planet_02.png": require("../assets/images/sprites/planets/planet_02.png"),
+    "planet_03.png": require("../assets/images/sprites/planets/planet_03.png"),
+    "planet_04.png": require("../assets/images/sprites/planets/planet_04.png"),
+  }), []);
+
+  const currentPlanetImg = PLANET_IMAGES[currentPlanet.sprite] || PLANET_IMAGES["planet_01.png"];
 
   // --- MULTIPLIER HELPERS (Moved Up) ---
   const getDpsMultiplier = useCallback(() => {
@@ -445,21 +545,57 @@ export function useGameEngine() {
       constantsDef: configCache.getUniversalConstants()?.items, // ✅ From Cache
       protocolsDef: configCache.getCosmicProtocols()?.protocols, // ✅ From Cache
       tagsByMinerId: eco.tagsByMinerId,
-      stellarFragmentsSpent: eco.stellarFragmentsSpentLifetime // ✅
+      stellarFragmentsSpent: eco.stellarFragmentsSpentLifetime, // ✅
+      stellarFragments: eco.stellarFragments // ✅ For Passive DPS
     });
-  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime]);
+  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime, eco.stellarFragments]);
 
   const tapDamageBase = totals.tapDamage;
   
   // Apply Active Skills to DPS
-  const totalDps = D(totals.dps).mul(getDpsMultiplier()).toNumber();
+  let totalDps = D(totals.dps).mul(getDpsMultiplier());
+  // Apply Idle Bonus (Silent Observer)
+  if (isIdle && totals.idleDpsMult > 1) {
+      totalDps = totalDps.mul(totals.idleDpsMult);
+  }
+  totalDps = totalDps.toNumber();
+
+  const goNextZone = useCallback(() => {
+    // SIMPLE LOGIC: If we are not at the max unlocked zone, we can go next.
+    // This allows skipping steps/bosses if we already beat them before.
+      if (zone < maxUnlockedZone) {
+      const next = zone + 1;
+      setZone(next);
+      setStep(1); // Start at step 1 of next zone
+      setMode("progress"); // Force progress mode so we don't get stuck in farm mode
+      
+      const newHp = monsterHp(next, 1, totals.hpGrowthMult || 1);
+      setMaxHp(newHp);
+      setHp(newHp);
+    }
+  }, [zone, maxUnlockedZone, totals.hpGrowthMult]);
+
+  const goPrevZone = useCallback(() => {
+    if (zone > 1) {
+       const prev = zone - 1;
+       setZone(prev);
+       setStep(1);
+       setMode("farm"); // Automatically switch to farm mode when going back
+       
+       const newHp = monsterHp(prev, 1, totals.hpGrowthMult || 1);
+       setMaxHp(newHp);
+       setHp(newHp);
+    }
+  }, [zone, setMode, totals.hpGrowthMult]);
 
   const critChance = totals.critChance;
   const critMult = totals.critMult;
 
   // HP state
-  const [maxHp, setMaxHp] = useState(monsterHp(zone, step));
-  const [hp, setHp] = useState(monsterHp(zone, step));
+  // We need to use useMemo or effect to update HP if totals change? 
+  // Probably not mid-fight, but for next spawn.
+  const [maxHp, setMaxHp] = useState(monsterHp(zone, step, 1)); // Init with 1 to avoid undefined error before totals
+  const [hp, setHp] = useState(monsterHp(zone, step, 1));
 
   // boss timer ms
   const [bossTimeMsLeft, setBossTimeMsLeft] = useState(0);
@@ -528,6 +664,15 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
           offlineDps = offlineDps.add(D(dpsBase).mul(lvl));
         }
       });
+      
+      // ✅ Eternal Drift (Idle Dominance)
+      // Constant ID: eternal_drift
+      // Formula: 1 + ((1.5^level - 1) * (base/0.30)) -> base 0.30 => scale 1
+      const driftLevel = sEco.universalConstantsLevels?.['eternal_drift'] || 0;
+      if (driftLevel > 0) {
+          const driftMult = 1 + (Math.pow(1.5, driftLevel) - 1);
+          offlineDps = offlineDps.mul(driftMult);
+      }
 
       if (offlineDps.lte(0)) return;
 
@@ -1067,10 +1212,13 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
           }
         } else {
           // Normal Planet (Steps 1-10)
-          if (localStep < 10) {
+          // KUMA / Warp Drive Check
+          const requiredKills = Math.max(2, 10 - (totals.zoneMonsterReducer || 0));
+          
+          if (localStep < requiredKills) {
               nextStep += 1;
           } else {
-              // End of Zone (Step 10 killed)
+              // End of Zone
               if (isFarm) {
                   nextStep = 1; // Loop back
               } else {
@@ -1088,7 +1236,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
         zoneRef.current = nextZone;
         stepRef.current = nextStep;
         
-        const newMax = monsterHp(nextZone, nextStep);
+        const newMax = monsterHp(nextZone, nextStep, totals.hpGrowthMult || 1);
         hpRef.current = newMax;
         maxHpRef.current = newMax;
 
@@ -1102,7 +1250,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
         
       }, 500); 
     },
-    [dispatchEco, totals.mineralMult, maxUnlockedZone, isPrimal],
+    [dispatchEco, totals.mineralMult, totals.hpGrowthMult, maxUnlockedZone, isPrimal],
   );
 
   // ---------------------------------------------------------------------------
@@ -1348,7 +1496,12 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     
     // Increase streak (both manual and auto?)
     // User: "Clickstorm... streak'i artıracak şekilde tasarla"
+    // Increase streak (both manual and auto?)
+    // User: "Clickstorm... streak'i artıracak şekilde tasarla"
     tapStreakRef.current += 1;
+    
+    // Reset Idle Logic
+    setIsIdle(false); // ✅ Force reset without stale check
     
     // Update UI every tap
     setUiStreak(tapStreakRef.current);
@@ -1361,7 +1514,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     // If auto is 10cps, floating text spam is bad. 
     // We can handle visuals outside.
     return { dmg, isCrit };
-  }, [applyDamage]); // We need to wrap calcTapDamage properly or move logic inside
+  }, [applyDamage, calcTapDamage]); // ✅ Added calcTapDamage dependency
 
 
   // Re-calc if static stats change
@@ -1397,6 +1550,18 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     }, 100); // 10 ticks/sec
     return () => clearInterval(timer);
   }, [activeSkills, handleTap]);
+
+  // --- IDLE CHECK LOOP (1s) ---
+  useEffect(() => {
+      const timer = setInterval(() => {
+          const now = Date.now();
+          const timeSinceTap = now - lastTapTimeRef.current;
+          if (timeSinceTap > 60000 && !isIdle) {
+              setIsIdle(true);
+          }
+      }, 1000);
+      return () => clearInterval(timer);
+  }, [isIdle]);
 
   useEffect(() => {
     const TICK_MS = 250;
@@ -1589,7 +1754,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
 
   // ---------------- Prestige Logic ----------------
   const [showRewindModal, setShowRewindModal] = useState(false);
-  const prestigeReward = calculateStellarRewindReward(maxUnlockedZone); 
+  const prestigeReward = calculateStellarRewindReward(maxUnlockedZone, totals.ascendRewardMult || 1); 
   
   const confirmStellarRewind = useCallback(() => {
      dispatchEco({ type: "PERFORM_STELLAR_REWIND", amount: prestigeReward });
@@ -1682,16 +1847,17 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
   }, [offlineEarnings]);
 
   // ---------------- Cosmic Store Logic ----------------
+  // ---------------- Cosmic Store Logic ----------------
   const [showCosmicStore, setShowCosmicStore] = useState(false);
+  const [showBigBangModal, setShowBigBangModal] = useState(false);
 
   const buyProtocol = useCallback((protocolId) => {
-      dispatchEco({ type: "BUY_PROTOCOL", protocolId });
+      dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId }); // ✅ Fixed type match
   }, []);
 
   // BIG BANG LOGIC
   // BIG BANG LOGIC
-  const performBigBang = useCallback(() => {
-      // 1. Calculate Essence Gain
+  const calcBigBangGain = useCallback(() => {
       const highestZone = statsRef.current?.thisRewind?.highestZoneReached || maxUnlockedZone;
       const spentSF = eco.stellarFragmentsSpentLifetime || 0;
       
@@ -1700,6 +1866,12 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       
       let gain = Math.max(0, sectorTerm + spentTerm);
       if (highestZone >= 150 && gain < 1) gain = 1;
+      return { gain, highestZone }; // Return object for UI use
+  }, [maxUnlockedZone, eco.stellarFragmentsSpentLifetime]);
+
+  const performBigBang = useCallback(() => {
+      // 1. Calculate Essence Gain
+      const { gain } = calcBigBangGain();
 
       // 2. Dispatch
       dispatchEco({ type: "PERFORM_BIG_BANG", payload: { gainedEssence: gain } });
@@ -1707,6 +1879,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       // 3. Reset Local State
       setMode("progress");
       setZone(1);
+      setShowBigBangModal(false); // Close modal
       setStep(1);
       setMaxUnlockedZone(1);
       setHp(monsterHp(1,1));
@@ -1716,7 +1889,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       if (statsRef.current) {
           statsRef.current.thisRewind = { startTime: Date.now() };
       }
-  }, [maxUnlockedZone, eco.stellarFragmentsSpentLifetime]);
+  }, [calcBigBangGain]);
 
   const buyUniversalConstant = useCallback((constantId) => {
       dispatchEco({ type: "BUY_UNIVERSAL_CONSTANT", constantId });
@@ -1749,6 +1922,7 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       ...pendingOwnedMiners,
     },
     uiStreak, // Exported for Combo UI
+    isIdle, // ✅ Exported for Mode Badge
 
     ownedSkills,
     buyOrUpgradeMiner,
@@ -1802,13 +1976,33 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     setShowRewindModal,
     confirmStellarRewind,
     prestigeReward,
+    
+    // Starlink
+    tagToast,
+
+    // Idle State
+    isIdle, // ✅ Exposed
+    hasIdleBonus: totals.idleDpsMult > 1.01, // ✅ Epsilon check to avoid false positives
     stellarFragments: eco.stellarFragments,
     
     // Cosmic Protocols
     showCosmicStore,
     setShowCosmicStore,
-    buyProtocol,
+    buyProtocol, // Legacy support if needed, or aliased to upgrade logic
     cosmicProtocols: eco.cosmicProtocols,
+    
+    // Summoning Exports (NEW)
+    summonPool: eco.summonPool,
+    rerollCount: eco.rerollCount || 0,
+    getNextUnlockCost: () => {
+        const ownedCount = Object.keys(eco.cosmicProtocols || {}).filter(k => eco.cosmicProtocols[k] > 0).length;
+        return getNextUnlockCost(ownedCount);
+    },
+    
+    unlockProtocol: (id) => dispatchEco({ type: "UNLOCK_PROTOCOL", protocolId: id }),
+    rerollSlot: (idx) => dispatchEco({ type: "REROLL_SLOT", slotIndex: idx }),
+    generateSummonPool: () => dispatchEco({ type: "GENERATE_SUMMON_POOL" }),
+    upgradeProtocol: (id) => dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId: id }),
 
     // Statistics
     stats: statsRef.current, // 📊
@@ -1824,5 +2018,8 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     universalConstantsLevels: eco.universalConstantsLevels, // ✅ From eco
     performBigBang,
     buyUniversalConstant,
+    showBigBangModal,
+    setShowBigBangModal,
+    calcBigBangGain,
   };
 }

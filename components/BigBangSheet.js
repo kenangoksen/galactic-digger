@@ -26,7 +26,8 @@ export default function BigBangSheet({
   performBigBang,
   stats,
   maxUnlockedZone,
-  stellarFragmentsSpentLifetime = 0 // Passed from engine totals or eco
+  stellarFragmentsSpentLifetime = 0, // Passed from engine totals or eco
+  onOpenModal // ✅ Trigger modal
 }) {
   const [tab, setTab] = useState("UPGRADES"); // "UPGRADES" | "BIGBANG"
 
@@ -128,54 +129,25 @@ export default function BigBangSheet({
         </ScrollView>
       ) : (
         <ScrollView style={styles.list} contentContainerStyle={styles.resetContainer}>
-            <Text style={styles.resetTitle}>TRIGGER BIG BANG</Text>
+            <Text style={styles.resetTitle}>BIG BANG RESET</Text>
             <Text style={styles.resetDesc}>
-                Reset the Universe to gain COSMIC ESSENCE based on your progress.
+                Current Cycle: Zone {highestZone}
             </Text>
-
-            {/* FORMULA BREAKDOWN */}
+            
             <View style={styles.formulaBox}>
-                <View style={styles.formulaRow}>
-                    <Text style={styles.fLabel}>From Sectors (Max {highestZone}):</Text>
-                    <Text style={styles.fVal}>+{sectorTerm}</Text>
-                </View>
-                <Text style={styles.fSub}>Floor((MaxZone - 100) / 50)</Text>
-
-                <View style={[styles.formulaRow, { marginTop: 8 }]}>
-                    <Text style={styles.fLabel}>From Spent Fragments:</Text>
-                    <Text style={styles.fVal}>+{spentTerm}</Text>
-                </View>
-                <Text style={styles.fSub}>Floor(Log10(SpentSF) / 2)</Text>
-                
-                <View style={styles.divider} />
-                
-                <View style={styles.formulaRow}>
-                    <Text style={[styles.fLabel, {color: '#fff'}]}>TOTAL TO GAIN:</Text>
-                    <Text style={[styles.fVal, {color: '#60a5fa', fontSize: 18}]}>+{gain}</Text>
-                </View>
-            </View>
-
-            {/* LOSS / KEEP */}
-            <View style={styles.warningGrid}>
-                 <View style={styles.warnCol}>
-                     <Text style={[styles.warnHeader, {color: '#ef4444'}]}>YOU LOSE</Text>
-                     <Text style={styles.warnItem}>• Minerals</Text>
-                     <Text style={styles.warnItem}>• Miners & Levels</Text>
-                     <Text style={styles.warnItem}>• Zone Progress</Text>
-                 </View>
-                 <View style={styles.warnCol}>
-                     <Text style={[styles.warnHeader, {color: '#22c55e'}]}>YOU KEEP</Text>
-                     <Text style={styles.warnItem}>• Cosmic Protocols</Text>
-                     <Text style={styles.warnItem}>• Stellar Fragments</Text>
-                     <Text style={styles.warnItem}>• Starlink Tags</Text>
-                 </View>
+                  <Text style={[styles.fLabel, {color: '#fff', textAlign: 'center'}]}>
+                      POTENTIAL ESSENCE GAIN
+                  </Text>
+                  <Text style={[styles.fVal, {color: '#ef4444', fontSize: 24, textAlign: 'center', marginTop: 4}]}>
+                      +{gain}
+                  </Text>
             </View>
 
             <Pressable 
                 style={styles.bigBangBtn}
-                onPress={performBigBang}
+                onPress={onOpenModal}
             >
-                <Text style={styles.bigBangBtnText}>PERFORM BIG BANG</Text>
+                <Text style={styles.bigBangBtnText}>INITIATE BIG BANG...</Text>
             </Pressable>
         </ScrollView>
       )}
@@ -189,7 +161,7 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     bottom: 74,
-    height: 500, // Taller for Big Bang
+    height: 300, // Standard-ish (slightly taller for content)
     borderRadius: 20,
     backgroundColor: "rgba(12, 16, 28, 0.98)",
     borderWidth: 1,
@@ -347,16 +319,15 @@ const styles = StyleSheet.create({
   },
   resetTitle: {
       color: '#fff',
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: 'bold',
-      marginBottom: 6,
+      marginBottom: 4,
   },
   resetDesc: {
       color: '#ffffff80',
       textAlign: 'center',
       fontSize: 12,
-      lineHeight: 18,
-      marginBottom: 20,
+      marginBottom: 16,
   },
   formulaBox: {
       width: '100%',
@@ -364,11 +335,9 @@ const styles = StyleSheet.create({
       padding: 12,
       borderRadius: 12,
       marginBottom: 20,
-  },
-  formulaRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   fLabel: {
       color: '#ffffff80',
@@ -379,42 +348,9 @@ const styles = StyleSheet.create({
       fontWeight: 'bold',
       fontSize: 14,
   },
-  fSub: {
-      color: '#ffffff40',
-      fontSize: 10,
-      marginTop: 2,
-  },
-  divider: {
-      height: 1,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      marginVertical: 10,
-  },
-  warningGrid: {
-      flexDirection: 'row',
-      gap: 12,
-      width: '100%',
-      marginBottom: 24,
-  },
-  warnCol: {
-      flex: 1,
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      padding: 12,
-      borderRadius: 8,
-  },
-  warnHeader: {
-      fontWeight: 'bold',
-      fontSize: 12,
-      marginBottom: 8,
-      textAlign: 'center',
-  },
-  warnItem: {
-      color: '#ffffff80',
-      fontSize: 11,
-      marginBottom: 4,
-  },
   bigBangBtn: {
-      backgroundColor: '#dc2626',
-      paddingVertical: 14,
+      backgroundColor: '#7f1d1d', // Dark Red
+      paddingVertical: 12,
       paddingHorizontal: 32,
       borderRadius: 12,
       width: '100%',
@@ -423,8 +359,8 @@ const styles = StyleSheet.create({
       borderColor: '#ef4444',
   },
   bigBangBtnText: {
-      color: '#fff',
-      fontSize: 16,
+      color: '#f87171',
+      fontSize: 14,
       fontWeight: 'bold',
       letterSpacing: 1,
   }

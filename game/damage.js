@@ -113,6 +113,10 @@ function createEmptyTotals() {
     skillCooldownMult: {}, // { skillId: multiplier } (starts empty, implies 1)
     skillValueBonus: {},
     
+    // Modifiers
+    zoneMonsterReducer: 0,
+    idleDpsMult: 1, // Silent Observer
+
     breakdown: { miners: {} }
   };
 }
@@ -264,11 +268,13 @@ function applyCosmicProtocols(totals, protocolsDef, ownedProtocols, stellarFragm
                 (p.targets || []).forEach(t => totals.skillValueBonus[t] = (totals.skillValueBonus[t]||0) + lv*base);
                 break;
             case "hpScalingReducer": // Reality Stabilizer
-                // Logic applied in HP calculation, here we might store it?
-                // Actually 'hpGrowthMult' handles reduction. 
-                // Reality stabilizer reduces growth by 4% per level.
-                // Multiplicative reduction? 0.96^level
                 totals.hpGrowthMult *= Math.pow(1 - base, lv);
+                break;
+            case "zoneMonsterReducer": // Warp Drive
+                totals.zoneMonsterReducer += (lv * base);
+                break;
+            case "idleDpsMultiplier": // Silent Observer
+                totals.idleDpsMult *= (1 + (lv * base));
                 break;
         }
     }
@@ -288,7 +294,8 @@ export function computeTotals({
   protocolsDef,
   tagsByMinerId,
   // Other
-  stellarFragmentsSpent
+  stellarFragmentsSpent,
+  stellarFragments // ✅ Passed in for passive DPS
 }) {
     const totals = createEmptyTotals();
 
@@ -346,6 +353,18 @@ export function computeTotals({
     // STARTING POWER BOOST (Singular Genesis)
     baseDps *= totals.startingPowerMult;
     baseTap *= totals.startingPowerMult; // Assuming it affects tap base too
+
+    // ✅ PASSIVE FRAGMENT BONUS (10% per unspent fragment)
+    // CH-style: +10% DPS per Soul. Additive or Multiplicative? 
+    // Usually Base * (1 + Souls * 0.10) * Ancients...
+    // We treat it as a separate Multiplier layer.
+    const sfCount = toNum(stellarFragments || 0);
+    if (sfCount > 0) {
+        // Warning: Number overflow possible if SF > 1e300. 
+        // But baseDps is also number. 
+        const sfMult = 1 + (sfCount * 0.10);
+        totals.globalDpsMult *= sfMult;
+    }
 
     // 3. Apply Global Multipliers
     // DPS

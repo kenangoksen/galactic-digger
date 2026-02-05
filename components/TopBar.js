@@ -24,6 +24,8 @@ export default function TopBar(props) {
     clickDamage = 0,
     dps = 0,
     prestigeReward = 0,
+    isIdle = false,
+    hasIdleBonus = false, // ✅ Fixed: Defined
   } = props;
   const gain = D(prestigeReward);
   const showGain = gain.gt(0);
@@ -67,6 +69,7 @@ export default function TopBar(props) {
         />
       </View>
 
+
       {/* Streak Badge */}
       {showStreak && (
         <View style={styles.streakBadge}>
@@ -74,6 +77,19 @@ export default function TopBar(props) {
                 {streak} Combo (x{streakMult.toFixed(2)})
             </Text>
         </View>
+      )}
+
+      {/* ✅ Game Mode Badge - Active/Idle */}
+      {hasIdleBonus && (
+          <View style={[
+              styles.modeBadge, 
+              isIdle ? styles.modeBadgeIdle : styles.modeBadgeActive
+          ]}>
+              <View style={[styles.modeDot, { backgroundColor: isIdle ? '#888' : '#00ff00' }]} />
+              <Text style={styles.modeText}>
+                  {isIdle ? "IDLE" : "ACTIVE"}
+              </Text>
+          </View>
       )}
 
       {/* Tooltip Bubble */}
@@ -90,6 +106,8 @@ export default function TopBar(props) {
 }
 
 function Stat({ icon, value, onPress }) {
+// ... existing Stat component ...
+
   return (
     <Pressable onPress={onPress} style={styles.stat}>
       <Image source={icon} style={styles.icon} />
@@ -190,9 +208,44 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.2)',
   },
+
   streakText: {
     color: '#000',
     fontWeight: '800',
     fontSize: 11,
+  },
+
+  // Game Mode Badge
+  modeBadge: {
+    position: 'absolute',
+    bottom: -18, // Tucked closer
+    right: 12, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4, // Tighter gap
+    paddingVertical: 2, // Smaller padding
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    zIndex: 95,
+  },
+  modeBadgeActive: {
+    backgroundColor: 'rgba(0, 50, 0, 0.8)',
+    borderColor: 'rgba(0, 255, 0, 0.3)',
+  },
+  modeBadgeIdle: {
+    backgroundColor: 'rgba(30, 30, 30, 0.8)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modeDot: {
+    width: 5, // Smaller dot
+    height: 5,
+    borderRadius: 2.5,
+  },
+  modeText: {
+    color: '#fff',
+    fontSize: 9, // Smaller font
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
