@@ -8,6 +8,7 @@ import SkillsSheet from "../../components/game/SkillsSheet";
 import MinersSheet from "../../components/MinersSheet";
 import SettingsSheet from "../../components/SettingsSheet";
 import TopBar from "../../components/TopBar";
+import ActiveBuffTray from "../../components/ui/ActiveBuffTray"; // ✅ New (Retry)
 import DevToolsModal from "../../components/ui/DevToolsModal";
 import StatisticsModal from "../../components/ui/StatisticsModal"; // 📊
 import WelcomeBackModal from "../../components/WelcomeBackModal";
@@ -213,6 +214,8 @@ export default function HomeScreen() {
                 onNext={() => engine.goNextZone?.()}
                 comboActive={engine.uiStreak > 5} // Push down if combo visible
               />
+              
+              <ActiveBuffTray cosmicProtocols={engine.cosmicProtocols} />
 
               <SideBarRight
                 mode={engine.mode} // "progress" | "farm"

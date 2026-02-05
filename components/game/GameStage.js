@@ -22,7 +22,11 @@ export default function GameStage({
 
   isBossPlanet, // ⬅️ engine’den geliyor
   isPrimal, // 🟣
+  isIdle,
+  activeProtocols, // { "silent_observer": 5, ... }
 }) {
+  const hasZenMode = isIdle && (activeProtocols?.['silent_observer'] || 0) > 0;
+  const hasHighEnergy = (activeProtocols?.['photon_strike_matrix'] || 0) > 0;
   return (
     <Animated.View
       style={{
@@ -32,6 +36,11 @@ export default function GameStage({
     >
       <Pressable style={styles.stagePress} onPress={onTap}>
         <View style={styles.stage} pointerEvents="none">
+          {/* Zen Mode Overlay */}
+           {hasZenMode && (
+              <Animated.View style={styles.zenOverlay} />
+           )}
+
           {/* puff */}
           <Animated.View
             style={[
@@ -231,5 +240,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     transform: [{ translateY: 120 }],
     zIndex: 10,
+  },
+  zenOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 5, 20, 0.4)', // Dimming
+    zIndex: 2, // Above planet, below UI
+    borderRadius: 300, // Circular mask attempt? Or full? full is fine for flavor
   },
 });

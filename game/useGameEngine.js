@@ -1950,7 +1950,8 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
     offlineEarnings,
     unlockedCount,
     resetGame,
-    isPrimal, 
+    isPrimal,
+    isIdle, // ⬅️ Exported for UI effects 
     
     // Skills API
     activateSkill,

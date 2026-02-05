@@ -129,9 +129,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#e0e0e0",
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "800",
-    letterSpacing: 2,
+    letterSpacing: 0.5,
   },
   closeBtn: {
     width: 32,

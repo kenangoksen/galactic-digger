@@ -192,10 +192,10 @@ const styles = StyleSheet.create({
     height: 24,
   },
   title: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "800",
     color: "#60a5fa",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   closeBtn: {
     padding: 4,

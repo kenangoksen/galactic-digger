@@ -317,10 +317,10 @@ const styles = StyleSheet.create({
       fontWeight: "bold",
   },
   title: {
-    fontSize: 14,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "800",
     color: "#60a5fa", // Blue
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   closeBtn: {
     padding: 4,

@@ -90,7 +90,7 @@ export default function MinersSheetHost({ sheetContent, children, visible, onClo
   const Sheet = useCallback(() => {
     return (
       <Animated.View
-        style={{ transform: [{ translateY: sheetTranslateY }] }}
+        style={{ transform: [{ translateY: sheetTranslateY }], zIndex: 100 }}
         pointerEvents={isOpen ? "auto" : "none"}
       >
         {sheetContentRef.current({ closeSheet })}

@@ -80,17 +80,11 @@ export default function CosmicStoreSheet({
         <Pressable 
             style={[styles.summonBanner]}
             onPress={() => setShowSummon(true)}
-            // Always enabled to view
         >
-            <View style={styles.summonContent}>
-                <Ionicons name="sparkles" size={16} color="#00ffaa" />
-                <Text style={styles.summonTitle}>
-                    SUMMON NEW PROTOCOL
-                </Text>
-            </View>
-            <View style={styles.summonCostBadge}>
-                <Text style={styles.summonCostText}>{fmt(nextUnlockCost)} SF</Text>
-            </View>
+             <Ionicons name="sparkles" size={14} color="#00ffaa" style={{marginRight: 6}} />
+             <Text style={styles.summonTitle}>
+                 SUMMON NEW PROTOCOL
+             </Text>
         </Pressable>
 
         {/* LIST */}
@@ -157,7 +151,7 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     bottom: 74,
-    height: 400, // Increased height for summon banner + list
+    height: 260, // Standardized height
     borderRadius: 20,
     backgroundColor: "rgba(12, 16, 28, 0.98)",
     borderWidth: 1,
@@ -183,10 +177,10 @@ const styles = StyleSheet.create({
     height: 24,
   },
   title: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "800",
     color: "#a855f7",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   closeBtn: {
     padding: 4,
@@ -218,12 +212,12 @@ const styles = StyleSheet.create({
   summonBanner: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: 'rgba(0, 255, 170, 0.1)',
+      justifyContent: 'center', // Center content
+      backgroundColor: 'rgba(0, 255, 170, 0.08)', // Slightly more transparent
       borderWidth: 1,
-      borderColor: 'rgba(0, 255, 170, 0.3)',
-      borderRadius: 10,
-      padding: 10,
+      borderColor: 'rgba(0, 255, 170, 0.2)',
+      borderRadius: 8,
+      paddingVertical: 8, // Minimal padding
       marginBottom: 10,
   },
   summonDisabled: {
