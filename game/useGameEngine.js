@@ -93,6 +93,119 @@ const ECO_INIT = {
   activeDroneCount: 0,
 };
 
+// ---------------- Time Warp Simulation ----------------
+function simulateTimeWarp(startZone, startStep, currentDps, durationSeconds) {
+    let zone = Number(startZone);
+    if (isNaN(zone) || zone < 1) zone = 1;
+    let step = Number(startStep);
+    if (isNaN(step) || step < 1) step = 1;
+    let dps = D(currentDps);
+    if (dps.lt(0) || isNaN(dps.e)) dps = D(0); // Safety check for Decimal
+    let secondsLeft = durationSeconds;
+    let gainedGold = D(0);
+    let gainedFragments = D(0);
+    let gainedZones = 0;
+    const startZ = zone;
+
+    // Safety Cap
+    let maxIterations = 10000;
+    
+    while (secondsLeft > 0 && maxIterations > 0) {
+        maxIterations--;
+        
+        // Monster at current zone/step
+        const hp = D(monsterHp(zone, step));
+        const reward = D(monsterMineral(zone, step));
+        const isBoss = zone % 5 === 0;
+
+        // Time to kill
+        // If DPS >= HP, instant kill (0.1s frame)
+        // Else time = HP / DPS
+        let timeToKill = 0.5; // Default animation/delay factor
+        
+        if (dps.gte(hp)) {
+            timeToKill = 0.1;
+        } else {
+            // Need multiple seconds
+            // HP / DPS
+             // approx
+            const ratio = hp.div(dps).toNumber(); // might be huge if dps low
+            timeToKill = ratio; 
+        }
+
+        // Check if we can kill it within remaining time
+        if (timeToKill > secondsLeft) {
+            // Cannot finish kill, farm remaining time?
+            // "Farm" means we are stuck fighting this monster.
+            // But we gain nothing until it dies?
+            // Actually, usually in idle games, if you can't kill a boss, you farm previous zone.
+            // But if normal monster, you just keep hitting it.
+            // Simplification: proportional reward? No, binary.
+            // If Time Warp ends, we stop exactly there.
+            break; 
+        }
+
+        // Check Boss Timer Limit (30s)
+        if (isBoss && timeToKill > 30) {
+            // Failed Boss!
+            // Stop progression.
+            // Farm logic: Farm PREVIOUS safe zone for remainder of time.
+            const farmZone = Math.max(1, zone - 1);
+            const farmStep = 1; // Start of zone
+            const farmHp = D(monsterHp(farmZone, farmStep));
+            const farmReward = D(monsterMineral(farmZone, farmStep));
+            
+            // Farming remainder
+            if (dps.gt(0)) {
+                // How many kills in remaining time?
+                // FarmKillTime = farmHp / dps
+                let farmKillTime = 1; 
+                if (dps.gte(farmHp)) farmKillTime = 0.1;
+                else farmKillTime = farmHp.div(dps).toNumber();
+                
+                // Effective kills
+                const kills = Math.floor(secondsLeft / farmKillTime);
+                gainedGold = gainedGold.add(farmReward.mul(kills));
+            }
+            
+            // We revert to safe zone? Or stay at boss wall?
+            // Usually stay at wall.
+            break;
+        }
+
+        // Success Kill
+        secondsLeft -= timeToKill;
+        gainedGold = gainedGold.add(reward);
+
+        // Advance
+        if (isBoss) {
+            zone++;
+            step = 1;
+        } else {
+             if (step < 10) step++;
+             else {
+                 zone++;
+                 step = 1;
+             }
+        }
+    }
+    
+    gainedZones = Math.max(0, zone - startZ);
+    // Potential Fragment drops? (Simulated roughly)
+    // Every 100 zones = 1 fragment? Or random?
+    // Let's give 1 fragment per 10 zones advanced to be generous in warp.
+    gainedFragments = D(Math.floor(gainedZones / 10));
+
+    // Return results
+    return {
+        finalZone: zone,
+        finalStep: step,
+        gainedGold,
+        gainedZones,
+        gainedFragments
+    };
+}
+
 function ecoReducer(state, action) {
   switch (action.type) {
     case "GAIN_MINERALS": {
@@ -113,6 +226,8 @@ function ecoReducer(state, action) {
         return { ...state, activeDroneCount: next };
     }
 
+
+
     case "BUY_SHOP_ITEM": {
       const { id, cost, payload } = action;
       if (!id || !cost) return state;
@@ -123,10 +238,49 @@ function ecoReducer(state, action) {
       // Effects
       if (id.startsWith("timelapse_")) {
           const seconds = payload?.seconds || 3600;
-          const dps = payload?.currentDps || D(0);
-          const income = D(dps).mul(seconds);
-          if (income.gt(0)) {
-              newState.minerals = D(newState.minerals).add(income);
+          const dps = payload?.currentDps ? D(payload.currentDps) : D(0);
+          
+          if (dps.gt(0)) {
+              // Run Simulation
+              // Fix: Use passed zone/step from payload (as reducer doesn't track them)
+              let startZ = Number(payload.currentZone);
+              if (isNaN(startZ) || startZ < 1) startZ = 1;
+              let startS = Number(payload.currentStep);
+              if (isNaN(startS) || startS < 1) startS = 1;
+              
+              console.log("Reducer BUY_SHOP_ITEM Simulation:", { startZ, startS, payload }); // 🔍 Debug Log
+
+              const result = simulateTimeWarp(startZ, startS, dps, seconds);
+              
+              // Apply Results
+              newState.minerals = D(state.minerals).add(result.gainedGold);
+              newState.zone = result.finalZone;
+              newState.step = result.finalStep;
+              
+              // Update Max Zone if needed
+              if (newState.zone > state.maxUnlockedZone) {
+                  newState.maxUnlockedZone = newState.zone;
+              }
+
+              // Update HP for new stage
+              // We need to trigger a side effect for HP update, usually handled by component observing zone/step
+              // But reducer is pure... we might need to rely on the component engine to update HP based on new zone/step
+              // Ideally pass this result to a side effect handler.
+              // For now, we store result in state to show Modal
+              // Note: `useReducer` state update will trigger re-render. 
+              // We can't set "timeWarpResult" (useState) directly inside reducer.
+              // We will return it in newState and let the hook extract it? 
+              // Or better: dispatch a secondary effect.
+              // Actually, useGameEngine wraps the reducer. We can handle it there.
+              // But wait, this is inside `reducer`. 
+              // We need to return the result in the state so the hook can see it.
+              newState.lastTimeWarpResult = {
+                  finalZone: result.finalZone, // ✅ FIX: Pass final zone
+                  finalStep: result.finalStep, // ✅ FIX: Pass final step
+                  gainedGold: result.gainedGold,
+                  gainedZones: result.gainedZones,
+                  gainedFragments: result.gainedFragments
+              };
           }
       } else if (id === "auto_tapper") {
           newState.droneCount = (newState.droneCount || 0) + 1;
@@ -139,6 +293,12 @@ function ecoReducer(state, action) {
       }
 
       return newState;
+    }
+
+    case "CLEAR_TIME_WARP_RESULT": {
+      const next = { ...state };
+      delete next.lastTimeWarpResult;
+      return next;
     }
 
     case "BUY_MINER": {
@@ -550,6 +710,9 @@ export function useGameEngine() {
   const lastTapTimeRef = useRef(Date.now());
   const [uiStreak, setUiStreak] = useState(0);
   const [isIdle, setIsIdle] = useState(false); // Siyalatas / Silent Observer check
+  
+  // Time Warp Result State
+  const [timeWarpResult, setTimeWarpResult] = useState(null);
 
   const resetGame = useCallback(async () => {
     // 1. Clear storage
@@ -632,6 +795,7 @@ export function useGameEngine() {
   }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime, eco.stellarFragments, eco.dpsToTapMilestonesUnlocked, eco.mineralBonusEndTime]);
 
   const tapDamageBase = totals.tapDamage;
+  const totalClickDamage = D(tapDamageBase).mul(getTapMultiplier()).toNumber();
   
   // Apply Active Skills to DPS
   let totalDps = D(totals.dps).mul(getDpsMultiplier());
@@ -640,6 +804,8 @@ export function useGameEngine() {
       totalDps = totalDps.mul(totals.idleDpsMult);
   }
   totalDps = totalDps.toNumber();
+  const dpsPctOfClick = totalClickDamage > 0 ? (totalDps / totalClickDamage) * 100 : 0;
+  
 
   const goNextZone = useCallback(() => {
     // SIMPLE LOGIC: If we are not at the max unlocked zone, we can go next.
@@ -707,6 +873,42 @@ export function useGameEngine() {
   useEffect(() => {
     latestStateRef.current = { mode, zone, step, eco, maxUnlockedZone };
   }, [mode, zone, step, eco, maxUnlockedZone]);
+
+  // Sync Time Warp State (Fix)
+  useEffect(() => {
+    if (eco.lastTimeWarpResult) {
+       console.log("Time Warp Result Sync Effect:", eco.lastTimeWarpResult); // 🔍 Debug Log
+
+       // Apply
+       const targetZone = Number(eco.lastTimeWarpResult.finalZone);
+       const targetStep = Number(eco.lastTimeWarpResult.finalStep);
+
+       if (!isNaN(targetZone) && targetZone >= 1) {
+           console.log("Setting Zone to:", targetZone); // 🔍 Debug Log
+           setZone(targetZone);
+           if (targetZone > maxUnlockedZone) {
+               console.log("Updating Max Zone to:", targetZone); // 🔍 Debug Log
+               setMaxUnlockedZone(targetZone);
+           }
+       } else {
+           console.error("Time Warp Result gave NaN Zone!", eco.lastTimeWarpResult);
+       }
+
+       if (!isNaN(targetStep) && targetStep >= 1) {
+           setStep(targetStep);
+       }
+
+       setMode("progress"); // Ensure we are moving
+       
+       // Force HP update immediately
+       const validZone = !isNaN(targetZone) && targetZone >= 1 ? targetZone : zone;
+       const validStep = !isNaN(targetStep) && targetStep >= 1 ? targetStep : step;
+       
+       const newHp = monsterHp(validZone, validStep, totals.hpGrowthMult || 1);
+       setMaxHp(newHp);
+       setHp(newHp);
+    }
+  }, [eco.lastTimeWarpResult, maxUnlockedZone, totals.hpGrowthMult]);
 
   // ---- OFFLINE EARNINGS STATE ----
   const [offlineEarnings, setOfflineEarnings] = useState(null);
@@ -1992,6 +2194,9 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
       // Stats Reset if needed
       if (statsRef.current) {
           statsRef.current.thisRewind = { startTime: Date.now() };
+          if (statsRef.current.lifetime) {
+              statsRef.current.lifetime.totalBigBangs = (statsRef.current.lifetime.totalBigBangs || 0) + 1;
+          }
       }
   }, [calcBigBangGain]);
 
@@ -2046,42 +2251,38 @@ const SKILLS_CONFIG = require("../assets/config/skills.json"); // New import
 
     // totals / damage
     totalDps,
-    // totals / damage
-    totalDps,
-    totalDps,
-    handleTap, // ✅ Exported for UI (GameStage onTap)
-    calcTapDamage, // Raw calc
-    // Skills API
+    totalClickDamage,
+    dpsPctOfClick,
+
+    // Time Warp
+    timeWarpResult: timeWarpResult || eco.lastTimeWarpResult,
+    clearTimeWarpResult: () => {
+        setTimeWarpResult(null); // Clear local if any
+        dispatchEco({ type: "CLEAR_TIME_WARP_RESULT" });
+    },
+
+
+
+
+    // Tap & Skills Logic
+    handleTap, 
+    calcTapDamage, 
     activateSkill,
     unlockSkill: purchaseActiveSkill,
     activeSkills,
     skillCooldowns,
     activeSkillLevels: ownedActiveSkills,
     ownedActiveSkills,
-    SKILLS_CONFIG, // ✅ Exported for UI
+    SKILLS_CONFIG, 
     isSkillUnlockable,
     resetSkillCooldowns,
     
-    // Offline
+    // Offline / Meta
     offlineEarnings,
+    collectOfflineEarnings,
     unlockedCount,
     resetGame,
     isPrimal,
-    isIdle, // ⬅️ Exported for UI effects 
-    
-    // Skills API
-    activateSkill,
-    unlockSkill: purchaseActiveSkill,
-    activeSkills,
-    skillCooldowns,
-    activeSkillLevels: ownedActiveSkills,
-    ownedActiveSkills,
-    SKILLS_CONFIG,
-    isSkillUnlockable,
-    
-    // Offline
-    offlineEarnings,
-    collectOfflineEarnings,
 
     // Zone Nav
     maxUnlockedZone,

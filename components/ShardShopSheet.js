@@ -78,7 +78,9 @@ export default function ShardShopSheet({
     buyShopItem, 
     watchAdForShards,
     droneCount = 0,
-    totalDps
+    totalDps,
+    zone = 1,
+    step = 1
 }) {
     const [isLoadingAd, setIsLoadingAd] = useState(false);
     const [showTimeModal, setShowTimeModal] = useState(false);
@@ -105,8 +107,13 @@ export default function ShardShopSheet({
 
     // Helper for Timelapse Buy
     const buyTimelapse = (hours, cost) => {
+        console.log("buyTimelapse called with:", { hours, cost, zone, step, totalDps }); // 🔍 Debug Log
         if (shards < cost) {
             Alert.alert("INSUFFICIENT", "Not enough Shards!");
+            return;
+        }
+        if (totalDps <= 0) {
+            Alert.alert("ZERO DPS", "You need DPS to warp time!");
             return;
         }
         Alert.alert(
@@ -117,7 +124,12 @@ export default function ShardShopSheet({
                 {
                     text: "WARP",
                     onPress: () => {
-                        const payload = { seconds: hours * 3600, currentDps: totalDps };
+                        const payload = { 
+                            seconds: hours * 3600, 
+                            currentDps: totalDps,
+                            currentZone: zone,
+                            currentStep: step 
+                        };
                         buyShopItem(`timelapse_${hours}h`, cost, payload);
                         setShowTimeModal(false);
                     }
@@ -206,8 +218,19 @@ export default function ShardShopSheet({
              rewardText = "(+10 Tap/Sec)";
         }
 
-        const canAfford = shards >= cost;
-        const isDisabled = isOwned || (item.type !== "FREE" && !canAfford);
+        let canAfford = shards >= cost;
+        
+        // Custom logic for Time Warp menu (it has variable cost, checking min cost 100)
+        if (item.id === "timelapse_menu") {
+             canAfford = shards >= 100;
+        }
+
+        let isDisabled = isOwned || (item.type !== "FREE" && !canAfford);
+
+        // ✅ EXCEPTION: Time Warp menu is always active (it opens a modal)
+        if (item.id === "timelapse_menu") {
+            isDisabled = false; 
+        }
 
         return (
             <Pressable

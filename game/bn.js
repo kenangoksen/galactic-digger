@@ -69,25 +69,28 @@ const SUFFIX = [
 export function fmtD(x) {
   const v = D(x);
   if (v.lte(0)) return "0";
+  if (!Number.isFinite(v.e) || !Number.isFinite(v.mantissa)) return "INF";
 
-  // < 1000
+  // < 1000: Clicker Heroes style integer for small numbers
   if (v.lt(1000)) return v.floor().toString();
 
-  // tier = floor(log10(v)/3)
-  // break_infinity: v.log10()
-  const tier = Math.floor(v.log10() / 3);
-  const t = Math.max(0, Math.min(tier, SUFFIX.length - 1));
+  // tier = floor(exponent / 3)
+  const tier = Math.floor(v.e / 3);
+  
+  // If tier is beyond our SUFFIX list, use scientific notation (e.g. 2.333e301)
+  if (tier >= SUFFIX.length) {
+      // toExponential(3) => "2.333e+301"
+      return v.toExponential(3).replace("+", "");
+  }
 
+  const suffix = SUFFIX[tier];
+  
   // scaled = v / 1000^tier
-  const scaled = v.div(Decimal.pow(1000, t));
-
-  // 3 basamak gibi: 123K, 9.87M yerine istersen:
-  // scaled.toFixed(0) => ClickerHeroes gibi kaba
-  const s = scaled.lt(10)
-    ? scaled.toFixed(2)
-    : scaled.lt(100)
-      ? scaled.toFixed(1)
-      : scaled.toFixed(0);
-
-  return `${s}${SUFFIX[t]}`;
+  // Optimization: mantissa * 10^(exponent % 3)
+  // e.g. 1.23e4 -> tier 1. rem 1. 1.23 * 10^1 = 12.3 K
+  const rem = v.e % 3;
+  const val = v.mantissa * Math.pow(10, rem);
+  
+  // User requested 3 decimal places for precision (e.g. 2.205q)
+  return val.toFixed(3) + suffix;
 }

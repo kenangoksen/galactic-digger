@@ -11,6 +11,7 @@ import TopBar from "../../components/TopBar";
 import ActiveBuffTray from "../../components/ui/ActiveBuffTray"; // ✅ New (Retry)
 import DevToolsModal from "../../components/ui/DevToolsModal";
 import StatisticsModal from "../../components/ui/StatisticsModal"; // 📊
+import TimeWarpResultModal from "../../components/ui/TimeWarpResultModal"; // ⏳
 import WelcomeBackModal from "../../components/WelcomeBackModal";
 
 import { fmt, getNextCost } from "../../game/damage";
@@ -112,14 +113,16 @@ export default function HomeScreen() {
             if (visibleContent === "SHOP") {
                 return (
                     <ShardShopSheet
-                        visible={true}
-                        onClose={closeSheet}
-                        shards={engine.shards}
-                        buyShopItem={engine.buyShopItem}
-                        watchAdForShards={engine.watchAdForShards}
-                        droneCount={engine.droneCount}
-                        totalDps={engine.totalDps}
-                    />
+                  visible={true}
+                  onClose={closeSheet}
+                  shards={engine.eco.shards} // ✅ Pass Shards
+                  droneCount={engine.droneCount}
+                  buyShopItem={engine.buyShopItem}
+                  watchAdForShards={console.log}
+                  totalDps={engine.totalDps}
+                  zone={engine.zone} // ✅ Pass Zone
+                  step={engine.step} // ✅ Pass Step
+              />
                 );
             }
 
@@ -215,8 +218,8 @@ export default function HomeScreen() {
                 // ✅ Boss planet'te step yazma
                 zoneText={
                   engine.isBossPlanet
-                    ? `Zone ${engine.zone} • BOSS`
-                    : `Zone ${engine.zone} • ${engine.step}/10`
+                    ? `Zone ${isNaN(engine.zone) ? 1 : engine.zone} • BOSS`
+                    : `Zone ${isNaN(engine.zone) ? 1 : engine.zone} • ${engine.step}/10`
                 }
                 hp={engine.hp}
                 maxHp={engine.maxHp}
@@ -356,6 +359,12 @@ export default function HomeScreen() {
         </MinersSheetHost>
       </ImageBackground>
     </View>
+
+    <TimeWarpResultModal 
+      visible={!!engine.timeWarpResult} 
+      result={engine.timeWarpResult} 
+      onClose={engine.clearTimeWarpResult}
+    />
 
     <DevToolsModal 
       visible={showDevTools} 

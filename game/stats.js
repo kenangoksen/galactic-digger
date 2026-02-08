@@ -24,6 +24,7 @@ export const DEFAULT_STATS = {
     totalAnomalyBossesSpawned: 0,
     totalAnomalyBossesKilled: 0,
     totalMonstersKilled: 0,
+    totalBigBangs: 0,
 
     // A2) Time
     totalTimePlayed: 0, // ms
