@@ -5,14 +5,14 @@ import { Image, Pressable, StyleSheet, View } from "react-native";
 const ICONS = {
   settings: require("../assets/images/ui/side/settings.png"),
   achievements: require("../assets/images/ui/side/achievements.png"),
-  relics: require("../assets/images/ui/side/relics.png"),
+  artifacts: require("../assets/images/ui/side/relics.png"),
   clan: require("../assets/images/ui/side/clan.png"),
 };
 
 export default function SideBarLeft({
   onSettings,
   onAchievements,
-  onRelics,
+  onArtifacts,
   onClan,
 }) {
   return (
@@ -28,7 +28,7 @@ export default function SideBarLeft({
       >
         <SideBtn icon={ICONS.settings} onPress={onSettings} />
         <SideBtn icon={ICONS.achievements} onPress={onAchievements} />
-        <SideBtn icon={ICONS.relics} onPress={onRelics} />
+        <SideBtn icon={ICONS.artifacts} onPress={onArtifacts} />
         <SideBtn icon={ICONS.clan} onPress={onClan} />
       </LinearGradient>
     </View>

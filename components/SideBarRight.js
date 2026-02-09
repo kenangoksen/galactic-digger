@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     // width is implicitly determined by children? No, we should set it.
     width: 56, 
     // No height, so it hugs content
-    zIndex: 9999,
+    zIndex: 40, // ✅ Lowered from 9999 so ArtifactsModal (50+) stays on top
     elevation: 20,
     // OVERFLOW VISIBLE IS DEFAULT HERE
   },

@@ -15,6 +15,8 @@ export default function WelcomeBackModal({
   visible,
   earnings, // BigNumber
   seconds, // number
+  zonesGained, // number
+  shards, // number
   onCollect, // (multiplier) => void
   onClose,
 }) {
@@ -61,6 +63,18 @@ export default function WelcomeBackModal({
                   <Text style={styles.statLabel}>Time Away</Text>
                   <Text style={styles.statValue}>{timeStr}</Text>
                 </View>
+
+                {/* Zones Gained */}
+                {zonesGained > 0 && (
+                    <>
+                    <View style={styles.divider} />
+                    <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>Zones Cleared</Text>
+                    <Text style={[styles.statValue, {color: '#4ade80'}]}>+{zonesGained}</Text>
+                    </View>
+                    </>
+                )}
+                
                 <View style={styles.divider} />
                 <View style={styles.statRow}>
                   <Text style={styles.statLabel}>Minerals Mined</Text>
@@ -121,14 +135,23 @@ export default function WelcomeBackModal({
                   )}
                 </Pressable>
 
-                {/* 3. GEM 3x (MOCK) */}
+                {/* 3. SHARD 3x */}
                 <Pressable
                   style={({ pressed }) => [
                     styles.btn,
-                    styles.btnGem,
+                    styles.btnGem, // Keeping style name for now, simpler
                     pressed && styles.btnPressed,
                   ]}
-                  onPress={() => onCollect(3)}
+                  onPress={() => {
+                      if (shards >= 50) {
+                          onCollect(3);
+                      } else {
+                          // Trigger shop open request or alert
+                          // Since we don't have a direct "open shop" callback passed yet, let's use onCollect with special code or pass a new callback?
+                          // For now, let's alert. User asked: "varsa yapalım yok ise Shard mağazası açılsın"
+                          onCollect("SHOP_REQUEST"); 
+                      }
+                  }}
                 >
                   <LinearGradient
                     colors={["#db2777", "#be185d"]}
@@ -137,11 +160,11 @@ export default function WelcomeBackModal({
                   <Text style={styles.btnTitle}>3X BOOST</Text>
                   <View style={styles.row}>
                     <MaterialCommunityIcons
-                      name="diamond"
+                      name="hexagon-slice-6" 
                       size={14}
                       color="#fff"
                     />
-                    <Text style={styles.btnSubWhite}> 50 Gems</Text>
+                    <Text style={styles.btnSubWhite}> 50 Shards</Text>
                   </View>
                 </Pressable>
               </View>

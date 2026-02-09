@@ -137,7 +137,23 @@ export default function DevToolsModal({ visible, onClose, engine }) {
               {/* DANGER */}
               <View style={styles.section}>
                  <Text style={[styles.label, {color: '#ef4444'}]}>Danger Zone</Text>
-                 <Pressable style={[styles.btn, {backgroundColor: '#ef4444'}]} onPress={resetGame}>
+                 <Pressable style={styles.cheatBtn} onPress={() => {
+                     engine.dispatchEco({ type: "DEBUG_ADD_ARTIFACT" });
+                     Alert.alert("Artifact Grant", "Added Random Artifact (Lv.100)");
+                 }}>
+                      <Ionicons name="trophy" size={18} color="#fca5a5" />
+                      <Text style={styles.cheatTxt}>+Artifact</Text>
+                 </Pressable>
+                 
+                 <Pressable style={styles.cheatBtn} onPress={() => {
+                     engine.dispatchEco({ type: "GRANT_EXPLORER" });
+                     Alert.alert("Explorer Grant", "Added Random Explorer!");
+                 }}>
+                      <Ionicons name="rocket" size={18} color="#60a5fa" />
+                      <Text style={styles.cheatTxt}>+Explorer</Text>
+                 </Pressable>
+                 
+                 <Pressable style={[styles.btn, {backgroundColor: '#ef4444', marginTop: 10}]} onPress={resetGame}>
                     <Text style={styles.btnTxt}>HARD RESET</Text>
                  </Pressable>
               </View>

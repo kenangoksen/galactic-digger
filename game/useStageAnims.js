@@ -52,18 +52,21 @@ export function useStageAnims() {
     ).start();
   }, [hover, minerIdle]);
 
-  const addFloater = (text) => {
+  const addFloater = (text, opts = {}) => {
     const id = ++floaterId.current;
     const t = new Animated.Value(0);
 
-    const baseX = 90;
-    const baseY = 8;
+    const baseX = opts.x !== undefined ? opts.x : 90;
+    const baseY = opts.y !== undefined ? opts.y : 8;
+    const duration = opts.duration || 640;
+    const color = opts.color || null; // default null means use style default
+    const fontSize = opts.fontSize || null;
 
-    setFloaters((prev) => [...prev, { id, t, baseX, baseY, value: text }]);
+    setFloaters((prev) => [...prev, { id, t, baseX, baseY, value: text, color, fontSize }]);
 
     Animated.timing(t, {
       toValue: 1,
-      duration: 640,
+      duration: duration,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {

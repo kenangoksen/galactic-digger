@@ -3,6 +3,8 @@
 // Galactic Digger – Damage & Economy Core
 // -----------------------------------------------------------------------------
 import Decimal from "break_infinity.js";
+import { getArtifactBonuses } from "./artifacts/artifactService";
+import { ARTIFACT_AFFIX } from "./artifacts/artifactTypes";
 import { D, fmtD } from "./bn";
 
 export const fmt = fmtD; // Alias
@@ -125,6 +127,10 @@ function createEmptyTotals() {
     // Modifiers
     zoneMonsterReducer: 0,
     idleDpsMult: 1, // Silent Observer
+    
+    // Artifacts
+    offlineEarningsMult: 1,
+    shardFindChance: 0,
 
     breakdown: { miners: {} }
   };
@@ -312,8 +318,39 @@ export function computeTotals({
   stellarFragments, // ✅ Passed in for passive DPS
   dpsToTapMilestonesUnlocked, // ✅ Progress
   mineralBonusActive, // ✅ Ad Bonus
+  activeArtifacts, // ✅ Artifacts
 }) {
     const totals = createEmptyTotals();
+
+    // 0. Apply Artifact Bonuses
+    if (activeArtifacts && activeArtifacts.length > 0) {
+        const artBonuses = getArtifactBonuses(activeArtifacts);
+        
+        // ANCIENT POWER (Boosts Global DPS for simplicity or multiply effect?)
+        // Let's make it multiplicative to Protocols
+        // Since Protocols are additive to multipliers mostly, we can just add to multipliers directly
+        // Or create a multiplier for protocol values. 
+        // For now, treat ANCIENT_POWER_ALL as Global DPS %
+        const ancientPower = artBonuses[ARTIFACT_AFFIX.ANCIENT_POWER_ALL];
+        if (ancientPower) {
+             totals.globalDpsMult *= (1 + ancientPower.toNumber());
+        }
+        
+        const idle = artBonuses[ARTIFACT_AFFIX.IDLE_DPS];
+        if (idle) totals.idleDpsMult *= (1 + idle.toNumber());
+        
+        const click = artBonuses[ARTIFACT_AFFIX.CLICK_DAMAGE];
+        if (click) totals.tapMult *= (1 + click.toNumber());
+        
+        const offline = artBonuses[ARTIFACT_AFFIX.OFFLINE_EARNINGS];
+        if (offline) totals.offlineEarningsMult *= (1 + offline.toNumber());
+        
+        const crit = artBonuses[ARTIFACT_AFFIX.CRIT_CHANCE];
+        if (crit) totals.critChance += crit.toNumber();
+        
+        const shard = artBonuses[ARTIFACT_AFFIX.SHARD_FIND];
+        if (shard) totals.shardFindChance += shard.toNumber();
+    }
 
     // 1. Gather Modifiers First (Universal + Protocols) because they affect Base/Tags
     applyUniversalConstants(totals, constantsDef, universalConstantsLevels);

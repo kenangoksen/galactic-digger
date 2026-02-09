@@ -10,6 +10,7 @@ import SettingsSheet from "../../components/SettingsSheet";
 import TopBar from "../../components/TopBar";
 import ActiveBuffTray from "../../components/ui/ActiveBuffTray"; // ✅ New (Retry)
 import DevToolsModal from "../../components/ui/DevToolsModal";
+import QuestSelectionModal from "../../components/ui/QuestSelectionModal"; // 🚀
 import StatisticsModal from "../../components/ui/StatisticsModal"; // 📊
 import TimeWarpResultModal from "../../components/ui/TimeWarpResultModal"; // ⏳
 import WelcomeBackModal from "../../components/WelcomeBackModal";
@@ -22,8 +23,10 @@ import GameStage from "../../components/game/GameStage";
 import MinersSheetHost from "../../components/game/MinersSheetHost";
 
 import minersDef from "../../assets/config/miners.json";
+import ArtifactsSheet from "../../components/ArtifactsSheet"; // 🏆
 import BigBangSheet from "../../components/BigBangSheet";
 import CosmicStoreSheet from "../../components/CosmicStoreSheet";
+import ExplorersSheet from "../../components/ExplorersSheet"; // 🚀
 import ShardShopSheet from "../../components/ShardShopSheet";
 import SideBarLeft from "../../components/SideBarLeft";
 import SideBarRight from "../../components/SideBarRight";
@@ -39,7 +42,11 @@ export default function HomeScreen() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showArtifacts, setShowArtifacts] = useState(false); // 🏆
+  const [showExplorers, setShowExplorers] = useState(false); // 🚀
   const [showDevTools, setShowDevTools] = useState(false);
+  const [selectedExplorer, setSelectedExplorer] = useState(null); // For quest selection
+  const [questOptions, setQuestOptions] = useState([]); // 4 quest options
 
   const engine = useGameEngine();
 
@@ -86,21 +93,102 @@ export default function HomeScreen() {
   }, [visibleContent]);
 
 
-  const handleMiners = () => toggleSheet("MINERS");
-  const handleCosmic = () => toggleSheet("COSMIC");
 
-  const handleSkills = () => toggleSheet("SKILLS");
+  const handleMiners = () => {
+    toggleSheet("MINERS");
+    setShowExplorers(false); // Close Explorers
+    setShowArtifacts(false); // Close Artifacts
+  };
+  
+  const handleCosmic = () => {
+    toggleSheet("COSMIC");
+    setShowExplorers(false); // Close Explorers
+    setShowArtifacts(false); // Close Artifacts
+  };
+  
+  const handleArtifacts = useCallback(() => {
+     setShowArtifacts(true);
+     setActiveSheet(null); // Close others
+     setShowExplorers(false); // Close Explorers
+  }, []);
+
+  const handleExplorers = useCallback(() => {
+     toggleSheet("EXPLORERS");
+     setShowArtifacts(false); // Close Artifacts (still needed as it's a separate modal)
+     // toggleSheet already handles closing other sheets in MinersSheetHost
+  }, [toggleSheet]);
+
+  const handleSkills = () => {
+    toggleSheet("SKILLS");
+    setShowExplorers(false); // Close Explorers
+    setShowArtifacts(false); // Close Artifacts
+  };
+  
   const handleBigBang = useCallback(() => {
       setVisibleContent("BIGBANG");
       expandSheet();
+      setShowExplorers(false); // Close Explorers
+      setShowArtifacts(false); // Close Artifacts
   }, [expandSheet]);
 
   const handleShop = useCallback(() => {
     setVisibleContent("SHOP");
     expandSheet();
+    setShowExplorers(false); // Close Explorers
+    setShowArtifacts(false); // Close Artifacts
   }, [expandSheet]);
 
   // DevTools Mock Helper
+
+  // Offline Earnings Handler
+  const handleOfflineCollect = useCallback((multiplier) => {
+      if (multiplier === "SHOP_REQUEST") {
+          Alert.alert(
+              "Yetersiz Shard", 
+              "Maalesef yeterli Shard yok. Mağazaya gitmek ister misin?",
+              [
+                  { text: "Hayır", style: "cancel" },
+                  { 
+                      text: "Evet", 
+                      onPress: () => {
+                          engine.collectOfflineEarnings(1); // Collect free first? Or keep pending?
+                          // Usually we just open shop and let modal stay?
+                          // If modal stays, user can buy then click 3x again.
+                          // But `WelcomeBackModal` covers screen.
+                          // Let's close modal (collect x1) OR keep it?
+                          // User said: "Mağaza açılsın".
+                          // If we open shop sheet, it might be behind modal if modal is topmost?
+                          // WelcomeBackModal is Modal component (z-index high).
+                          // We might need to close WelcomeBackModal temporarily?
+                          // Or better: Just navigate to shop and let user handle it?
+                          // Given modal is `Modal`, we can't show sheet over it easily without closing it.
+                          // Let's just Open Shop and Close Modal (collecting 1x as penalty/default? or 0x wait?)
+                          // "Satın almak ister misiniz" -> If yes, we should let them buy.
+                          // If they buy, they need to come back.
+                          // Complex flow.
+                          // For now: Close modal (claim 1x) -> Open Shop.
+                          // "Mağazaya gitmek ister misin?" implied leaving this screen.
+                          
+                          // BETTER UX: Just open Shop Sheet. 
+                          // If `WelcomeBackModal` is a React Native `Modal`, it covers everything.
+                          // We can't show BottomSheet over RN Modal.
+                          // So we MUST close standard Modal.
+                          // To keep earnings, we must NOT collect.
+                          // But `offlineEarnings` state controls visibility.
+                          // We need a way to "Hide" modal but keep state?
+                          // Too complex for now.
+                          // Let's just Collect 1x and Open Shop.
+                          engine.collectOfflineEarnings(1); 
+                          handleShop();
+                      }
+                  }
+              ]
+          );
+          return;
+      }
+      
+      engine.collectOfflineEarnings(multiplier);
+  }, [engine, handleShop]);
 
   return (
     <>
@@ -118,7 +206,7 @@ export default function HomeScreen() {
                   shards={engine.eco.shards} // ✅ Pass Shards
                   droneCount={engine.droneCount}
                   buyShopItem={engine.buyShopItem}
-                  watchAdForShards={console.log}
+                  watchAdForShards={engine.watchAdForShards} // ✅ Fix prop
                   totalDps={engine.totalDps}
                   zone={engine.zone} // ✅ Pass Zone
                   step={engine.step} // ✅ Pass Step
@@ -153,6 +241,10 @@ export default function HomeScreen() {
                     />
                 );
             }
+            if (visibleContent === "ARTIFACTS") {
+                // Now handled as standalone modal
+                return null;
+            }
             if (visibleContent === "BIGBANG") { // ✅ Render Sheet
                 return (
                     <BigBangSheet
@@ -165,6 +257,82 @@ export default function HomeScreen() {
                         stats={engine.stats}
                         maxUnlockedZone={engine.maxUnlockedZone}
                         onOpenModal={() => engine.setShowBigBangModal(true)}
+                    />
+                );
+            }
+            if (visibleContent === "EXPLORERS") {
+                return (
+                    <ExplorersSheet
+                        visible={true} // Controlled by Host
+                        onClose={closeSheet}
+                        explorers={engine.eco?.explorers}
+                        onStartQuest={(explorerId) => {
+                            const explorer = engine.eco?.explorers?.byId[explorerId];
+                            if (explorer) {
+                                // Use existing quests if available, otherwise generate new ones
+                                if (explorer.availableQuests && explorer.availableQuests.length > 0) {
+                                    setQuestOptions(explorer.availableQuests);
+                                    setSelectedExplorer(explorer);
+                                } else {
+                                    // Generate quests for first time
+                                    const { generateQuests } = require("../../game/explorers/explorerService");
+                                    const quests = generateQuests(explorer, engine.zone || 1);
+                                    
+                                    // Save quests to explorer
+                                    engine.dispatchEco({ 
+                                        type: "GENERATE_QUESTS", 
+                                        explorerId, 
+                                        quests 
+                                    });
+                                    
+                                    setQuestOptions(quests);
+                                    setSelectedExplorer(explorer);
+                                }
+                            }
+                        }}
+                        onPurchase={() => {
+                            const cost = 40;
+                            if (engine.eco.shards >= cost) {
+                                Alert.alert(
+                                    "Recruit Explorer",
+                                    `Recruit a new Explorer for ${cost} Shards?`,
+                                    [
+                                        { text: "Cancel", style: "cancel" },
+                                        { 
+                                            text: "Recruit", 
+                                            onPress: () => {
+                                                engine.dispatchEco({ type: "SPEND_SHARDS", amount: cost });
+                                                engine.dispatchEco({ type: "GRANT_EXPLORER" });
+                                            }
+                                        }
+                                    ]
+                                );
+                            } else {
+                                Alert.alert("Insufficient Shards", `You need ${cost} Shards to recruit an Explorer.`);
+                            }
+                        }}
+                        currentShards={engine.eco.shards}
+                        onDismiss={(explorer) => {
+                            Alert.alert(
+                                "Dismiss Explorer",
+                                `Are you sure you want to dismiss ${explorer.name}? They will be lost forever.`,
+                                [
+                                    { text: "Cancel", style: "cancel" },
+                                    { 
+                                        text: "Dismiss", 
+                                        style: "destructive",
+                                        onPress: () => {
+                                            engine.dispatchEco({ type: "DISMISS_EXPLORER", explorerId: explorer.id });
+                                            // Close quest selection if open for this explorer (cleanup)
+                                            if (selectedExplorer?.id === explorer.id) {
+                                                setSelectedExplorer(null);
+                                                setQuestOptions([]);
+                                            }
+                                        }
+                                    }
+                                ]
+                            );
+                        }}
                     />
                 );
             }
@@ -234,6 +402,34 @@ export default function HomeScreen() {
                   anims.addFloater(`${isCrit ? "CRIT " : ""}+${fmt(dmg)}`);
                 }}
                 activeDroneCount={engine.activeDroneCount}
+                
+                // Clickables
+                activeClickable={engine.activeClickable}
+                onClickablePress={(item) => {
+                    const res = engine.handleClickable(item);
+                    if (res) {
+                        // Calculate position relative to center (approx stage size)
+                        // item.x/y are 0..1. Center is 0.5
+                        const x = (item.x - 0.5) * 320; 
+                        const y = (item.y - 0.5) * 500;
+
+                        if (res.type === "MINERALS") {
+                            anims.addFloater(`+${fmt(res.amount)} Mineral`, {
+                                x, y,
+                                duration: 2000,
+                                color: "#ef4444", 
+                                fontSize: 22,
+                            });
+                        } else if (res.type === "SHARDS") { 
+                             anims.addFloater(`+${res.amount} Shard!`, {
+                                 x, y,
+                                 duration: 2500,
+                                 color: "#fbbf24", 
+                                 fontSize: 24,
+                             });
+                        }
+                    }
+                }}
               />
 
               <TopBar
@@ -288,7 +484,7 @@ export default function HomeScreen() {
               <SideBarLeft
                 onSettings={() => setShowSettings(true)}
                 onAchievements={() => console.log("Achievements")}
-                onRelics={() => console.log("Relics")}
+                onArtifacts={handleArtifacts} 
                 onClan={() => console.log("Clan")}
               />
 
@@ -297,13 +493,59 @@ export default function HomeScreen() {
                 onPlanets={() => onPressStub("PLANETS")}
                 onSkills={handleSkills} // ✅ Connected
                 onGem={handleShop} // ✅ Link to Shop
-                onQuests={() => onPressStub("QUESTS")}
+                onQuests={handleExplorers} // 🚀 Explorers
                 onProtocols={handleCosmic}
                 onBigBang={handleBigBang} // ✅ Connect
                 onShop={handleShop} // ✅ Link to Shop
               />
               
-              <Sheet />
+            <Sheet /> 
+            
+            {/* 🏆 ARTIFACTS MODAL - Full View except TopBar */}
+            {showArtifacts && (
+                 <ArtifactsSheet
+                      visible={true}
+                      onClose={() => setShowArtifacts(false)}
+                      artifacts={engine.eco?.artifacts}
+                      onEquip={(id) => engine.dispatchEco({ type: "EQUIP_ARTIFACT", id })}
+                      onUnequip={(id) => engine.dispatchEco({ type: "UNEQUIP_ARTIFACT", id })}
+                      onUpgrade={(id) => engine.dispatchEco({ type: "UPGRADE_ARTIFACT", id })}
+                      onSalvage={(id) => engine.dispatchEco({ type: "SALVAGE_ARTIFACT", id })}
+                    />
+            )}
+
+
+            {/* 🎯 QUEST SELECTION MODAL */}
+            {selectedExplorer && questOptions.length > 0 && (
+                <QuestSelectionModal
+                    visible={true}
+                    onClose={() => {
+                        setSelectedExplorer(null);
+                        setQuestOptions([]);
+                    }}
+                    explorer={selectedExplorer}
+                    quests={questOptions}
+                    onSelectQuest={(quest) => {
+                        // Dispatch START_QUEST action
+                        engine.dispatchEco({ 
+                            type: "START_QUEST", 
+                            explorerId: selectedExplorer.id, 
+                            quest 
+                        });
+                        setSelectedExplorer(null);
+                        setQuestOptions([]);
+                    }}
+                    onRerollQuests={() => {
+                        // Reroll quests (costs 10 shards)
+                        const { generateQuests } = require("../../game/explorers/explorerService");
+                        const newQuests = generateQuests(selectedExplorer, engine.zone || 1);
+                        setQuestOptions(newQuests);
+                        // TODO: Deduct shards
+                        engine.dispatchEco({ type: "SPEND_SHARDS", amount: 10 });
+                    }}
+                    currentShards={engine.eco?.shards || 0}
+                />
+            )}
 
               {/* Settings Overlay - Sibling, not Wrapper */}
               <SettingsSheetHost
@@ -334,7 +576,11 @@ export default function HomeScreen() {
                 visible={!!engine.offlineEarnings}
                 earnings={engine.offlineEarnings?.amount || 0}
                 seconds={engine.offlineEarnings?.seconds || 0}
-                onCollect={engine.collectOfflineEarnings}
+                avgDps={engine.offlineEarnings?.avgDps} // ✅ Pass
+                zonesGained={engine.offlineEarnings?.zonesGained} // ✅ Pass
+                shards={engine.eco.shards} // 💎 Pass Shards
+                onCollect={handleOfflineCollect} // ✅ Use Handler
+                onClose={() => engine.collectOfflineEarnings(1)} // Fallback close
               />
               
               {/* Prestige Modal */}

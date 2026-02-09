@@ -7,6 +7,7 @@ export default function HpBarCompact({
   hp = 0,
   maxHp = 1,
   bossMsLeft = 0,
+  isChest = false, // 📦
 }) {
   const pct = maxHp > 0 ? Math.max(0, Math.min(1, Number(hp) / Number(maxHp))) : 0;
   
@@ -30,13 +31,19 @@ export default function HpBarCompact({
   const bossTxt =
     bossMsLeft > 0 ? `${(bossMsLeft / 1000).toFixed(2)}s` : "";
 
+  // 🎨 Color Logic
+  const barColor = isChest ? "#fbbf24" : "rgba(255,235,195,0.85)";
+  const borderColor = isChest ? "#d97706" : "rgba(255,255,255,0.14)";
+  
   return (
     <View pointerEvents="none" style={styles.wrap}>
-      <Text style={styles.zone}>{zoneText}</Text>
+      <Text style={[styles.zone, isChest && { color: '#fbbf24' }]}>
+          {isChest ? "COSMIC GEODE" : zoneText}
+      </Text>
 
-      <View style={styles.barOuter}>
+      <View style={[styles.barOuter, { borderColor }]}>
         {/* Animated Bar Fill */}
-        <Animated.View style={[styles.barFill, { width: widthInterp }]} />
+        <Animated.View style={[styles.barFill, { width: widthInterp, backgroundColor: barColor }]} />
         <Text style={styles.hpText}>{fmt(hp)}</Text>
       </View>
 
@@ -68,7 +75,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "rgba(0,0,0,0.38)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
+    // borderColor handled inline
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -79,7 +86,7 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: "rgba(255,235,195,0.85)", // master’a yakın sıcak bar
+    // backgroundColor handled inline
   },
 
   hpText: {

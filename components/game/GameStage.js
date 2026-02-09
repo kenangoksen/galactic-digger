@@ -2,6 +2,7 @@
 import { Animated, Pressable, StyleSheet, View } from "react-native";
 import SpriteAnimation from "../ui/SpriteAnimation";
 import BossBar from "./BossBar";
+import ClickableItem from "./ClickableItem"; // ✅ Import
 import HpBarCompact from "./HpBarCompact";
 
 export default function GameStage({
@@ -23,10 +24,15 @@ export default function GameStage({
   bossMsLeft,
 
   isBossPlanet, // ⬅️ engine’den geliyor
+  isChest, // 📦
   isPrimal, // 🟣
   isIdle,
   activeProtocols, // { "silent_observer": 5, ... }
   activeDroneCount,
+  
+  // Clickables
+  activeClickable, // { id, type, x, y ... }
+  onClickablePress, // (item) => void
 }) {
   const hasZenMode = isIdle && (activeProtocols?.['silent_observer'] || 0) > 0;
   const hasHighEnergy = (activeProtocols?.['photon_strike_matrix'] || 0) > 0;
@@ -38,10 +44,18 @@ export default function GameStage({
       }}
     >
       <Pressable style={styles.stagePress} onPress={onTap}>
-        <View style={styles.stage} pointerEvents="none">
+        <View style={styles.stage} pointerEvents="box-none"> 
           {/* Zen Mode Overlay */}
            {hasZenMode && (
               <Animated.View style={styles.zenOverlay} />
+           )}
+           
+           {/* CLICKABLE ITEM (Overlay) */}
+           {activeClickable && (
+               <ClickableItem 
+                  item={activeClickable} 
+                  onPress={onClickablePress}
+               />
            )}
 
           {/* puff */}
@@ -84,6 +98,8 @@ export default function GameStage({
                 key={f.id}
                 style={[
                   styles.tapDmg,
+                  f.color && { color: f.color }, 
+                  f.fontSize && { fontSize: f.fontSize }, 
                   {
                     opacity,
                     transform: [
@@ -132,7 +148,7 @@ export default function GameStage({
             {isBossPlanet ? (
               <BossBar hp={hp} maxHp={maxHp} timeMs={bossMsLeft} isPrimal={isPrimal} />
             ) : (
-              <HpBarCompact zoneText={zoneText} hp={hp} maxHp={maxHp} />
+              <HpBarCompact zoneText={zoneText} hp={hp} maxHp={maxHp} isChest={isChest} />
             )}
           </View>
 

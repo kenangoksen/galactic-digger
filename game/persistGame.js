@@ -41,6 +41,22 @@ export function serializeEco(eco) {
     shards: Number(eco?.shards || 0),
     droneCount: Number(eco?.droneCount || 0),
     activeDroneCount: Number(eco?.activeDroneCount || 0),
+    // ARTIFACTS
+    artifacts: eco?.artifacts ? {
+       active: eco.artifacts.active || [],
+       junk: eco.artifacts.junk || [],
+       byId: eco.artifacts.byId || {},
+       forgeCores: eco.artifacts.forgeCores ? eco.artifacts.forgeCores.toString() : "0",
+    } : null,
+    // EXPLORERS - Always save, even if empty
+    explorers: {
+       active: eco?.explorers?.active || [],
+       byId: eco?.explorers?.byId || {},
+       nextFreeSlotTime: eco?.explorers?.nextFreeSlotTime || null,
+       totalExplorersLost: Number(eco?.explorers?.totalExplorersLost || 0),
+       totalQuestsCompleted: Number(eco?.explorers?.totalQuestsCompleted || 0),
+       unlocked: Boolean(eco?.explorers?.unlocked || false),
+    },
   };
 }
 
@@ -71,6 +87,22 @@ export function normalizeLoadedEco(rawEco) {
     shards: Number(eco.shards || 0),
     droneCount: Number(eco.droneCount || (eco.autoClickerActive ? 1 : 0)),
     activeDroneCount: Number(eco.activeDroneCount || 0),
+    // ARTIFACTS
+    artifacts: {
+      active: eco.artifacts?.active || [],
+      junk: eco.artifacts?.junk || [],
+      byId: eco.artifacts?.byId || {},
+      forgeCores: D(eco.artifacts?.forgeCores || "0"),
+    },
+    // EXPLORERS
+    explorers: {
+      active: eco.explorers?.active || [],
+      byId: eco.explorers?.byId || {},
+      nextFreeSlotTime: eco.explorers?.nextFreeSlotTime || null,
+      totalExplorersLost: Number(eco.explorers?.totalExplorersLost || 0),
+      totalQuestsCompleted: Number(eco.explorers?.totalQuestsCompleted || 0),
+      unlocked: Boolean(eco.explorers?.unlocked || false),
+    },
   };
 }
 
