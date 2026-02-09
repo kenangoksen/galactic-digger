@@ -57,6 +57,8 @@ export function serializeEco(eco) {
        totalQuestsCompleted: Number(eco?.explorers?.totalQuestsCompleted || 0),
        unlocked: Boolean(eco?.explorers?.unlocked || false),
     },
+    claimedAchievements: eco?.claimedAchievements || [],
+    mineralBonusEndTime: Number(eco?.mineralBonusEndTime || 0),
   };
 }
 
@@ -103,6 +105,8 @@ export function normalizeLoadedEco(rawEco) {
       totalQuestsCompleted: Number(eco.explorers?.totalQuestsCompleted || 0),
       unlocked: Boolean(eco.explorers?.unlocked || false),
     },
+    claimedAchievements: eco.claimedAchievements || [],
+    mineralBonusEndTime: Number(eco.mineralBonusEndTime || 0),
   };
 }
 

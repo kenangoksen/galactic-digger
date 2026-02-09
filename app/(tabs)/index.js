@@ -1,5 +1,5 @@
 // app/(tabs)/index.js
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 
 import BottomNav from "../../components/BottomNav";
@@ -8,6 +8,7 @@ import SkillsSheet from "../../components/game/SkillsSheet";
 import MinersSheet from "../../components/MinersSheet";
 import SettingsSheet from "../../components/SettingsSheet";
 import TopBar from "../../components/TopBar";
+import AchievementsModal from "../../components/ui/AchievementsModal"; // 🏆 New
 import ActiveBuffTray from "../../components/ui/ActiveBuffTray"; // ✅ New (Retry)
 import DevToolsModal from "../../components/ui/DevToolsModal";
 import QuestSelectionModal from "../../components/ui/QuestSelectionModal"; // 🚀
@@ -22,6 +23,7 @@ import { useStageAnims } from "../../game/useStageAnims";
 import GameStage from "../../components/game/GameStage";
 import MinersSheetHost from "../../components/game/MinersSheetHost";
 
+import achievementsDef from "../../assets/config/achievements.json"; // 🏆
 import minersDef from "../../assets/config/miners.json";
 import ArtifactsSheet from "../../components/ArtifactsSheet"; // 🏆
 import BigBangSheet from "../../components/BigBangSheet";
@@ -33,6 +35,7 @@ import SideBarRight from "../../components/SideBarRight";
 import BigBangModal from "../../components/ui/BigBangModal";
 import StellarRewindModal from "../../components/ui/StellarRewindModal";
 import ZoneSwitcher from "../../components/ZoneSwitcher";
+import { D } from "../../game/bn";
 
 const BG_IMG = require("../../assets/images/backgrounds/bg_space_full.png");
 
@@ -42,13 +45,50 @@ export default function HomeScreen() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [showArtifacts, setShowArtifacts] = useState(false); // 🏆
-  const [showExplorers, setShowExplorers] = useState(false); // 🚀
+  const [showAchievements, setShowAchievements] = useState(false); // 🏆
+  const [showArtifacts, setShowArtifacts] = useState(false); 
+  const [showExplorers, setShowExplorers] = useState(false); 
   const [showDevTools, setShowDevTools] = useState(false);
   const [selectedExplorer, setSelectedExplorer] = useState(null); // For quest selection
   const [questOptions, setQuestOptions] = useState([]); // 4 quest options
 
   const engine = useGameEngine();
+
+  // 🔄 Refresh Badge Interval
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+      const interval = setInterval(() => setTick(t => t + 1), 2000); // 2s refresh for badge
+      return () => clearInterval(interval);
+  }, []);
+
+  // 🏆 Calculate Unclaimed Achievements (FRESH on every tick)
+  const freshStats = engine.getStats ? engine.getStats() : (engine.stats || {});
+  const claimedAchList = engine.claimedAchievements || [];
+  
+  // Force tick to be consumed so React keeps re-rendering
+  void tick;
+  
+  const unclaimedCount = achievementsDef.filter(ach => {
+      // Check if already claimed
+      if (claimedAchList.includes(ach.id)) return false;
+
+      // Check if completed
+      const keys = ach.statKey.split(".");
+      let val = freshStats;
+      for (const k of keys) {
+          val = val?.[k];
+      }
+       
+      // Safe number conversion
+      let numVal = 0;
+      if (typeof val === 'string') {
+           numVal = D(val).toNumber();
+      } else {
+           numVal = Number(val || 0);
+      }
+
+      return numVal >= ach.threshold;
+  }).length;
 
   const handleReset = () => {
     Alert.alert(
@@ -333,6 +373,11 @@ export default function HomeScreen() {
                                 ]
                             );
                         }}
+                        onCollect={(explorer) => {
+                            engine.dispatchEco({ type: "COLLECT_QUEST", explorerId: explorer.id });
+                            // Optional: Show a quick feedback if desired, or let the UI update naturally
+                             // We could add a toast here if we had a toast system ready
+                        }}
                     />
                 );
             }
@@ -483,7 +528,8 @@ export default function HomeScreen() {
               {/* SOL BAR */}
               <SideBarLeft
                 onSettings={() => setShowSettings(true)}
-                onAchievements={() => console.log("Achievements")}
+                onAchievements={() => setShowAchievements(true)} 
+                notificationCount={unclaimedCount} // 🔔 Badge
                 onArtifacts={handleArtifacts} 
                 onClan={() => console.log("Clan")}
               />
@@ -611,6 +657,12 @@ export default function HomeScreen() {
       result={engine.timeWarpResult} 
       onClose={engine.clearTimeWarpResult}
     />
+
+      <AchievementsModal
+        visible={showAchievements}
+        onClose={() => setShowAchievements(false)}
+        engine={engine} // ✅ Pass shared engine instance
+      />
 
     <DevToolsModal 
       visible={showDevTools} 

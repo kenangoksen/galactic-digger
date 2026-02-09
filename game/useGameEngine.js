@@ -4,12 +4,12 @@
 // Sadece ECONOMY (minerals/cost/buy) Decimal-safe yapılır.
 
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState,
 } from "react";
 
 import milestonesDef from "../assets/config/milestones.json";
@@ -111,6 +111,8 @@ const ECO_INIT = {
       totalQuestsCompleted: 0,       // Stats
       unlocked: false,               // Zone 140 + Stellar Rewind
   },
+  // ACHIEVEMENTS
+  claimedAchievements: [],       // New: Array of Achievement IDs
 };
 
 // ---------------- Time Warp Simulation ----------------
@@ -465,6 +467,23 @@ function ecoReducer(state, action) {
         stellarFragments: D(state.stellarFragments).add(action.amount || 0),
       };
     }
+
+    case "CLAIM_ACHIEVEMENT": {
+        const { id, reward } = action;
+        if (!id) return state;
+        
+        // Prevent duplicate claim
+        if (state.claimedAchievements && state.claimedAchievements.includes(id)) {
+            console.warn("Achievement already claimed:", id);
+            return state;
+        }
+
+        return {
+            ...state,
+            shards: (state.shards || 0) + (Number(reward) || 0),
+            claimedAchievements: [...(state.claimedAchievements || []), id]
+        };
+    }
     
     case "GAIN_TAG": {
         // action: { targetMinerId: string (optional), amount: 1 }
@@ -562,6 +581,10 @@ function ecoReducer(state, action) {
             totalQuestsCompleted: Number(p.explorers.totalQuestsCompleted || 0),
             unlocked: Boolean(p.explorers.unlocked || false),
         } : state.explorers,
+
+        // ACHIEVEMENTS & MISC
+        claimedAchievements: p.claimedAchievements || state.claimedAchievements || [],
+        mineralBonusEndTime: p.mineralBonusEndTime ?? state.mineralBonusEndTime ?? 0,
       };
     }
 
@@ -590,6 +613,16 @@ function ecoReducer(state, action) {
           // Keep Summoning State
           summonPool: state.summonPool,
           rerollCount: state.rerollCount,
+          // ✅ FIX: Keep Shards & Drones (meta-currency, persist across rewinds)
+          shards: state.shards,
+          droneCount: state.droneCount,
+          activeDroneCount: state.activeDroneCount,
+          // ✅ FIX: Keep Achievements (lifetime progress)
+          claimedAchievements: state.claimedAchievements || [],
+          // ✅ FIX: Keep Milestones
+          dpsToTapMilestonesUnlocked: state.dpsToTapMilestonesUnlocked || {},
+          // ✅ FIX: Keep Explorers
+          explorers: state.explorers,
           // Artifact Drop
           artifacts: (() => {
               const base = state.artifacts || {}; 
@@ -657,6 +690,8 @@ function ecoReducer(state, action) {
     }
 
     case "UPGRADE_PROTOCOL": {
+        // TODO: Implement protocol upgrade logic
+        return state;
     }
 
     case "BUY_UNIVERSAL_CONSTANT": {
@@ -708,6 +743,21 @@ function ecoReducer(state, action) {
             // Keep Starlink Tags
             totalStarlinkTags: state.totalStarlinkTags,
             tagsByMinerId: state.tagsByMinerId,
+            lifetimeTagsEarned: state.lifetimeTagsEarned,
+
+            // ✅ FIX: Keep Shards & Drones
+            shards: state.shards,
+            droneCount: state.droneCount,
+            activeDroneCount: state.activeDroneCount,
+            // ✅ FIX: Keep Achievements
+            claimedAchievements: state.claimedAchievements || [],
+            // ✅ FIX: Keep Milestones
+            dpsToTapMilestonesUnlocked: state.dpsToTapMilestonesUnlocked || {},
+            // ✅ FIX: Keep Explorers
+            explorers: state.explorers,
+            // ✅ FIX: Keep Summoning
+            summonPool: state.summonPool,
+            rerollCount: state.rerollCount,
 
             // Artifacts
             artifacts: RESET_ARTIFACTS_ON_BIG_BANG ? {
@@ -716,7 +766,6 @@ function ecoReducer(state, action) {
                 byId: {},
                 forgeCores: D(0),
             } : state.artifacts,
-            lifetimeTagsEarned: state.lifetimeTagsEarned,
         };
     }
 
@@ -733,6 +782,84 @@ function ecoReducer(state, action) {
             ...state,
             shards: current - amount,
         };
+    }
+
+    case "COLLECT_QUEST": {
+        const { explorerId } = action;
+        const explorer = state.explorers.byId[explorerId];
+        if (!explorer || !explorer.currentQuest) return state;
+
+        const quest = explorer.currentQuest;
+        
+        // Base updates
+        let newState = { ...state };
+        
+        // 1. Distribute Rewards
+        switch (quest.type) {
+            case "MINERAL":
+                newState.minerals = D(newState.minerals || 0).add(quest.baseReward);
+                break;
+                
+            case "FRAGMENT":
+                newState.stellarFragments = (newState.stellarFragments || 0) + quest.baseReward;
+                break;
+                
+            case "SHARD":
+                newState.shards = (newState.shards || 0) + quest.baseReward;
+                break;
+                
+            case "ARTIFACT": {
+                // Chance check
+                if (Math.random() < quest.baseReward) { // baseReward is probability (0.5 etc)
+                     // Create Artifact
+                     const { createArtifact } = require("./artifacts/artifactService");
+                     const newArt = createArtifact(state.maxUnlockedZone || 1);
+                     
+                     // Add to artifacts
+                     if (newState.artifacts.active.length < 4) {
+                         newState.artifacts.active = [...newState.artifacts.active, newArt.id];
+                     } else {
+                         newState.artifacts.junk = [...newState.artifacts.junk, newArt.id];
+                     }
+                     newState.artifacts.byId = { ...newState.artifacts.byId, [newArt.id]: newArt };
+                }
+                break;
+            }
+            
+            case "PROTOCOL":
+                // Placeholder for Protocol Boost
+                break;
+                
+            case "RECRUIT": {
+                // Generate new explorer
+                const { generateExplorer } = require("./explorers/explorerService");
+                const newExplorer = generateExplorer(state.maxUnlockedZone || 1);
+                
+                // Add to explorers
+                newState.explorers.byId = {
+                    ...newState.explorers.byId,
+                    [newExplorer.id]: newExplorer
+                };
+                newState.explorers.active = [...newState.explorers.active, newExplorer.id];
+                break;
+            }
+        }
+
+        // 2. Reset Explorer
+        const updatedExplorer = {
+            ...explorer,
+            currentQuest: null,
+            questStartTime: null,
+        };
+        
+        const nextById = { ...newState.explorers.byId, [explorerId]: updatedExplorer };
+        
+        newState.explorers = {
+            ...newState.explorers,
+            byId: nextById
+        };
+
+        return newState;
     }
 
     // --- ARTIFACTS ACTIONS ---
@@ -1852,7 +1979,15 @@ export function useGameEngine() {
     
     // Deduct
     dispatchEco({ type: "GAIN_MINERALS", amount: cost.times(-1) });
-    setOwnedActiveSkills(prev => ({ ...prev, [skillId]: (prev[skillId]||0) + 1 }));
+      setOwnedActiveSkills((prev) => ({
+        ...prev,
+        [skillId]: (prev[skillId] || 0) + 1,
+      }));
+
+      // 📊 Stats: Track Skill Purchases
+      if (statsRef.current && statsRef.current.lifetime) {
+          statsRef.current.lifetime.totalSkillsPurchased = (statsRef.current.lifetime.totalSkillsPurchased || 0) + 1;
+      }
   };
 
   const resetSkillCooldowns = () => {
@@ -2690,6 +2825,8 @@ export function useGameEngine() {
 
     // Statistics
     stats: statsRef.current, // 📊
+    getStats: () => statsRef.current, // ✅ Getter for fresh ref access
+    claimedAchievements: eco.claimedAchievements || [], // 🏆 Exposed for UI
 
     // Dev Tools Exports
     dispatchEco,
@@ -2712,6 +2849,7 @@ export function useGameEngine() {
 
     // SHARD SHOP
     shards: eco.shards,
+    claimedAchievements: eco.claimedAchievements || [], // 🏆 Exposed
     droneCount: eco.droneCount || 0,
     watchAdForShards: (amount = 25) => dispatchEco({ type: "GAIN_SHARDS", amount }),
     buyShopItem: (id, cost, payload) => dispatchEco({ type: "BUY_SHOP_ITEM", id, cost, payload }),

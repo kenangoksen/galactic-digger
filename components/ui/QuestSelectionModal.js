@@ -121,12 +121,18 @@ function QuestCard({ quest, onSelect }) {
 
   // Format reward based on type
   let rewardText = "";
-  if (quest.type === QUEST_TYPE.MINERAL || quest.type === QUEST_TYPE.FRAGMENT || quest.type === QUEST_TYPE.SHARD) {
-    rewardText = `~${fmtD(quest.baseReward)}`;
+  if (quest.type === QUEST_TYPE.MINERAL) {
+    rewardText = `~${fmtD(quest.baseReward)} Minerals`;
+  } else if (quest.type === QUEST_TYPE.FRAGMENT) {
+    rewardText = `+${fmtD(quest.baseReward)} Stellar Fragments`;
+  } else if (quest.type === QUEST_TYPE.SHARD) {
+    rewardText = `+${fmtD(quest.baseReward)} Shards`;
   } else if (quest.type === QUEST_TYPE.ARTIFACT) {
-    rewardText = `${(quest.baseReward * 100).toFixed(0)}% chance`;
-  } else if (quest.type === QUEST_TYPE.PROTOCOL || quest.type === QUEST_TYPE.RECRUIT) {
-    rewardText = "Guaranteed";
+    rewardText = `${(quest.baseReward * 100).toFixed(0)}% Chance: Random Artifact`;
+  } else if (quest.type === QUEST_TYPE.PROTOCOL) {
+    rewardText = "Reward: Protocol Boost";
+  } else if (quest.type === QUEST_TYPE.RECRUIT) {
+    rewardText = "Reward: New Explorer";
   }
 
   return (

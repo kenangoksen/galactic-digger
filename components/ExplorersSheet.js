@@ -1,5 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 const MAX_EXPLORERS = 5;
@@ -12,6 +12,7 @@ function ExplorersSheet({
   onPurchase,
   currentShards,
   onDismiss,
+  onCollect, // ✅ Add prop
 }) {
   if (!visible) return null;
 
@@ -77,6 +78,7 @@ function ExplorersSheet({
               onPurchase={onPurchase}
               currentShards={currentShards}
               onDismiss={onDismiss}
+              onCollect={onCollect}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -87,7 +89,7 @@ function ExplorersSheet({
   );
 }
 
-function ExplorerSlot({ slot, onStartQuest, onPurchase, currentShards, onDismiss }) {
+function ExplorerSlot({ slot, onStartQuest, onPurchase, currentShards, onDismiss, onCollect }) {
   const { explorer } = slot;
 
   if (!explorer) {
@@ -119,6 +121,15 @@ function ExplorerSlot({ slot, onStartQuest, onPurchase, currentShards, onDismiss
   // Explorer exists
   const isOnQuest = explorer.currentQuest !== null;
   const rarityColor = getRarityColor(explorer.rarity);
+
+  // Force re-render every second for timer
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (isOnQuest) {
+        const interval = setInterval(() => setTick(t => t + 1), 1000);
+        return () => clearInterval(interval);
+    }
+  }, [isOnQuest]);
 
   // Calculate progress if on quest
   let progress = 0;
@@ -173,17 +184,27 @@ function ExplorerSlot({ slot, onStartQuest, onPurchase, currentShards, onDismiss
       {/* RIGHT: Quest Status or Start Button */}
       <View style={styles.explorerRight}>
         {isOnQuest ? (
-          <View style={styles.questProgress}>
-            {/* Progress Bar with Countdown */}
-            <View style={styles.progressBarContainer}>
-              <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
-              <Text style={styles.countdownText}>{timeRemaining}</Text>
+          progress >= 1 ? (
+             <Pressable 
+                style={[styles.startQuestBtn, { backgroundColor: '#10b981' }]} 
+                onPress={() => onCollect && onCollect(explorer)}
+             >
+                <MaterialCommunityIcons name="check-circle-outline" size={16} color="#fff" />
+                <Text style={styles.startQuestText}>COLLECT</Text>
+             </Pressable>
+          ) : (
+            <View style={styles.questProgress}>
+                {/* Progress Bar with Countdown */}
+                <View style={styles.progressBarContainer}>
+                <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+                <Text style={styles.countdownText}>{timeRemaining}</Text>
+                </View>
+                {/* Reward */}
+                <Text style={styles.rewardText} numberOfLines={1}>
+                {getRewardLabel(explorer.currentQuest)}
+                </Text>
             </View>
-            {/* Reward */}
-            <Text style={styles.rewardText} numberOfLines={1}>
-              Reward: {getRewardLabel(explorer.currentQuest)}
-            </Text>
-          </View>
+          )
         ) : (
           <Pressable 
             style={styles.startQuestBtn} 
@@ -206,17 +227,19 @@ function getRewardLabel(quest) {
   
   switch (quest.type) {
     case QUEST_TYPE.MINERAL:
+      return `${fmtD(quest.baseReward)} Minerals`;
     case QUEST_TYPE.FRAGMENT:
+      return `+${fmtD(quest.baseReward)} Fragments`;
     case QUEST_TYPE.SHARD:
-      return fmtD(quest.baseReward);
+      return `+${fmtD(quest.baseReward)} Shards`;
     case QUEST_TYPE.ARTIFACT:
-      return `${(quest.baseReward * 100).toFixed(0)}% chance`;
+      return `${(quest.baseReward * 100).toFixed(0)}% Chance: Artifact`;
     case QUEST_TYPE.PROTOCOL:
       return "Protocol Boost";
     case QUEST_TYPE.RECRUIT:
       return "New Explorer";
     default:
-      return "Unknown";
+      return "Unknown Reward";
   }
 }
 

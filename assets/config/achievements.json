@@ -1,0 +1,392 @@
+[
+  {
+    "id": "tap_1000",
+    "series": "total_taps",
+    "order": 1,
+    "title": "Finger Warmup I",
+    "description": "Tap 1,000 times.",
+    "statKey": "lifetime.totalTaps",
+    "threshold": 1000,
+    "reward": 5
+  },
+  {
+    "id": "tap_5000",
+    "series": "total_taps",
+    "order": 2,
+    "title": "Finger Warmup II",
+    "description": "Tap 5,000 times.",
+    "statKey": "lifetime.totalTaps",
+    "threshold": 5000,
+    "reward": 10
+  },
+  {
+    "id": "tap_10000",
+    "series": "total_taps",
+    "order": 3,
+    "title": "Click Master I",
+    "description": "Tap 10,000 times.",
+    "statKey": "lifetime.totalTaps",
+    "threshold": 10000,
+    "reward": 15
+  },
+  {
+    "id": "tap_50000",
+    "series": "total_taps",
+    "order": 4,
+    "title": "Click Master II",
+    "description": "Tap 50,000 times.",
+    "statKey": "lifetime.totalTaps",
+    "threshold": 50000,
+    "reward": 25
+  },
+  {
+    "id": "tap_100000",
+    "series": "total_taps",
+    "order": 5,
+    "title": "Bionic Finger",
+    "description": "Tap 100,000 times.",
+    "statKey": "lifetime.totalTaps",
+    "threshold": 100000,
+    "reward": 40
+  },
+
+
+  {
+    "id": "monster_500",
+    "series": "total_kills",
+    "order": 1,
+    "title": "Monster Hunter I",
+    "description": "Kill 500 monsters.",
+    "statKey": "lifetime.totalMonstersKilled",
+    "threshold": 500,
+    "reward": 5
+  },
+  {
+    "id": "monster_1000",
+    "series": "total_kills",
+    "order": 2,
+    "title": "Monster Hunter II",
+    "description": "Kill 1,000 monsters.",
+    "statKey": "lifetime.totalMonstersKilled",
+    "threshold": 1000,
+    "reward": 10
+  },
+  {
+    "id": "monster_5000",
+    "series": "total_kills",
+    "order": 3,
+    "title": "Galactic Cleaner I",
+    "description": "Kill 5,000 monsters.",
+    "statKey": "lifetime.totalMonstersKilled",
+    "threshold": 5000,
+    "reward": 20
+  },
+  {
+    "id": "monster_10000",
+    "series": "total_kills",
+    "order": 4,
+    "title": "Galactic Cleaner II",
+    "description": "Kill 10,000 monsters.",
+    "statKey": "lifetime.totalMonstersKilled",
+    "threshold": 10000,
+    "reward": 35
+  },
+
+
+  {
+    "id": "boss_5",
+    "series": "boss_kills",
+    "order": 1,
+    "title": "Boss Slayer I",
+    "description": "Defeat 5 Bosses.",
+    "statKey": "lifetime.totalBossesKilled",
+    "threshold": 5,
+    "reward": 5
+  },
+  {
+    "id": "boss_25",
+    "series": "boss_kills",
+    "order": 2,
+    "title": "Boss Slayer II",
+    "description": "Defeat 25 Bosses.",
+    "statKey": "lifetime.totalBossesKilled",
+    "threshold": 25,
+    "reward": 15
+  },
+  {
+    "id": "boss_100",
+    "series": "boss_kills",
+    "order": 3,
+    "title": "Who's the Boss?",
+    "description": "Defeat 100 Bosses.",
+    "statKey": "lifetime.totalBossesKilled",
+    "threshold": 100,
+    "reward": 30
+  },
+
+
+  {
+    "id": "miner_5",
+    "series": "miners_unlocked",
+    "order": 1,
+    "title": "Miner Recruit",
+    "description": "Unlock 5 different miners.",
+    "statKey": "lifetime.totalMinersUnlocked",
+    "threshold": 5,
+    "reward": 5
+  },
+  {
+    "id": "miner_10",
+    "series": "miners_unlocked",
+    "order": 2,
+    "title": "Miner Army I",
+    "description": "Unlock 10 different miners.",
+    "statKey": "lifetime.totalMinersUnlocked",
+    "threshold": 10,
+    "reward": 10
+  },
+  {
+    "id": "miner_15",
+    "series": "miners_unlocked",
+    "order": 3,
+    "title": "Miner Army II",
+    "description": "Unlock 15 different miners.",
+    "statKey": "lifetime.totalMinersUnlocked",
+    "threshold": 15,
+    "reward": 20
+  },
+  {
+    "id": "miner_20",
+    "series": "miners_unlocked",
+    "order": 4,
+    "title": "Mining Corporation",
+    "description": "Unlock 20 different miners.",
+    "statKey": "lifetime.totalMinersUnlocked",
+    "threshold": 20,
+    "reward": 35
+  },
+
+
+  {
+    "id": "skill_1",
+    "series": "skills_purchased",
+    "order": 1,
+    "title": "First Skill",
+    "description": "Purchase 1 skill.",
+    "statKey": "lifetime.totalSkillsPurchased",
+    "threshold": 1,
+    "reward": 5
+  },
+  {
+    "id": "skill_5",
+    "series": "skills_purchased",
+    "order": 2,
+    "title": "Skilled",
+    "description": "Purchase 5 skills.",
+    "statKey": "lifetime.totalSkillsPurchased",
+    "threshold": 5,
+    "reward": 10
+  },
+  {
+    "id": "skill_10",
+    "series": "skills_purchased",
+    "order": 3,
+    "title": "Talented",
+    "description": "Purchase 10 skills.",
+    "statKey": "lifetime.totalSkillsPurchased",
+    "threshold": 10,
+    "reward": 25
+  },
+
+
+  {
+    "id": "zone_10",
+    "series": "zone_reached",
+    "order": 1,
+    "title": "Explorer",
+    "description": "Reach Zone 10.",
+    "statKey": "lifetime.highestSector",
+    "threshold": 10,
+    "reward": 5
+  },
+  {
+    "id": "zone_50",
+    "series": "zone_reached",
+    "order": 2,
+    "title": "Into the Depths",
+    "description": "Reach Zone 50.",
+    "statKey": "lifetime.highestSector",
+    "threshold": 50,
+    "reward": 15
+  },
+  {
+    "id": "zone_100",
+    "series": "zone_reached",
+    "order": 3,
+    "title": "Centennial",
+    "description": "Reach Zone 100.",
+    "statKey": "lifetime.highestSector",
+    "threshold": 100,
+    "reward": 30
+  },
+  {
+    "id": "zone_200",
+    "series": "zone_reached",
+    "order": 4,
+    "title": "Voyage to the Unknown",
+    "description": "Reach Zone 200.",
+    "statKey": "lifetime.highestSector",
+    "threshold": 200,
+    "reward": 50
+  },
+
+
+  {
+    "id": "rewind_1",
+    "series": "total_rewinds",
+    "order": 1,
+    "title": "The Big Bang",
+    "description": "Perform a Stellar Rewind for the first time.",
+    "statKey": "lifetime.totalRewinds",
+    "threshold": 1,
+    "reward": 50
+  },
+
+
+  {
+    "id": "crit_50",
+    "series": "sharpshooter",
+    "order": 1,
+    "title": "Sharpshooter I",
+    "description": "Perform 50 Critical Hits.",
+    "statKey": "lifetime.totalCriticalTaps",
+    "threshold": 50,
+    "reward": 5
+  },
+  {
+    "id": "crit_250",
+    "series": "sharpshooter",
+    "order": 2,
+    "title": "Sharpshooter II",
+    "description": "Perform 250 Critical Hits.",
+    "statKey": "lifetime.totalCriticalTaps",
+    "threshold": 250,
+    "reward": 10
+  },
+  {
+    "id": "crit_1000",
+    "series": "sharpshooter",
+    "order": 3,
+    "title": "Sharpshooter III",
+    "description": "Perform 1,000 Critical Hits.",
+    "statKey": "lifetime.totalCriticalTaps",
+    "threshold": 1000,
+    "reward": 25
+  },
+  {
+    "id": "crit_5000",
+    "series": "sharpshooter",
+    "order": 4,
+    "title": "Deadshot",
+    "description": "Perform 5,000 Critical Hits.",
+    "statKey": "lifetime.totalCriticalTaps",
+    "threshold": 5000,
+    "reward": 50
+  },
+
+
+  {
+    "id": "gold_1M",
+    "series": "gold_tycoon",
+    "order": 1,
+    "title": "Millionaire",
+    "description": "Earn 1 Million Minerals.",
+    "statKey": "lifetime.totalGoldEarned",
+    "threshold": 1000000,
+    "reward": 5
+  },
+  {
+    "id": "gold_1B",
+    "series": "gold_tycoon",
+    "order": 2,
+    "title": "Billionaire",
+    "description": "Earn 1 Billion Minerals.",
+    "statKey": "lifetime.totalGoldEarned",
+    "threshold": 1000000000,
+    "reward": 15
+  },
+  {
+    "id": "gold_1T",
+    "series": "gold_tycoon",
+    "order": 3,
+    "title": "Trillionaire",
+    "description": "Earn 1 Trillion Minerals.",
+    "statKey": "lifetime.totalGoldEarned",
+    "threshold": 1000000000000,
+    "reward": 30
+  },
+  {
+    "id": "gold_1q",
+    "series": "gold_tycoon",
+    "order": 4,
+    "title": "Quadrillionaire",
+    "description": "Earn 1 Quadrillion Minerals.",
+    "statKey": "lifetime.totalGoldEarned",
+    "threshold": 1000000000000000,
+    "reward": 50
+  },
+
+
+  {
+    "id": "sf_100",
+    "series": "star_collector",
+    "order": 1,
+    "title": "Star Collector I",
+    "description": "Earn 100 Stellar Fragments.",
+    "statKey": "lifetime.totalStellarFragmentsEarned",
+    "threshold": 100,
+    "reward": 10
+  },
+  {
+    "id": "sf_1000",
+    "series": "star_collector",
+    "order": 2,
+    "title": "Star Collector II",
+    "description": "Earn 1,000 Stellar Fragments.",
+    "statKey": "lifetime.totalStellarFragmentsEarned",
+    "threshold": 1000,
+    "reward": 25
+  },
+  {
+    "id": "sf_5000",
+    "series": "star_collector",
+    "order": 3,
+    "title": "Star Collector III",
+    "description": "Earn 5,000 Stellar Fragments.",
+    "statKey": "lifetime.totalStellarFragmentsEarned",
+    "threshold": 5000,
+    "reward": 50
+  },
+
+
+  {
+    "id": "bigbang_1",
+    "series": "universe_reset",
+    "order": 1,
+    "title": "New Beginning",
+    "description": "Perform a Big Bang Reset.",
+    "statKey": "lifetime.totalBigBangs",
+    "threshold": 1,
+    "reward": 10
+  },
+  {
+    "id": "bigbang_5",
+    "series": "universe_reset",
+    "order": 2,
+    "title": "Time Lord",
+    "description": "Perform 5 Big Bang Resets.",
+    "statKey": "lifetime.totalBigBangs",
+    "threshold": 5,
+    "reward": 30
+  }
+]
