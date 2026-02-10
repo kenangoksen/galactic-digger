@@ -107,7 +107,7 @@ export default function ShardShopSheet({
 
     // Helper for Timelapse Buy
     const buyTimelapse = (hours, cost) => {
-        console.log("buyTimelapse called with:", { hours, cost, zone, step, totalDps }); // 🔍 Debug Log
+        if (__DEV__) console.log("buyTimelapse called with:", { hours, cost, zone, step, totalDps }); // 🔍 Debug Log
         if (shards < cost) {
             Alert.alert("INSUFFICIENT", "Not enough Shards!");
             return;

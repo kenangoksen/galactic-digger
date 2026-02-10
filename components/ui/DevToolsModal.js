@@ -12,7 +12,7 @@ import {
 } from "react-native";
 
 export default function DevToolsModal({ visible, onClose, engine }) {
-  console.log("DevToolsModal Render. Visible:", visible);
+  if (__DEV__) console.log("DevToolsModal Render. Visible:", visible);
   const [warpZone, setWarpZone] = useState("");
 
   if (!visible) return null;

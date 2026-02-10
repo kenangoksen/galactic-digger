@@ -46,7 +46,7 @@ function SideBtn({ icon, onPress, badge }) {
 
   useEffect(() => {
       if (badge > 0) {
-          Animated.loop(
+          const anim = Animated.loop(
               Animated.sequence([
                   Animated.timing(translateY, {
                       toValue: -4,
@@ -59,7 +59,9 @@ function SideBtn({ icon, onPress, badge }) {
                       useNativeDriver: true,
                   })
               ])
-          ).start();
+          );
+          anim.start();
+          return () => anim.stop();
       } else {
           translateY.setValue(0);
       }

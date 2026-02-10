@@ -64,25 +64,8 @@ function NavItem({ item }) {
   );
 }
 
-const styles = StyleSheet.create({
-   
-  btn: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 50,
-    height: 50,
-  },
-  btnPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.95 }]
-  },
 
-  iconContainer: {
-    width: 48,
-    height: 48,
-    justifyContent: "center", 
-    alignItems: "center",
-  },
+const styles = StyleSheet.create({
  
   wrapper: {
     position: "absolute",

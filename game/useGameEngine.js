@@ -1,7 +1,6 @@
-
+﻿
 // game/useGameEngine.js
-// Mevcut API korunur, planet görseli sistemi bozulmaz.
-// Sadece ECONOMY (minerals/cost/buy) Decimal-safe yapılır.
+// Modular game engine hook. Reducer and helpers extracted to separate modules.
 
 import {
     useCallback,
@@ -12,1070 +11,28 @@ import {
     useState,
 } from "react";
 
-import milestonesDef from "../assets/config/milestones.json";
+import achievementsDef from "../assets/config/achievements.json";
 import minersDef from "../assets/config/miners.json";
 import planets from "../assets/config/planets.json";
 
 import { AppState } from "react-native";
-import { calculateSalvageValue, calculateUpgradeCost, createArtifact, getArtifactBonuses } from "./artifacts/artifactService";
+import { createArtifact, getArtifactBonuses } from "./artifacts/artifactService";
 import { ARTIFACT_AFFIX } from "./artifacts/artifactTypes";
 import { D } from "./bn";
-import { DAMAGE_CONFIG } from "./config";
-import configCache from "./ConfigCache"; // ✅ Central Config
+import { DAMAGE_CONFIG, STARLINK_CONFIG } from "./config";
+import configCache from "./ConfigCache";
 import { computeTotals, getBulkCost, getPrimalReward } from "./damage";
 import { loadGame, saveGame, serializeEco } from "./persistGame";
-import { DEFAULT_STATS, initStats } from "./stats"; // 📊
+import { DEFAULT_STATS, initStats } from "./stats";
 
-// ---------------- Clicker Heroes-style monster HP ----------------
-// ---------------- Clicker Heroes-style monster HP ----------------
-function baseMonsterHp(zone, hpMult = 1) {
-  const z = Math.max(1, Math.floor(zone));
-  // Apply HP Growth Multiplier (Graviton Law)
-  // If hpMult < 1, it reduces the effective HP.
-  const rawHp = 10 * (z - 1 + Math.pow(1.55, z - 1));
-  return Math.floor(rawHp * hpMult);
-}
+// Extracted modules
+import { ECO_INIT, ecoReducer } from "./ecoReducer";
+import { calculateStellarRewindReward, getNextUnlockCost, monsterHp, monsterMineral } from "./monsterCalc";
 
-function monsterHp(zone, step, hpMult = 1) {
-  const hp = baseMonsterHp(zone, hpMult);
-  const isBossPlanet = zone % 5 === 0;
-  return isBossPlanet ? hp * 10 : hp;
-}
 
-function monsterMineral(zone, step) {
-  const z = Math.max(1, Math.floor(zone));
-  const isBossPlanet = z % 5 === 0;
-  const base = Math.floor(Math.pow(1.60255, z - 1));
-  return Math.max(1, isBossPlanet ? base * 10 : base);
-}
 
-// ---------------- Stellar Rewind Calculation ----------------
-// Formula: ((MaxZone - 50) / 10) ^ 1.5
-export function calculateStellarRewindReward(maxZone, rewardMult = 1) {
-  const z = Number(maxZone || 0);
-  if (z < 60) return 0; // First meaningful reward at 60 (since 50 is base)
-  
-  // (z - 50) / 10
-  const base = (z - 50) / 10;
-  if (base <= 0) return 0;
-  
-  const reward = Math.pow(base, 1.5);
-  return Math.floor(reward * rewardMult);
-}
-
-// ---------------- Protocol Costs ----------------
-export function getNextUnlockCost(ownedCount = 0) {
-    const costs = [1, 2, 4, 8, 16, 35, 70, 125, 250, 500];
-    if (ownedCount < costs.length) return costs[ownedCount];
-    return Math.floor(500 * Math.pow(1.2, ownedCount - costs.length + 1)); 
-}
-
-// ---------------- Economy reducer (atomic buys, Decimal minerals) ----------------
-const RESET_ARTIFACTS_ON_BIG_BANG = true; // Config
-
-const ECO_INIT = {
-  minerals: D(0), 
-  ownedMiners: {},
-  ownedSkills: {},
-  unlockedCount: 2,
-  stellarFragments: D(0),
-  cosmicProtocols: {}, 
-  // STARLINK
-  totalStarlinkTags: 0,
-  tagsByMinerId: {},
-  lifetimeTagsEarned: 0,
-  // Universal Constants & Essence
-  cosmicEssence: 0,
-  universalConstantsLevels: {},
-  lifetimeEssence: 0,
-  spentEssence: 0,
-  stellarFragmentsSpentLifetime: 0,
-  mineralBonusEndTime: 0, 
-  // SHARD SHOP
-  shards: 0,
-  droneCount: 0,
-  activeDroneCount: 0,
-  // ARTIFACTS
-  artifacts: {
-      active: [],
-      junk: [],
-      byId: {},
-      forgeCores: D(0),
-  },
-  // EXPLORERS
-  explorers: {
-      active: [],                    // Max 5 explorers
-      byId: {},                      // Explorer objects by ID
-      nextFreeSlotTime: null,        // Timestamp for next free explorer (after bury)
-      totalExplorersLost: 0,         // Stats
-      totalQuestsCompleted: 0,       // Stats
-      unlocked: false,               // Zone 140 + Stellar Rewind
-  },
-  // ACHIEVEMENTS
-  claimedAchievements: [],       // New: Array of Achievement IDs
-};
-
-// ---------------- Time Warp Simulation ----------------
-function simulateTimeWarp(startZone, startStep, currentDps, durationSeconds) {
-    let zone = Number(startZone);
-    if (isNaN(zone) || zone < 1) zone = 1;
-    let step = Number(startStep);
-    if (isNaN(step) || step < 1) step = 1;
-    let dps = D(currentDps);
-    if (dps.lt(0) || isNaN(dps.e)) dps = D(0); // Safety check for Decimal
-    let secondsLeft = durationSeconds;
-    let gainedGold = D(0);
-    let gainedFragments = D(0);
-    let gainedZones = 0;
-    const startZ = zone;
-
-    // Safety Cap
-    let maxIterations = 10000;
-    
-    while (secondsLeft > 0 && maxIterations > 0) {
-        maxIterations--;
-        
-        // Monster at current zone/step
-        const hp = D(monsterHp(zone, step));
-        const reward = D(monsterMineral(zone, step));
-        const isBoss = zone % 5 === 0;
-
-        // Time to kill
-        // If DPS >= HP, instant kill (0.1s frame)
-        // Else time = HP / DPS
-        let timeToKill = 0.5; // Default animation/delay factor
-        
-        if (dps.gte(hp)) {
-            timeToKill = 0.1;
-        } else {
-            // Need multiple seconds
-            // HP / DPS
-             // approx
-            const ratio = hp.div(dps).toNumber(); // might be huge if dps low
-            timeToKill = ratio; 
-        }
-
-        // Check if we can kill it within remaining time
-        if (timeToKill > secondsLeft) {
-            // Cannot finish kill, farm remaining time?
-            // "Farm" means we are stuck fighting this monster.
-            // But we gain nothing until it dies?
-            // Actually, usually in idle games, if you can't kill a boss, you farm previous zone.
-            // But if normal monster, you just keep hitting it.
-            // Simplification: proportional reward? No, binary.
-            // If Time Warp ends, we stop exactly there.
-            break; 
-        }
-
-        // Check Boss Timer Limit (30s)
-        if (isBoss && timeToKill > 30) {
-            // Failed Boss!
-            // Stop progression.
-            // Farm logic: Farm PREVIOUS safe zone for remainder of time.
-            const farmZone = Math.max(1, zone - 1);
-            const farmStep = 1; // Start of zone
-            const farmHp = D(monsterHp(farmZone, farmStep));
-            const farmReward = D(monsterMineral(farmZone, farmStep));
-            
-            // Farming remainder
-            if (dps.gt(0)) {
-                // How many kills in remaining time?
-                // FarmKillTime = farmHp / dps
-                let farmKillTime = 1; 
-                if (dps.gte(farmHp)) farmKillTime = 0.1;
-                else farmKillTime = farmHp.div(dps).toNumber();
-                
-                // Effective kills
-                const kills = Math.floor(secondsLeft / farmKillTime);
-                gainedGold = gainedGold.add(farmReward.mul(kills));
-            }
-            
-            // We revert to safe zone? Or stay at boss wall?
-            // Usually stay at wall.
-            break;
-        }
-
-        // Success Kill
-        secondsLeft -= timeToKill;
-        gainedGold = gainedGold.add(reward);
-
-        // Advance
-        if (isBoss) {
-            zone++;
-            step = 1;
-        } else {
-             if (step < 10) step++;
-             else {
-                 zone++;
-                 step = 1;
-             }
-        }
-    }
-    
-    gainedZones = Math.max(0, zone - startZ);
-    // Potential Fragment drops? (Simulated roughly)
-    // Every 100 zones = 1 fragment? Or random?
-    // Let's give 1 fragment per 10 zones advanced to be generous in warp.
-    gainedFragments = D(Math.floor(gainedZones / 10));
-
-    // Return results
-    return {
-        finalZone: zone,
-        finalStep: step,
-        gainedGold,
-        gainedZones,
-        gainedFragments
-    };
-}
-
-function ecoReducer(state, action) {
-  switch (action.type) {
-    case "GAIN_MINERALS": {
-      const add = D(action.amount || 0);
-      if (add.lte(0)) return state;
-      return { ...state, minerals: D(state.minerals).add(add) };
-    }
-
-    case "GAIN_SHARDS": {
-      return { ...state, shards: (state.shards || 0) + (action.amount || 0) };
-    }
-
-    case "TOGGLE_DRONE": {
-        const total = state.droneCount || 0;
-        const current = state.activeDroneCount || 0;
-        let next = current + 1;
-        if (next > total) next = 0; // Loop back to 0 (Recall all)
-        return { ...state, activeDroneCount: next };
-    }
-
-
-
-    case "BUY_SHOP_ITEM": {
-      const { id, cost, payload } = action;
-      if (!id || !cost) return state;
-      if ((state.shards || 0) < cost) return state; // Check afford
-
-      let newState = { ...state, shards: state.shards - cost };
-
-      // Effects
-      if (id.startsWith("timelapse_")) {
-          const seconds = payload?.seconds || 3600;
-          const dps = payload?.currentDps ? D(payload.currentDps) : D(0);
-          
-          if (dps.gt(0)) {
-              // Run Simulation
-              // Fix: Use passed zone/step from payload (as reducer doesn't track them)
-              let startZ = Number(payload.currentZone);
-              if (isNaN(startZ) || startZ < 1) startZ = 1;
-              let startS = Number(payload.currentStep);
-              if (isNaN(startS) || startS < 1) startS = 1;
-              
-              console.log("Reducer BUY_SHOP_ITEM Simulation:", { startZ, startS, payload }); // 🔍 Debug Log
-
-              const result = simulateTimeWarp(startZ, startS, dps, seconds);
-              
-              // Apply Results
-              newState.minerals = D(state.minerals).add(result.gainedGold);
-              newState.zone = result.finalZone;
-              newState.step = result.finalStep;
-              
-              // Update Max Zone if needed
-              if (newState.zone > state.maxUnlockedZone) {
-                  newState.maxUnlockedZone = newState.zone;
-              }
-
-              // Update HP for new stage
-              // We need to trigger a side effect for HP update, usually handled by component observing zone/step
-              // But reducer is pure... we might need to rely on the component engine to update HP based on new zone/step
-              // Ideally pass this result to a side effect handler.
-              // For now, we store result in state to show Modal
-              // Note: `useReducer` state update will trigger re-render. 
-              // We can't set "timeWarpResult" (useState) directly inside reducer.
-              // We will return it in newState and let the hook extract it? 
-              // Or better: dispatch a secondary effect.
-              // Actually, useGameEngine wraps the reducer. We can handle it there.
-              // But wait, this is inside `reducer`. 
-              // We need to return the result in the state so the hook can see it.
-              newState.lastTimeWarpResult = {
-                  finalZone: result.finalZone, // ✅ FIX: Pass final zone
-                  finalStep: result.finalStep, // ✅ FIX: Pass final step
-                  gainedGold: result.gainedGold,
-                  gainedZones: result.gainedZones,
-                  gainedFragments: result.gainedFragments
-              };
-          }
-      } else if (id === "auto_tapper") {
-          newState.droneCount = (newState.droneCount || 0) + 1;
-      } else if (id === "pack_fragments") {
-          const amount = payload?.amount || 0;
-          newState.stellarFragments = D(newState.stellarFragments).add(amount);
-      } else if (id === "pack_tags") {
-          const amount = payload?.amount || 0;
-          newState.totalStarlinkTags = (newState.totalStarlinkTags || 0) + amount;
-      }
-
-      return newState;
-    }
-
-    case "CLEAR_TIME_WARP_RESULT": {
-      const next = { ...state };
-      delete next.lastTimeWarpResult;
-      return next;
-    }
-
-    case "BUY_MINER": {
-      const { minerId, amount = 1 } = action;
-      const def = minersDef.find((m) => m.id === minerId);
-      if (!def) return state;
-
-      const lvl = Number(state.ownedMiners[minerId] || 0);
-      
-      // Use getBulkCost for N levels
-      const cost = getBulkCost(def, lvl, amount);
-
-      // ✅ Decimal compare
-      if (!D(state.minerals).gte(cost)) return state;
-
-      return {
-        ...state,
-        minerals: D(state.minerals).sub(cost),
-        ownedMiners: { ...state.ownedMiners, [minerId]: lvl + amount },
-      };
-    }
-
-    case "BUY_SKILL": {
-      const { minerId, skillId } = action;
-      const def = minersDef.find((m) => m.id === minerId);
-      if (!def) return state;
-
-      const skill = def.skills?.find((s) => s.id === skillId);
-      if (!skill) return state;
-
-      const lvl = Number(state.ownedMiners[minerId] || 0);
-      const unlockAt = Number(skill.unlockAt || 0);
-      if (lvl < unlockAt) return state;
-
-      const ownedMap = state.ownedSkills[minerId] || {};
-      if (ownedMap[skillId]) return state;
-
-      const cost = D(skill.cost || 0); // ✅ Decimal parse
-      if (cost.gt(0) && !D(state.minerals).gte(cost)) return state;
-
-      return {
-        ...state,
-        minerals: cost.gt(0) ? D(state.minerals).sub(cost) : D(state.minerals),
-        ownedSkills: {
-          ...state.ownedSkills,
-          [minerId]: { ...ownedMap, [skillId]: true },
-        },
-      };
-    }
-    case "UNLOCK_UP_TO": {
-      const upTo = Number(action.count || 2);
-      if (!Number.isFinite(upTo)) return state;
-
-      const next = Math.max(state.unlockedCount || 2, upTo);
-      if (next === (state.unlockedCount || 2)) return state;
-
-      return { ...state, unlockedCount: next };
-    }
-
-    case "CHECK_MILESTONES": {
-       if (!milestonesDef.dpsToTapMilestones?.enabled) return state;
-       
-       let changed = false;
-       const newUnlocked = { ...state.dpsToTapMilestonesUnlocked };
-       
-       for (const ms of milestonesDef.dpsToTapMilestones.milestones) {
-          if (newUnlocked[ms.id]) continue; // Already unlocked
-          
-          if (ms.requirement.type === "minerLevelAtLeast") {
-             const mId = ms.requirement.minerId || ms.minerId;
-             const lvl = Number(state.ownedMiners[mId] || 0);
-             if (lvl >= ms.requirement.value) {
-                newUnlocked[ms.id] = true;
-                changed = true;
-             }
-          }
-       }
-       
-       if (!changed) return state;
-       
-       // Toast logic could go here
-       return { 
-          ...state, 
-          dpsToTapMilestonesUnlocked: newUnlocked 
-       };
-    }
-    // Summoning Logic
-    case "GENERATE_SUMMON_POOL": {
-        if (state.summonPool && state.summonPool.length > 0) return state;
-        
-        const protocols = configCache.getCosmicProtocols()?.protocols || [];
-        const ownedIds = Object.keys(state.cosmicProtocols).filter(id => state.cosmicProtocols[id] > 0);
-        
-        // Random 4 not owned
-        const available = protocols.filter(p => !ownedIds.includes(p.id));
-        // Simple shuffle
-        for (let i = available.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [available[i], available[j]] = [available[j], available[i]];
-        }
-        const newPool = available.slice(0, 4).map(p => p.id);
-        
-        return {
-            ...state,
-            summonPool: newPool
-        };
-    }
-    
-    case "REROLL_SLOT": {
-        const { slotIndex } = action;
-        const protocols = configCache.getCosmicProtocols()?.protocols || [];
-        const ownedIds = Object.keys(state.cosmicProtocols).filter(id => state.cosmicProtocols[id] > 0);
-        
-        // Cost: 1.5 ^ rerollCount (min 1)
-        const cost = Math.floor(Math.max(1, Math.pow(1.5, state.rerollCount || 0)));
-        
-        if (D(state.stellarFragments).lt(cost)) return state;
-        
-        const currentPool = [...(state.summonPool || [])];
-        const exclude = [...currentPool]; // Avoid dupes in view
-        
-        const available = protocols.filter(p => !ownedIds.includes(p.id) && !exclude.includes(p.id));
-         // Simple shuffle
-        for (let i = available.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [available[i], available[j]] = [available[j], available[i]];
-        }
-        
-        if (available.length > 0) {
-            currentPool[slotIndex] = available[0].id;
-        }
-        
-        return {
-            ...state,
-            stellarFragments: D(state.stellarFragments).sub(cost),
-            summonPool: currentPool,
-            rerollCount: (state.rerollCount || 0) + 1
-        };
-    }
-
-    case "GAIN_FRAGMENTS": {
-      return {
-        ...state,
-        stellarFragments: D(state.stellarFragments).add(action.amount || 0),
-      };
-    }
-
-    case "CLAIM_ACHIEVEMENT": {
-        const { id, reward } = action;
-        if (!id) return state;
-        
-        // Prevent duplicate claim
-        if (state.claimedAchievements && state.claimedAchievements.includes(id)) {
-            console.warn("Achievement already claimed:", id);
-            return state;
-        }
-
-        return {
-            ...state,
-            shards: (state.shards || 0) + (Number(reward) || 0),
-            claimedAchievements: [...(state.claimedAchievements || []), id]
-        };
-    }
-    
-    case "GAIN_TAG": {
-        // action: { targetMinerId: string (optional), amount: 1 }
-        const amt = action.amount || 1;
-        const target = action.targetMinerId || null;
-        
-        let newTagsMap = { ...state.tagsByMinerId };
-        
-        // If no target provided, pick a random owned miner > 0 level.
-        let finalTarget = target;
-        if (!finalTarget) {
-            const ownedIds = Object.keys(state.ownedMiners).filter(id => state.ownedMiners[id] > 0);
-            if (ownedIds.length > 0) {
-                finalTarget = ownedIds[Math.floor(Math.random() * ownedIds.length)];
-            }
-        }
-        
-        if (finalTarget) {
-            newTagsMap[finalTarget] = (newTagsMap[finalTarget] || 0) + amt;
-        } else {
-             // Fallback if no miners owned
-             newTagsMap["unassigned"] = (newTagsMap["unassigned"] || 0) + amt;
-        }
-        
-        return {
-            ...state,
-            totalStarlinkTags: (state.totalStarlinkTags || 0) + amt,
-            lifetimeTagsEarned: (state.lifetimeTagsEarned || 0) + amt,
-            tagsByMinerId: newTagsMap
-        };
-    }
-
-    case "REDISTRIBUTE_TAGS": {
-         const total = state.totalStarlinkTags || 0;
-         if (total <= 0) return state;
-         
-         const ownedIds = Object.keys(state.ownedMiners).filter(id => state.ownedMiners[id] > 0);
-         if (ownedIds.length === 0) return state;
-         
-         // Basic Redistribution: 80% to provided 'primary', rest to others?
-         // For V1, let's just implement the mechanics if needed, or leave basic.
-         // Since UI for redistribution isn't active yet, this is placeholder.
-         return state;
-    }
-
-    case "LOAD_STATE": {
-      // payload: { minerals: Decimal, unlockedCount, ownedMiners, ownedSkills }
-      const p = action.payload;
-      if (!p) return state;
-
-      return {
-        ...state,
-        minerals: p.minerals ?? state.minerals,
-        unlockedCount: p.unlockedCount ?? state.unlockedCount,
-        ownedMiners: p.ownedMiners ?? state.ownedMiners,
-        ownedSkills: p.ownedSkills ?? state.ownedSkills,
-        // ✅ Rehydrate Meta Currencies
-        stellarFragments: p.stellarFragments ?? state.stellarFragments,
-        cosmicProtocols: p.cosmicProtocols ?? state.cosmicProtocols,
-        summonPool: p.summonPool ?? state.summonPool,
-        rerollCount: p.rerollCount ?? state.rerollCount,
-
-        // Starlink Rehydration
-        totalStarlinkTags: p.totalStarlinkTags || 0,
-        tagsByMinerId: p.tagsByMinerId || {},
-        lifetimeTagsEarned: p.lifetimeTagsEarned || 0,
-        // Universal Constants & Essence Rehydration
-        cosmicEssence: p.cosmicEssence || 0,
-        universalConstantsLevels: p.universalConstantsLevels || {},
-        lifetimeEssence: p.lifetimeEssence || 0,
-        spentEssence: p.spentEssence || 0,
-        stellarFragmentsSpentLifetime: p.stellarFragmentsSpentLifetime || 0,
-        
-        // SHARD SHOP REHYDRATION
-        shards: p.shards ?? state.shards,
-        droneCount: p.droneCount ?? state.droneCount,
-        // Active drones reset on load or persist? User didn't specify, but safer to persist or reset?
-        // Let's persist.
-        activeDroneCount: p.activeDroneCount ?? 0,
-        
-        // ARTIFACTS
-        artifacts: p.artifacts ? {
-            active: p.artifacts.active || [],
-            junk: p.artifacts.junk || [],
-            byId: p.artifacts.byId || {},
-            forgeCores: p.artifacts.forgeCores || D(0),
-        } : state.artifacts,
-
-        // EXPLORERS
-        explorers: p.explorers ? {
-            active: p.explorers.active || [],
-            byId: p.explorers.byId || {},
-            nextFreeSlotTime: p.explorers.nextFreeSlotTime || null,
-            totalExplorersLost: Number(p.explorers.totalExplorersLost || 0),
-            totalQuestsCompleted: Number(p.explorers.totalQuestsCompleted || 0),
-            unlocked: Boolean(p.explorers.unlocked || false),
-        } : state.explorers,
-
-        // ACHIEVEMENTS & MISC
-        claimedAchievements: p.claimedAchievements || state.claimedAchievements || [],
-        mineralBonusEndTime: p.mineralBonusEndTime ?? state.mineralBonusEndTime ?? 0,
-      };
-    }
-
-    case "RESET_GAME": {
-      return { ...ECO_INIT };
-    }
-
-    case "PERFORM_STELLAR_REWIND": {
-       // amount: gained shards
-       const gained = D(action.amount || 0);
-       
-       return {
-          ...ECO_INIT, // Reset minerals, miners, unlockedCount, etc.
-          stellarFragments: D(state.stellarFragments).add(gained),
-          cosmicProtocols: state.cosmicProtocols, // Keep protocols!
-          // Keep Starlink Tags!
-          totalStarlinkTags: state.totalStarlinkTags,
-          tagsByMinerId: state.tagsByMinerId,
-          lifetimeTagsEarned: state.lifetimeTagsEarned,
-          // Keep Universal Constants & Essence!
-          cosmicEssence: state.cosmicEssence,
-          universalConstantsLevels: state.universalConstantsLevels,
-          lifetimeEssence: state.lifetimeEssence,
-          spentEssence: state.spentEssence,
-          stellarFragmentsSpentLifetime: state.stellarFragmentsSpentLifetime,
-          // Keep Summoning State
-          summonPool: state.summonPool,
-          rerollCount: state.rerollCount,
-          // ✅ FIX: Keep Shards & Drones (meta-currency, persist across rewinds)
-          shards: state.shards,
-          droneCount: state.droneCount,
-          activeDroneCount: state.activeDroneCount,
-          // ✅ FIX: Keep Achievements (lifetime progress)
-          claimedAchievements: state.claimedAchievements || [],
-          // ✅ FIX: Keep Milestones
-          dpsToTapMilestonesUnlocked: state.dpsToTapMilestonesUnlocked || {},
-          // ✅ FIX: Keep Explorers
-          explorers: state.explorers,
-          // Artifact Drop
-          artifacts: (() => {
-              const base = state.artifacts || {}; 
-              // Clone to avoid mutation
-              const next = { ...base };
-              // Ensure arrays exist
-              next.active = next.active || [];
-              next.junk = [...(next.junk || [])];
-              next.byId = { ...(next.byId || {}) };
-              next.forgeCores = next.forgeCores || D(0);
-              
-              if (action.artifact) {
-                  next.junk.push(action.artifact.id);
-                  next.byId[action.artifact.id] = action.artifact;
-              }
-              return next;
-          })(),
-       };
-    }
-
-    case "UNLOCK_PROTOCOL": {
-        const { protocolId } = action;
-        // Cost is based on OWNED COUNT
-        const ownedCount = Object.keys(state.cosmicProtocols).filter(k => state.cosmicProtocols[k] > 0).length;
-        const cost = getNextUnlockCost(ownedCount);
-        
-        if (D(state.stellarFragments).lt(cost)) {
-            console.log("Unlock failed: Not enough SF", state.stellarFragments, cost);
-            return state;
-        }
-        
-        return {
-            ...state,
-            stellarFragments: D(state.stellarFragments).sub(cost),
-            cosmicProtocols: {
-                ...state.cosmicProtocols,
-                [protocolId]: 1 // Unlock at level 1
-            },
-            summonPool: null, // Reset pool
-            rerollCount: 0 // Reset reroll cost scaling
-        };
-    }
-
-    case "DEBUG_ADD_ARTIFACT": {
-        // Just add a random artifact without reset
-        // Use max zone from state? Or default to 50 for testing.
-        const z = action.zone || 100;
-        const art = createArtifact(z);
-        return {
-           ...state,
-           artifacts: (() => {
-               const base = state.artifacts || {}; 
-               const next = { ...base };
-               next.active = next.active || [];
-               next.junk = [...(next.junk || [])];
-               next.byId = { ...(next.byId || {}) };
-               next.forgeCores = next.forgeCores || D(0);
-               
-               next.junk.push(art.id);
-               next.byId[art.id] = art;
-               
-               return next;
-           })(),
-        };
-    }
-
-    case "UPGRADE_PROTOCOL": {
-        // TODO: Implement protocol upgrade logic
-        return state;
-    }
-
-    case "BUY_UNIVERSAL_CONSTANT": {
-        const { constantId } = action;
-        const def = configCache.getConstantDef(constantId);
-        if (!def) return state;
-
-        const currentLvl = state.universalConstantsLevels[constantId] || 0;
-        const maxLevel = def.leveling?.maxLevel || Infinity;
-        if (currentLvl >= maxLevel) return state;
-
-        // Cost Model
-        let cost = 0;
-        const model = def.leveling?.costModel;
-        if (model === "levelPlus1") cost = currentLvl + 1;
-        else if (model === "flat1") cost = 1;
-        else cost = 999999; // Fallback
-
-        if (state.cosmicEssence < cost) return state;
-
-        return {
-            ...state,
-            cosmicEssence: state.cosmicEssence - cost,
-            spentEssence: (state.spentEssence || 0) + cost,
-            universalConstantsLevels: {
-                ...state.universalConstantsLevels,
-                [constantId]: currentLvl + 1
-            }
-        };
-    }
-
-    case "PERFORM_BIG_BANG": {
-        // payload: { gainedEssence }
-        const gained = action.payload?.gainedEssence || 0;
-        
-        return {
-            ...ECO_INIT, // Reset minerals, miners, unlockedCount
-            // Keep Meta
-            stellarFragments: state.stellarFragments,
-            stellarFragmentsSpentLifetime: state.stellarFragmentsSpentLifetime,
-            cosmicProtocols: state.cosmicProtocols,
-            
-            // Keep Constants & Essence
-            cosmicEssence: (state.cosmicEssence || 0) + gained,
-            universalConstantsLevels: state.universalConstantsLevels,
-            lifetimeEssence: (state.lifetimeEssence || 0) + gained,
-            spentEssence: state.spentEssence,
-            
-            // Keep Starlink Tags
-            totalStarlinkTags: state.totalStarlinkTags,
-            tagsByMinerId: state.tagsByMinerId,
-            lifetimeTagsEarned: state.lifetimeTagsEarned,
-
-            // ✅ FIX: Keep Shards & Drones
-            shards: state.shards,
-            droneCount: state.droneCount,
-            activeDroneCount: state.activeDroneCount,
-            // ✅ FIX: Keep Achievements
-            claimedAchievements: state.claimedAchievements || [],
-            // ✅ FIX: Keep Milestones
-            dpsToTapMilestonesUnlocked: state.dpsToTapMilestonesUnlocked || {},
-            // ✅ FIX: Keep Explorers
-            explorers: state.explorers,
-            // ✅ FIX: Keep Summoning
-            summonPool: state.summonPool,
-            rerollCount: state.rerollCount,
-
-            // Artifacts
-            artifacts: RESET_ARTIFACTS_ON_BIG_BANG ? {
-                active: [],
-                junk: [],
-                byId: {},
-                forgeCores: D(0),
-            } : state.artifacts,
-        };
-    }
-
-    case "EXTEND_MINERAL_BONUS": {
-        return { ...state, mineralBonusEndTime: action.endTime };
-    }
-
-    case "SPEND_SHARDS": {
-        const { amount } = action;
-        const current = state.shards || 0;
-        if (current < amount) return state;
-        
-        return {
-            ...state,
-            shards: current - amount,
-        };
-    }
-
-    case "COLLECT_QUEST": {
-        const { explorerId } = action;
-        const explorer = state.explorers.byId[explorerId];
-        if (!explorer || !explorer.currentQuest) return state;
-
-        const quest = explorer.currentQuest;
-        
-        // Base updates
-        let newState = { ...state };
-        
-        // 1. Distribute Rewards
-        switch (quest.type) {
-            case "MINERAL":
-                newState.minerals = D(newState.minerals || 0).add(quest.baseReward);
-                break;
-                
-            case "FRAGMENT":
-                newState.stellarFragments = (newState.stellarFragments || 0) + quest.baseReward;
-                break;
-                
-            case "SHARD":
-                newState.shards = (newState.shards || 0) + quest.baseReward;
-                break;
-                
-            case "ARTIFACT": {
-                // Chance check
-                if (Math.random() < quest.baseReward) { // baseReward is probability (0.5 etc)
-                     // Create Artifact
-                     const { createArtifact } = require("./artifacts/artifactService");
-                     const newArt = createArtifact(state.maxUnlockedZone || 1);
-                     
-                     // Add to artifacts
-                     if (newState.artifacts.active.length < 4) {
-                         newState.artifacts.active = [...newState.artifacts.active, newArt.id];
-                     } else {
-                         newState.artifacts.junk = [...newState.artifacts.junk, newArt.id];
-                     }
-                     newState.artifacts.byId = { ...newState.artifacts.byId, [newArt.id]: newArt };
-                }
-                break;
-            }
-            
-            case "PROTOCOL":
-                // Placeholder for Protocol Boost
-                break;
-                
-            case "RECRUIT": {
-                // Generate new explorer
-                const { generateExplorer } = require("./explorers/explorerService");
-                const newExplorer = generateExplorer(state.maxUnlockedZone || 1);
-                
-                // Add to explorers
-                newState.explorers.byId = {
-                    ...newState.explorers.byId,
-                    [newExplorer.id]: newExplorer
-                };
-                newState.explorers.active = [...newState.explorers.active, newExplorer.id];
-                break;
-            }
-        }
-
-        // 2. Reset Explorer
-        const updatedExplorer = {
-            ...explorer,
-            currentQuest: null,
-            questStartTime: null,
-        };
-        
-        const nextById = { ...newState.explorers.byId, [explorerId]: updatedExplorer };
-        
-        newState.explorers = {
-            ...newState.explorers,
-            byId: nextById
-        };
-
-        return newState;
-    }
-
-    // --- ARTIFACTS ACTIONS ---
-    case "EQUIP_ARTIFACT": {
-        const { id } = action;
-        if (!state.artifacts) return state;
-        const art = state.artifacts.byId[id];
-        if (!art || state.artifacts.active.includes(id)) return state;
-        if (state.artifacts.active.length >= 4) return state;
-
-        return {
-            ...state,
-            artifacts: {
-                ...state.artifacts,
-                junk: state.artifacts.junk.filter(jid => jid !== id),
-                active: [...state.artifacts.active, id],
-            }
-        };
-    }
-
-    case "UNEQUIP_ARTIFACT": {
-        const { id } = action;
-        if (!state.artifacts || !state.artifacts.active.includes(id)) return state;
-
-        return {
-            ...state,
-            artifacts: {
-                ...state.artifacts,
-                active: state.artifacts.active.filter(aid => aid !== id),
-                junk: [...state.artifacts.junk, id],
-            }
-        };
-    }
-
-    case "SALVAGE_ARTIFACT": {
-        const { id } = action;
-        if (!state.artifacts) return state;
-        const art = state.artifacts.byId[id];
-        if (!art || state.artifacts.active.includes(id)) return state;
-
-        const val = calculateSalvageValue(art);
-        const nextById = { ...state.artifacts.byId };
-        delete nextById[id];
-
-        return {
-            ...state,
-            artifacts: {
-                ...state.artifacts,
-                junk: state.artifacts.junk.filter(jid => jid !== id),
-                byId: nextById,
-                forgeCores: D(state.artifacts.forgeCores).add(val),
-            }
-        };
-    }
-
-    case "UPGRADE_ARTIFACT": {
-        const { id } = action;
-        if (!state.artifacts) return state;
-        const art = state.artifacts.byId[id];
-        if (!art) return state;
-
-        const cost = calculateUpgradeCost(art);
-        if (D(state.artifacts.forgeCores).lt(cost)) return state;
-
-        const newLevel = (art.level || 1) + 1;
-        const oldLevel = art.level || 1;
-        const scale = newLevel / oldLevel;
-        
-        // Scale affixes
-        const newAffixes = art.affixes.map(a => ({
-            type: a.type,
-            value: (parseFloat(a.value) * scale).toFixed(4)
-        }));
-
-        return {
-            ...state,
-            artifacts: {
-                ...state.artifacts,
-                byId: {
-                    ...state.artifacts.byId,
-                    [id]: { 
-                        ...art, 
-                        level: newLevel,
-                        affixes: newAffixes
-                        // upgradeLevel is deprecated/merged
-                    }
-                },
-                forgeCores: D(state.artifacts.forgeCores).sub(cost),
-            }
-        };
-    }
-
-    case "GRANT_EXPLORER": {
-        // Import at top of file needed
-        const { createExplorer } = require("./explorers/explorerService");
-        
-        if (!state.explorers) {
-            return {
-                ...state,
-                explorers: {
-                    active: [],
-                    byId: {},
-                    nextFreeSlotTime: null,
-                    totalExplorersLost: 0,
-                    totalQuestsCompleted: 0,
-                    unlocked: true, // Auto-unlock for testing
-                }
-            };
-        }
-
-        // Check if we have space (max 5)
-        if (state.explorers.active.length >= 5) {
-            console.warn("Cannot grant explorer: all slots full");
-            return state;
-        }
-
-        const newExplorer = createExplorer();
-        
-        return {
-            ...state,
-            explorers: {
-                ...state.explorers,
-                active: [...state.explorers.active, newExplorer.id],
-                byId: {
-                    ...state.explorers.byId,
-                    [newExplorer.id]: newExplorer,
-                },
-                unlocked: true, // Ensure unlocked
-            }
-        };
-    }
-
-    case "DISMISS_EXPLORER": {
-        const { explorerId } = action;
-        if (!state.explorers || !state.explorers.byId[explorerId]) return state;
-
-        // Remove from active list
-        const newActive = state.explorers.active.filter(id => id !== explorerId);
-        
-        // Remove from byId (optional, but cleaner)
-        const newById = { ...state.explorers.byId };
-        delete newById[explorerId];
-
-        const totalLost = (state.explorers.totalExplorersLost || 0) + 1;
-
-        return {
-            ...state,
-            explorers: {
-                ...state.explorers,
-                active: newActive,
-                byId: newById,
-                totalExplorersLost: totalLost,
-            }
-        };
-    }
-
-    case "GENERATE_QUESTS": {
-        const { explorerId, quests } = action;
-        
-        if (!state.explorers || !state.explorers.byId[explorerId]) {
-            console.warn("Cannot generate quests: explorer not found");
-            return state;
-        }
-
-        return {
-            ...state,
-            explorers: {
-                ...state.explorers,
-                byId: {
-                    ...state.explorers.byId,
-                    [explorerId]: {
-                        ...state.explorers.byId[explorerId],
-                        availableQuests: quests,
-                    }
-                }
-            }
-        };
-    }
-
-    case "START_QUEST": {
-        const { explorerId, quest } = action;
-        
-        if (!state.explorers || !state.explorers.byId[explorerId]) {
-            console.warn("Cannot start quest: explorer not found");
-            return state;
-        }
-
-        const explorer = state.explorers.byId[explorerId];
-        
-        // Check if already on quest
-        if (explorer.currentQuest) {
-            console.warn("Explorer already on quest");
-            return state;
-        }
-
-        return {
-            ...state,
-            explorers: {
-                ...state.explorers,
-                byId: {
-                    ...state.explorers.byId,
-                    [explorerId]: {
-                        ...explorer,
-                        currentQuest: quest,
-                        questStartTime: Date.now(),
-                    }
-                },
-                totalQuestsCompleted: state.explorers.totalQuestsCompleted || 0,
-            }
-        };
-    }
-
-    default:
-      return state;
-  }
-}
+// Re-export for external consumers
+export { calculateStellarRewindReward, getNextUnlockCost } from "./monsterCalc";
 
 export function useGameEngine() {
   // progress model
@@ -1084,7 +41,7 @@ export function useGameEngine() {
   const [step, setStep] = useState(1);
   const [maxUnlockedZone, setMaxUnlockedZone] = useState(1);
   const [isPrimal, setIsPrimal] = useState(false);
-  const [isChest, setIsChest] = useState(false); // 📦 Treasure Chest State
+  const [isChest, setIsChest] = useState(false); // ğŸ“¦ Treasure Chest State
   
 
 
@@ -1101,7 +58,7 @@ export function useGameEngine() {
 
   // economy (atomic)
   const [eco, dispatchEco] = useReducer(ecoReducer, ECO_INIT);
-  const minerals = eco.minerals; // ✅ Decimal dışarıya da Decimal döner
+  const minerals = eco.minerals; // âœ… Decimal dÄ±ÅŸarÄ±ya da Decimal dÃ¶ner
   const ownedMiners = eco.ownedMiners;
   const ownedSkills = eco.ownedSkills;
   const [pendingOwnedMiners, setPendingOwnedMiners] = useState({});
@@ -1135,14 +92,14 @@ export function useGameEngine() {
     // 2. Reset Memory
     setMode("progress");
     setZone(1);
-    setMaxUnlockedZone(1); // ✅ Reset max zone too
+    setMaxUnlockedZone(1); // âœ… Reset max zone too
     setStep(1);
-    // 📊 Reset Memory Stats
+    // ğŸ“Š Reset Memory Stats
     statsRef.current = initStats({}); 
     dispatchEco({ type: "RESET_GAME" });
   }, []);
 
-  // ✅ Planet visual — BURAYA DOKUNMADIM (senin sistem aynen)
+  // âœ… Planet visual â€” BURAYA DOKUNMADIM (senin sistem aynen)
   const planetCount = planets?.length || 1;
   const globalStageIndex = (zone - 1) * 10 + (step - 1);
   const planetIndex = planetCount > 0 ? globalStageIndex % planetCount : 0;
@@ -1189,7 +146,7 @@ export function useGameEngine() {
       return 0;
   }, [activeSkills]);
 
-  // totals (tap + dps + crit + multipliers) — depends only on economy + zone
+  // totals (tap + dps + crit + multipliers) â€” depends only on economy + zone
   const totals = useMemo(() => {
     return computeTotals({
       minersDef,
@@ -1197,16 +154,16 @@ export function useGameEngine() {
       ownedSkills,
       zone,
       // Meta
-      universalConstantsLevels: eco.universalConstantsLevels, // ✅ From Eco based on persistence
+      universalConstantsLevels: eco.universalConstantsLevels, // âœ… From Eco based on persistence
       cosmicProtocolLevels: eco.cosmicProtocols,
-      constantsDef: configCache.getUniversalConstants()?.items, // ✅ From Cache
-      protocolsDef: configCache.getCosmicProtocols()?.protocols, // ✅ From Cache
+      constantsDef: configCache.getUniversalConstants()?.items, // âœ… From Cache
+      protocolsDef: configCache.getCosmicProtocols()?.protocols, // âœ… From Cache
       tagsByMinerId: eco.tagsByMinerId,
-      stellarFragmentsSpent: eco.stellarFragmentsSpentLifetime, // ✅
-      stellarFragments: eco.stellarFragments, // ✅ For Passive DPS
-      dpsToTapMilestonesUnlocked: eco.dpsToTapMilestonesUnlocked, // ✅ Progress
-      mineralBonusActive: Date.now() < (eco.mineralBonusEndTime || 0), // ✅ Ad Bonus Status
-      activeArtifacts: eco.artifacts?.active?.map(id => eco.artifacts.byId[id]).filter(Boolean), // ✅ Artifacts
+      stellarFragmentsSpent: eco.stellarFragmentsSpentLifetime, // âœ…
+      stellarFragments: eco.stellarFragments, // âœ… For Passive DPS
+      dpsToTapMilestonesUnlocked: eco.dpsToTapMilestonesUnlocked, // âœ… Progress
+      mineralBonusActive: Date.now() < (eco.mineralBonusEndTime || 0), // âœ… Ad Bonus Status
+      activeArtifacts: eco.artifacts?.active?.map(id => eco.artifacts.byId[id]).filter(Boolean), // âœ… Artifacts
     });
   }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime, eco.stellarFragments, eco.dpsToTapMilestonesUnlocked, eco.mineralBonusEndTime, eco.artifacts]);
 
@@ -1270,7 +227,7 @@ export function useGameEngine() {
   const maxHpRef = useRef(maxHp);
   const modeRef = useRef(mode);
   
-  // 📊 Statistics Store
+  // ğŸ“Š Statistics Store
   const statsRef = useRef(initStats());
 
   useEffect(() => {
@@ -1293,17 +250,17 @@ export function useGameEngine() {
   // Sync Time Warp State (Fix)
   useEffect(() => {
     if (eco.lastTimeWarpResult) {
-       console.log("Time Warp Result Sync Effect:", eco.lastTimeWarpResult); // 🔍 Debug Log
+       if (__DEV__) console.log("Time Warp Result Sync Effect:", eco.lastTimeWarpResult); // ğŸ” Debug Log
 
        // Apply
        const targetZone = Number(eco.lastTimeWarpResult.finalZone);
        const targetStep = Number(eco.lastTimeWarpResult.finalStep);
 
        if (!isNaN(targetZone) && targetZone >= 1) {
-           console.log("Setting Zone to:", targetZone); // 🔍 Debug Log
+           if (__DEV__) console.log("Setting Zone to:", targetZone); // ğŸ” Debug Log
            setZone(targetZone);
            if (targetZone > maxUnlockedZone) {
-               console.log("Updating Max Zone to:", targetZone); // 🔍 Debug Log
+               if (__DEV__) console.log("Updating Max Zone to:", targetZone); // ğŸ” Debug Log
                setMaxUnlockedZone(targetZone);
            }
        } else {
@@ -1341,7 +298,7 @@ export function useGameEngine() {
     let diffSeconds = Math.floor((now - lastSave) / 1000);
 
     if (diffSeconds > 5) {
-      // ✅ Hard Cap: 24 Hours (86400s)
+      // âœ… Hard Cap: 24 Hours (86400s)
       let remainingSeconds = Math.min(diffSeconds, 86400); 
       const originalSeconds = remainingSeconds; // For report
 
@@ -1368,14 +325,14 @@ export function useGameEngine() {
         }
       });
       
-      // ✅ Eternal Drift (Idle Dominance)
+      // âœ… Eternal Drift (Idle Dominance)
       const driftLevel = sEco.universalConstantsLevels?.['eternal_drift'] || 0;
       if (driftLevel > 0) {
           const driftMult = 1 + (Math.pow(1.5, driftLevel) - 1);
           offlineDps = offlineDps.mul(driftMult);
       }
       
-      // ✅ Passive Fragment Bonus (if implemented in totals)
+      // âœ… Passive Fragment Bonus (if implemented in totals)
       // Usually totals.globalDpsMult accounts for this. 
       // We should ideally use `computeTotals` here but it requires full config context.
       // For now, let's assume raw DPS is close enough or replicate fragment bonus if key.
@@ -1498,13 +455,13 @@ export function useGameEngine() {
 
           const zonesGained = Math.max(0, farmZone - startZone);
           
-          console.log(`OFFLINE SIM: Reached Z${currentZone}. Gained ${zonesGained} Zones. Total: ${totalEarned}`);
+          if (__DEV__) console.log(`OFFLINE SIM: Reached Z${currentZone}. Gained ${zonesGained} Zones. Total: ${totalEarned}`);
           
           setOfflineEarnings({ 
               amount: totalEarned, 
               seconds: originalSeconds,
-              avgDps: avgDps, // ✅ Pass DPS
-              zonesGained: zonesGained, // ✅ Pass Zone Prog
+              avgDps: avgDps, // âœ… Pass DPS
+              zonesGained: zonesGained, // âœ… Pass Zone Prog
               startZone: startZone,
               endZone: farmZone
           });
@@ -1540,14 +497,14 @@ export function useGameEngine() {
         
         dispatchEco({ type: "LOAD_STATE", payload: loaded.eco });
         
-        // 📊 Load Stats
+        // ğŸ“Š Load Stats
         if (loaded.stats) {
             statsRef.current = initStats(loaded.stats);
         } else {
             statsRef.current = initStats({});
         }
 
-        // 🔄 RETROACTIVE SYNC: If stats are fresh but game is advanced, sync them up
+        // ğŸ”„ RETROACTIVE SYNC: If stats are fresh but game is advanced, sync them up
         const s = statsRef.current;
         if (s && s.lifetime) {
             // 1. Sync Levels
@@ -1588,7 +545,7 @@ export function useGameEngine() {
                     maxUnlockedZone: current.maxUnlockedZone 
                 },
                 eco: serializeEco(current.eco),
-                stats: statsRef.current, // 📊
+                stats: statsRef.current, // ğŸ“Š
              };
              saveGame(snapshot).catch(e => console.warn("BG Save Failed", e));
         }
@@ -1628,7 +585,7 @@ export function useGameEngine() {
             maxUnlockedZone: current.maxUnlockedZone 
         },
         eco: serializeEco(current.eco),
-        stats: statsRef.current, // 📊
+        stats: statsRef.current, // ğŸ“Š
       };
 
       saveGame(snapshot).catch(() => {});
@@ -1656,9 +613,9 @@ export function useGameEngine() {
     setMaxHp(m);
     setHp(m);
 
-    const s = statsRef.current; // ✅ Moved to top scope
+    const s = statsRef.current; // âœ… Moved to top scope
 
-    // 📊 Stats (Boss Spawned)
+    // ğŸ“Š Stats (Boss Spawned)
     if (isBossPlanet) {
        
        // Calculate Boss Time based on Constants
@@ -1731,7 +688,7 @@ export function useGameEngine() {
 
   const applyDamage = useCallback(
     (dmg) => {
-      if (respawningRef.current) return; // 🛑 Respawn sırasında hasar yok
+      if (respawningRef.current) return; // ğŸ›‘ Respawn sÄ±rasÄ±nda hasar yok
 
       const rawHit = Number(dmg || 0);
       if (rawHit <= 0) return;
@@ -1750,20 +707,20 @@ export function useGameEngine() {
       // HP azal
       currentHp -= hit;
 
-      // ÖLMEDİ
+      // Ã–LMEDÄ°
       if (currentHp > 0) {
         hpRef.current = currentHp;
         setHp(currentHp);
         return;
       }
 
-      // ÖLDÜ (Dead) 💀
+      // Ã–LDÃœ (Dead) ğŸ’€
       // 1. Durumu kilitle
       respawningRef.current = true;
       hpRef.current = 0;
       setHp(0); 
 
-      // 2. Ödül ver
+      // 2. Ã–dÃ¼l ver
       const localZone = zoneRef.current;
       const localStep = stepRef.current;
       const base = monsterMineral(localZone, localStep);
@@ -1784,12 +741,12 @@ export function useGameEngine() {
       const gained = D(base)
         .mul(totals.mineralMult || 1)
         .mul(bossRewardMul)
-        .mul(chestMul) // 📦
+        .mul(chestMul) // ğŸ“¦
         .mul(activeGoldMult)
         .floor();
       dispatchEco({ type: "GAIN_MINERALS", amount: gained });
 
-      // 📊 Stats (Kill & Eco)
+      // ğŸ“Š Stats (Kill & Eco)
       const s = statsRef.current;
       if (s && s.lifetime) {
           // Kills
@@ -1844,7 +801,7 @@ export function useGameEngine() {
                  setTimeout(() => setTagToast(null), 3000);
              }
 
-             // 📊 Stats (Fragments)
+             // ğŸ“Š Stats (Fragments)
              if (s && s.lifetime) {
                  s.lifetime.totalStellarFragmentsEarned = D(s.lifetime.totalStellarFragmentsEarned).add(pReward).toString();
                  s.lifetime.totalAnomalySfEarned = D(s.lifetime.totalAnomalySfEarned).add(pReward).toString();
@@ -1862,7 +819,7 @@ export function useGameEngine() {
           }
       }
 
-      // 3. Delay (200ms -> "Kısa" dediği için)
+      // 3. Delay (200ms -> "KÄ±sa" dediÄŸi iÃ§in)
       setTimeout(() => {
         let nextZone = localZone;
         let nextStep = localStep;
@@ -1956,7 +913,7 @@ export function useGameEngine() {
     
     // Fallback: If no unlock skill defined in miner, maybe default unlock?
     // For now, assume strict requirement. return false.
-    // User requested: "Miner içerisinde skill'i satın aldığımda".
+    // User requested: "Miner iÃ§erisinde skill'i satÄ±n aldÄ±ÄŸÄ±mda".
     // If I haven't added the skill to miners.json yet (e.g. miners 4-9), this will return false.
     // To prevent blocking access to miners 4-9 while I update json, I can add a fallback check?
     // "If no unlocker skill exists in definition, use old logic (miner owned > 0)"
@@ -1984,7 +941,7 @@ export function useGameEngine() {
         [skillId]: (prev[skillId] || 0) + 1,
       }));
 
-      // 📊 Stats: Track Skill Purchases
+      // ğŸ“Š Stats: Track Skill Purchases
       if (statsRef.current && statsRef.current.lifetime) {
           statsRef.current.lifetime.totalSkillsPurchased = (statsRef.current.lifetime.totalSkillsPurchased || 0) + 1;
       }
@@ -2208,7 +1165,7 @@ export function useGameEngine() {
     dpsRef.current = totalDps;
   }, [totalDps]);
 
-  // ✅ Ref for applyDamage to avoid stale closures in setInterval
+  // âœ… Ref for applyDamage to avoid stale closures in setInterval
   const applyDamageRef = useRef(applyDamage);
   useEffect(() => {
     applyDamageRef.current = applyDamage;
@@ -2254,7 +1211,7 @@ export function useGameEngine() {
     const id = setInterval(() => {
       const dps = dpsRef.current;
       
-      // 📊 Stats (Time) - ALWAYS TRACK TIME
+      // ğŸ“Š Stats (Time) - ALWAYS TRACK TIME
       const s = statsRef.current;
       if (s && s.lifetime) {
           s.lifetime.totalTimePlayed = (s.lifetime.totalTimePlayed || 0) + TICK_MS;
@@ -2273,7 +1230,7 @@ export function useGameEngine() {
 
       const dmg = dps * (TICK_MS / 1000);
 
-      // 📊 Stats (DPS Damage)
+      // ğŸ“Š Stats (DPS Damage)
       if (s && s.lifetime) {
           s.lifetime.totalDpsDamage = D(s.lifetime.totalDpsDamage).add(dmg).toString();
           s.lifetime.totalDamage = D(s.lifetime.totalDamage).add(dmg).toString();
@@ -2291,7 +1248,7 @@ export function useGameEngine() {
   }, []);
 
   useEffect(() => {
-    // Boss planet'e girince timer başlasın; çıkınca sıfırlansın
+    // Boss planet'e girince timer baÅŸlasÄ±n; Ã§Ä±kÄ±nca sÄ±fÄ±rlansÄ±n
     if (isBossPlanet) {
       setBossTimeMsLeft(30_000);
     } else {
@@ -2322,7 +1279,7 @@ export function useGameEngine() {
     setHp(newMax);
     setBossTimeMsLeft(30_000);
     
-    // 📊 Stats (Boss Failed)
+    // ğŸ“Š Stats (Boss Failed)
     const s = statsRef.current;
     if (s && s.lifetime) {
         s.lifetime.totalBossesFailed = (s.lifetime.totalBossesFailed || 0) + 1;
@@ -2349,7 +1306,7 @@ export function useGameEngine() {
           const cost = getBulkCost(def, lvl, multiplier);
           
           if (D(minerals).gte(cost)) {
-              // 📊 Stats
+              // ğŸ“Š Stats
               if (statsRef.current && statsRef.current.lifetime) {
                   const s = statsRef.current;
                   s.lifetime.totalGoldSpent = D(s.lifetime.totalGoldSpent).add(cost).toString();
@@ -2384,7 +1341,7 @@ export function useGameEngine() {
           }
       }
 
-      // ✅ optimistic update: UI hemen level artmış görsün
+      // âœ… optimistic update: UI hemen level artmÄ±ÅŸ gÃ¶rsÃ¼n
       setPendingOwnedMiners((prev) => {
         const base = Number(ownedMiners[minerId] || 0);
         const alreadyPending = Number(prev[minerId] || 0);
@@ -2392,7 +1349,7 @@ export function useGameEngine() {
       });
 
       dispatchEco({ type: "BUY_MINER", minerId, amount: multiplier });
-      dispatchEco({ type: "CHECK_MILESTONES" }); // ✅ Check unlock milestones
+      dispatchEco({ type: "CHECK_MILESTONES" }); // âœ… Check unlock milestones
 
       requestAnimationFrame(() => {
         buyLockRef.current = false;
@@ -2402,7 +1359,7 @@ export function useGameEngine() {
   );
 
   useEffect(() => {
-    // Reducer state güncellendiğinde optimistic layer'ı temizle
+    // Reducer state gÃ¼ncellendiÄŸinde optimistic layer'Ä± temizle
     if (Object.keys(pendingOwnedMiners).length) {
       setPendingOwnedMiners({});
     }
@@ -2410,12 +1367,12 @@ export function useGameEngine() {
   }, [ownedMiners]);
 
   useEffect(() => {
-    // Zaten hepsi açıksa çık
+    // Zaten hepsi aÃ§Ä±ksa Ã§Ä±k
     if (unlockedCount >= minersDef.length) return;
 
-    // Açılacak miner = unlockedCount (0-based)
-    // Kural: Miner (n+1) açılması için minerals >= baseCost(miner n)
-    // Başlangıçta 2 açık => 3. miner için miner[1] baseCost hedef.
+    // AÃ§Ä±lacak miner = unlockedCount (0-based)
+    // Kural: Miner (n+1) aÃ§Ä±lmasÄ± iÃ§in minerals >= baseCost(miner n)
+    // BaÅŸlangÄ±Ã§ta 2 aÃ§Ä±k => 3. miner iÃ§in miner[1] baseCost hedef.
     const prevIndex = unlockedCount - 1; // n
     if (prevIndex < 0) return;
 
@@ -2424,11 +1381,11 @@ export function useGameEngine() {
 
     if (threshold.lte(0)) return;
 
-    // ✅ anlık minerals yeterliyse unlockCount +1 (kalıcı)
+    // âœ… anlÄ±k minerals yeterliyse unlockCount +1 (kalÄ±cÄ±)
     if (D(minerals).gte(threshold)) {
       dispatchEco({ type: "UNLOCK_UP_TO", count: unlockedCount + 1 });
       
-      // 📊 Stats (Unlock) - Only if we actually increased unlock count
+      // ğŸ“Š Stats (Unlock) - Only if we actually increased unlock count
       if (statsRef.current && statsRef.current.lifetime) {
           statsRef.current.lifetime.totalMinersUnlocked = (statsRef.current.lifetime.totalMinersUnlocked || 0) + 1;
       }
@@ -2445,12 +1402,12 @@ export function useGameEngine() {
   const confirmStellarRewind = useCallback(() => {
      // 1. Generate Artifact
      const newArtifact = createArtifact(maxUnlockedZone);
-     console.log("Creating Artifact:", newArtifact);
+     if (__DEV__) console.log("Creating Artifact:", newArtifact);
      
      // 2. Dispatch
      dispatchEco({ type: "PERFORM_STELLAR_REWIND", amount: prestigeReward, artifact: newArtifact });
      
-     // 📊 Reset Rewind Stats
+     // ğŸ“Š Reset Rewind Stats
      if (statsRef.current) {
         // Update Lifetime
         if (statsRef.current.lifetime) {
@@ -2485,7 +1442,7 @@ export function useGameEngine() {
     const skill = minerDef.skills?.find((s) => s.id === skillId);
     if (!skill) return;
 
-    // ✅ SPECIAL: Prestige Skill Intercept
+    // âœ… SPECIAL: Prestige Skill Intercept
     if (skill.kind === "prestige_unlock") {
         setShowRewindModal(true);
         return;
@@ -2504,7 +1461,7 @@ export function useGameEngine() {
     if (ownedSkills?.[minerId]?.[skillId]) return;
 
     buyLockRef.current = true;
-    // 📊 Stats
+    // ğŸ“Š Stats
     if (statsRef.current && statsRef.current.lifetime) {
         const s = statsRef.current;
         s.lifetime.totalGoldSpent = D(s.lifetime.totalGoldSpent).add(cost).toString();
@@ -2567,7 +1524,7 @@ export function useGameEngine() {
   const [showBigBangModal, setShowBigBangModal] = useState(false);
 
   const buyProtocol = useCallback((protocolId) => {
-      dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId }); // ✅ Fixed type match
+      dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId }); // âœ… Fixed type match
   }, []);
 
   // BIG BANG LOGIC
@@ -2648,7 +1605,7 @@ export function useGameEngine() {
 
               // Update Comet Time if Comet
               // Wait, strictly update on spawn or click? Usually spawn is enough to reset pity?
-              // User said "6 dakika içinde Comet gelmediyse". So reset on spawn.
+              // User said "6 dakika iÃ§inde Comet gelmediyse". So reset on spawn.
               if (type === "COMET") {
                   lastCometTimeRef.current = now;
               }
@@ -2715,6 +1672,47 @@ export function useGameEngine() {
       dispatchEco({ type: "EXTEND_MINERAL_BONUS", endTime: newEnd });
   }, [eco.mineralBonusEndTime]);
 
+  // 🏆 Achievements Watcher (Updates badge live)
+  const [unclaimedAchievements, setUnclaimedAchievements] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+        // Calculate count from Ref (fresh data)
+        const claimedList = eco.claimedAchievements || [];
+        let count = 0;
+        
+        for (const ach of achievementsDef) {
+            if (claimedList.includes(ach.id)) continue;
+
+            const keys = ach.statKey.split(".");
+            let val = statsRef.current;
+            for (const k of keys) {
+                val = val?.[k];
+                if (val === undefined) break;
+            }
+            
+            let numVal = 0;
+            if (typeof val === 'string') {
+                 numVal = D(val).toNumber();
+            } else {
+                 numVal = Number(val || 0);
+            }
+
+            if (numVal >= ach.threshold) {
+                count++;
+            }
+        }
+
+        setUnclaimedAchievements(prev => {
+            if (prev !== count) return count;
+            return prev;
+        });
+
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, [eco.claimedAchievements]); // Re-create if claimed list changes
+
   return {
     // visuals / stage
     currentPlanet,
@@ -2726,7 +1724,7 @@ export function useGameEngine() {
     zone,
     step,
     isBossPlanet,
-    isChest, // ✅ Exported for UI (e.g. show different sprite)
+    isChest, // âœ… Exported for UI (e.g. show different sprite)
 
     // combat
     maxHp,
@@ -2736,13 +1734,13 @@ export function useGameEngine() {
 
     // economy
     minerals,
-    eco, // ✅ Expose full eco state (needed for tags etc)
+    eco, // âœ… Expose full eco state (needed for tags etc)
     ownedMiners: {
       ...ownedMiners,
       ...pendingOwnedMiners,
     },
     uiStreak, // Exported for Combo UI
-    isIdle, // ✅ Exported for Mode Badge
+    isIdle, // âœ… Exported for Mode Badge
 
     ownedSkills,
     buyOrUpgradeMiner,
@@ -2800,8 +1798,8 @@ export function useGameEngine() {
     tagToast,
 
     // Idle State
-    isIdle, // ✅ Exposed
-    hasIdleBonus: totals.idleDpsMult > 1.01, // ✅ Epsilon check to avoid false positives
+    isIdle, // âœ… Exposed
+    hasIdleBonus: totals.idleDpsMult > 1.01, // âœ… Epsilon check to avoid false positives
     stellarFragments: eco.stellarFragments,
     
     // Cosmic Protocols
@@ -2824,9 +1822,10 @@ export function useGameEngine() {
     upgradeProtocol: (id, amount = 1) => dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId: id, amount }),
 
     // Statistics
-    stats: statsRef.current, // 📊
-    getStats: () => statsRef.current, // ✅ Getter for fresh ref access
-    claimedAchievements: eco.claimedAchievements || [], // 🏆 Exposed for UI
+    stats: statsRef.current, // ğŸ“Š
+    getStats: () => statsRef.current, // âœ… Getter for fresh ref access
+    claimedAchievements: eco.claimedAchievements || [], // ğŸ† Exposed for UI
+    unclaimedAchievements, // 🔔 EXPOSED BADGE COUNT
 
     // Dev Tools Exports
     dispatchEco,
@@ -2835,8 +1834,8 @@ export function useGameEngine() {
     setMaxUnlockedZone,
     
     // Big Bang Exports
-    cosmicEssence: eco.cosmicEssence, // ✅ From eco
-    universalConstantsLevels: eco.universalConstantsLevels, // ✅ From eco
+    cosmicEssence: eco.cosmicEssence, // âœ… From eco
+    universalConstantsLevels: eco.universalConstantsLevels, // âœ… From eco
     performBigBang,
     buyUniversalConstant,
     showBigBangModal,
@@ -2849,7 +1848,7 @@ export function useGameEngine() {
 
     // SHARD SHOP
     shards: eco.shards,
-    claimedAchievements: eco.claimedAchievements || [], // 🏆 Exposed
+    claimedAchievements: eco.claimedAchievements || [], // ğŸ† Exposed
     droneCount: eco.droneCount || 0,
     watchAdForShards: (amount = 25) => dispatchEco({ type: "GAIN_SHARDS", amount }),
     buyShopItem: (id, cost, payload) => dispatchEco({ type: "BUY_SHOP_ITEM", id, cost, payload }),

@@ -35,7 +35,6 @@ function rollAffixCount() {
 }
 
 // Base Scalars for Affix Types (at Level 1)
-// Base Scalars for Affix Types (at Level 1)
 const AFFIX_SCALARS = {
   [ARTIFACT_AFFIX.ANCIENT_POWER_ALL]: 0.05, // % Rebalanced: 5%
   [ARTIFACT_AFFIX.IDLE_DPS]: 0.10, // % Rebalanced: 10%
@@ -94,7 +93,6 @@ export function createArtifact(bestZone) {
 
   return {
     id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
-    rarity,
     rarity,
     level,
     // upgradeLevel removed, using unified level

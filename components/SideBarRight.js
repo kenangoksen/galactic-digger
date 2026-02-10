@@ -152,7 +152,6 @@ export default function SideBarRight({
             <View style={{ marginTop: 8 }}>
                  <Pressable 
                     onPress={() => {
-                        console.log("DevTools Button Pressed!");
                         onDevTools && onDevTools();
                     }} 
                     style={[styles.btnBase, { width: 36, height: 36 }]}
@@ -210,9 +209,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 18,
   },
 
-  btnWrap: {
-      // Normal wrapper
-  },
+  btnWrap: {},
   btnBase: {
     width: 42,
     height: 42,

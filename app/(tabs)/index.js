@@ -1,5 +1,5 @@
 // app/(tabs)/index.js
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 
 import BottomNav from "../../components/BottomNav";
@@ -23,7 +23,6 @@ import { useStageAnims } from "../../game/useStageAnims";
 import GameStage from "../../components/game/GameStage";
 import MinersSheetHost from "../../components/game/MinersSheetHost";
 
-import achievementsDef from "../../assets/config/achievements.json"; // 🏆
 import minersDef from "../../assets/config/miners.json";
 import ArtifactsSheet from "../../components/ArtifactsSheet"; // 🏆
 import BigBangSheet from "../../components/BigBangSheet";
@@ -35,13 +34,10 @@ import SideBarRight from "../../components/SideBarRight";
 import BigBangModal from "../../components/ui/BigBangModal";
 import StellarRewindModal from "../../components/ui/StellarRewindModal";
 import ZoneSwitcher from "../../components/ZoneSwitcher";
-import { D } from "../../game/bn";
 
 const BG_IMG = require("../../assets/images/backgrounds/bg_space_full.png");
 
 export default function HomeScreen() {
-  const onPressStub = (name) =>
-    Alert.alert(name, "Şimdilik UI. Mekanikler burada.");
 
   const [showSettings, setShowSettings] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -54,41 +50,8 @@ export default function HomeScreen() {
 
   const engine = useGameEngine();
 
-  // 🔄 Refresh Badge Interval
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-      const interval = setInterval(() => setTick(t => t + 1), 2000); // 2s refresh for badge
-      return () => clearInterval(interval);
-  }, []);
-
-  // 🏆 Calculate Unclaimed Achievements (FRESH on every tick)
-  const freshStats = engine.getStats ? engine.getStats() : (engine.stats || {});
-  const claimedAchList = engine.claimedAchievements || [];
-  
-  // Force tick to be consumed so React keeps re-rendering
-  void tick;
-  
-  const unclaimedCount = achievementsDef.filter(ach => {
-      // Check if already claimed
-      if (claimedAchList.includes(ach.id)) return false;
-
-      // Check if completed
-      const keys = ach.statKey.split(".");
-      let val = freshStats;
-      for (const k of keys) {
-          val = val?.[k];
-      }
-       
-      // Safe number conversion
-      let numVal = 0;
-      if (typeof val === 'string') {
-           numVal = D(val).toNumber();
-      } else {
-           numVal = Number(val || 0);
-      }
-
-      return numVal >= ach.threshold;
-  }).length;
+  // 🏆 Badge now comes from engine directly (live update)
+  const unclaimedCount = engine.unclaimedAchievements || 0;
 
   const handleReset = () => {
     Alert.alert(
@@ -536,7 +499,7 @@ export default function HomeScreen() {
 
               <BottomNav
                 onMiners={handleMiners}
-                onPlanets={() => onPressStub("PLANETS")}
+
                 onSkills={handleSkills} // ✅ Connected
                 onGem={handleShop} // ✅ Link to Shop
                 onQuests={handleExplorers} // 🚀 Explorers

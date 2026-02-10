@@ -106,7 +106,6 @@ export default function TopBar(props) {
 }
 
 function Stat({ icon, value, onPress }) {
-// ... existing Stat component ...
 
   return (
     <Pressable onPress={onPress} style={styles.stat}>

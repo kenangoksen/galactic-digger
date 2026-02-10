@@ -1,5 +1,4 @@
 export const DAMAGE_CONFIG = {
-  // ... existing ...
   BASE_CLICK_DMG: 1,
   CLICK_SCALE: 1.05,
   TAP_FROM_DPS_RATIO: 0.035, // 3.5% of DPS converts to Click Damage
