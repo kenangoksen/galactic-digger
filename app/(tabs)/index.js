@@ -381,6 +381,7 @@ export default function HomeScreen() {
 
               <GameStage
                 planetImg={engine.currentPlanetImg}
+                planetData={engine.currentPlanetData}
                 stageTranslateY={stageTranslateY}
                 stageScale={stageScale}
                 sheetProgress={sheetProgress}

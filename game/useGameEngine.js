@@ -1,19 +1,19 @@
-﻿
-// game/useGameEngine.js
+﻿// game/useGameEngine.js
 // Modular game engine hook. Reducer and helpers extracted to separate modules.
 
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useReducer,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
 } from "react";
 
 import achievementsDef from "../assets/config/achievements.json";
 import minersDef from "../assets/config/miners.json";
 import planets from "../assets/config/planets.json";
+import { PLANET_ANIM_META, PLANET_SPRITES } from "../assets/registry/planetSprites";
 
 import { AppState } from "react-native";
 import { createArtifact, getArtifactBonuses } from "./artifacts/artifactService";
@@ -112,14 +112,10 @@ export function useGameEngine() {
       sprite: "planet_01.png",
     };
 
-  const PLANET_IMAGES = useMemo(() => ({
-    "planet_01.png": require("../assets/images/sprites/planets/planet_01.png"),
-    "planet_02.png": require("../assets/images/sprites/planets/planet_02.png"),
-    "planet_03.png": require("../assets/images/sprites/planets/planet_03.png"),
-    "planet_04.png": require("../assets/images/sprites/planets/planet_04.png"),
-  }), []);
-
-  const currentPlanetImg = PLANET_IMAGES[currentPlanet.sprite] || PLANET_IMAGES["planet_01.png"];
+  const currentPlanetImg = PLANET_SPRITES[currentPlanet.sprite] || PLANET_SPRITES["planet_01.png"];
+  const currentPlanetData = currentPlanet.animated
+    ? { animated: true, ...PLANET_ANIM_META[currentPlanet.sprite] }
+    : null;
 
   // --- MULTIPLIER HELPERS (Moved Up) ---
   const getDpsMultiplier = useCallback(() => {
@@ -1717,6 +1713,7 @@ export function useGameEngine() {
     // visuals / stage
     currentPlanet,
     currentPlanetImg,
+    currentPlanetData, // 🎞️ Animation metadata (null for static)
 
     // progress
     mode,

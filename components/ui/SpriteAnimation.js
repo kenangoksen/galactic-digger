@@ -5,13 +5,17 @@ import { Image, View } from "react-native";
 /**
  * Animated Sprite Sheet Component
  * 
- * Assumes a HORIZONTAL strip sprite sheet by default.
- * If you have a grid, you can extend logic to handle rows/cols.
+ * Supports both HORIZONTAL STRIP and GRID sprite sheets.
+ * 
+ * For horizontal strips: set frameCount (cols=frameCount implicitly)
+ * For grids: set cols + rows (frameCount = cols * rows)
  * 
  * @param {Object} source - Image require(...)
  * @param {number} frameWidth - Width of a single frame
  * @param {number} frameHeight - Height of a single frame
  * @param {number} frameCount - Total number of frames
+ * @param {number} cols - Columns in the sprite sheet (default: frameCount = horizontal strip)
+ * @param {number} rows - Rows in the sprite sheet (default: 1)
  * @param {number} fps - Frames per second (default: 12)
  * @param {boolean} loop - Whether to loop (default: true)
  * @param {boolean} playing - Control playback (default: true)
@@ -23,18 +27,23 @@ export default function SpriteAnimation({
   frameHeight,
   frameCount,
   framesToPlay, // Optional: Limit playback to first N frames
+  cols,  // NEW: grid columns (default = frameCount for horizontal strip)
+  rows,  // NEW: grid rows (default = 1)
   fps = 12,
   loop = true,
   playing = true,
-  enableSafetyClip = false, // Deprecated in favor of explicit trim, but kept for compatibility
-  trimAmount = 0, // Pixels to crop from BOTH sides
+  enableSafetyClip = false,
+  trimAmount = 0,
   style,
 }) {
   const [frameIndex, setFrameIndex] = useState(0);
   const frameRef = useRef(0);
   const timerRef = useRef(null);
   
-  // Default to playing all frames if not specified
+  // Grid support: default to horizontal strip
+  const sheetCols = cols || frameCount;
+  const sheetRows = rows || 1;
+  
   const limit = framesToPlay || frameCount;
 
   useEffect(() => {
@@ -65,12 +74,13 @@ export default function SpriteAnimation({
   }, [playing, fps, limit, loop]);
 
   // Determine trim
-  // If enableSafetyClip is true but no trimAmount, default to 1.
-  // If trimAmount is > 0, use it.
   const effectiveTrim = trimAmount > 0 ? trimAmount : (enableSafetyClip ? 1 : 0);
-  
   const containerWidth = frameWidth - (effectiveTrim * 2);
   const offsetAdjustment = -effectiveTrim;
+
+  // Grid frame position: col = frameIndex % cols, row = floor(frameIndex / cols)
+  const col = frameIndex % sheetCols;
+  const row = Math.floor(frameIndex / sheetCols);
 
   return (
     <View style={[
@@ -83,11 +93,13 @@ export default function SpriteAnimation({
     ]}>
       <Image
         source={source}
+        resizeMode="stretch"
         style={{
-            width: frameWidth * frameCount, 
-            height: frameHeight,
-            // Shift image left to show current frame + clip offset
-            transform: [{ translateX: -(frameIndex * frameWidth) + offsetAdjustment }],
+            position: "absolute",
+            top: -(row * frameHeight),
+            left: -(col * frameWidth) + offsetAdjustment,
+            width: frameWidth * sheetCols, 
+            height: frameHeight * sheetRows,
         }}
       />
     </View>

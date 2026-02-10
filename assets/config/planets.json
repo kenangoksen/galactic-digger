@@ -1,6 +1,42 @@
 [
-  { "id": "planet_01", "name": "Dusty Rock", "sprite": "planet_01.png" },
-  { "id": "planet_02", "name": "Candy Crater", "sprite": "planet_02.png" },
-  { "id": "planet_03", "name": "Lava Puff", "sprite": "planet_03.png" },
-  { "id": "planet_04", "name": "Frost Pebble", "sprite": "planet_04.png" }
+  {
+    "id": "planet_01",
+    "name": "Dusty Rock",
+    "sprite": "planet_01.png"
+  },
+  {
+    "id": "planet_02",
+    "name": "Candy Crater",
+    "sprite": "planet_02.png"
+  },
+  {
+    "id": "planet_03",
+    "name": "Lava Puff",
+    "sprite": "planet_03.png"
+  },
+  {
+    "id": "planet_04",
+    "name": "Frost Pebble",
+    "sprite": "planet_04.png"
+  },
+  {
+    "id": "planet_05",
+    "name": "Neon Void",
+    "sprite": "planet_05.png"
+  },
+  {
+    "id": "planet_06",
+    "name": "Crystal Moon",
+    "sprite": "planet_06.png"
+  },
+  {
+    "id": "planet_07",
+    "name": "Iron Giant",
+    "sprite": "planet_07.png"
+  },
+  {
+    "id": "planet_08",
+    "name": "Solar Drift",
+    "sprite": "planet_08.png"
+  }
 ]

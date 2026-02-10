@@ -117,29 +117,67 @@ export default function GameStage({
           })}
 
           {/* planet */}
-          <Animated.Image
-            source={planetImg}
-            style={[
-              styles.planet,
-              {
-                transform: [
-                  {
-                    scaleX: planetSquash.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1.1, 1.035],
-                    }),
-                  },
-                  {
-                    scaleY: planetSquash.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1.1, 0.975],
-                    }),
-                  },
-                ],
-              },
-            ]}
-            resizeMode="contain"
-          />
+          {planetData?.animated ? (
+            <Animated.View
+              style={[
+                styles.planet,
+                {
+                  overflow: "hidden",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: [
+                    {
+                      scaleX: planetSquash.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1.1, 1.035],
+                      }),
+                    },
+                    {
+                      scaleY: planetSquash.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1.1, 0.975],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <SpriteAnimation
+                source={planetImg}
+                frameWidth={256}
+                frameHeight={256}
+                frameCount={planetData.frameCount}
+                cols={planetData.cols}
+                rows={planetData.rows}
+                fps={planetData.fps || 6}
+                style={{ width: 256, height: 256 }}
+              />
+            </Animated.View>
+          ) : (
+            <Animated.Image
+              source={planetImg}
+              style={[
+                styles.planet,
+                {
+                  transform: [
+                    {
+                      scaleX: planetSquash.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1.1, 1.035],
+                      }),
+                    },
+                    {
+                      scaleY: planetSquash.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1.1, 0.975],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+              resizeMode="contain"
+            />
+          )}
 
           {/* =======================
               HP BAR (planet altı)
