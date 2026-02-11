@@ -31,9 +31,11 @@ import ExplorersSheet from "../../components/ExplorersSheet"; // 🚀
 import ShardShopSheet from "../../components/ShardShopSheet";
 import SideBarLeft from "../../components/SideBarLeft";
 import SideBarRight from "../../components/SideBarRight";
+import SyndicateSheet from "../../components/syndicate/SyndicateSheet";
 import BigBangModal from "../../components/ui/BigBangModal";
 import StellarRewindModal from "../../components/ui/StellarRewindModal";
 import ZoneSwitcher from "../../components/ZoneSwitcher";
+import useSyndicate from "../../game/syndicate/useSyndicate";
 
 const BG_IMG = require("../../assets/images/backgrounds/bg_space_full.png");
 
@@ -47,8 +49,10 @@ export default function HomeScreen() {
   const [showDevTools, setShowDevTools] = useState(false);
   const [selectedExplorer, setSelectedExplorer] = useState(null); // For quest selection
   const [questOptions, setQuestOptions] = useState([]); // 4 quest options
+  const [showSyndicate, setShowSyndicate] = useState(false); // ⚡ Syndicate
 
   const engine = useGameEngine();
+  const syndicateHook = useSyndicate(engine.eco?.stellarFragmentsSpentLifetime || 0);
 
   // 🏆 Badge now comes from engine directly (live update)
   const unclaimedCount = engine.unclaimedAchievements || 0;
@@ -495,7 +499,7 @@ export default function HomeScreen() {
                 onAchievements={() => setShowAchievements(true)} 
                 notificationCount={unclaimedCount} // 🔔 Badge
                 onArtifacts={handleArtifacts} 
-                onClan={() => console.log("Clan")}
+                onClan={() => setShowSyndicate(true)}
               />
 
               <BottomNav
@@ -627,6 +631,14 @@ export default function HomeScreen() {
         onClose={() => setShowAchievements(false)}
         engine={engine} // ✅ Pass shared engine instance
       />
+
+    {/* ⚡ Syndicate Panel */}
+    <SyndicateSheet
+      visible={showSyndicate}
+      onClose={() => setShowSyndicate(false)}
+      syndicateHook={syndicateHook}
+      onAddShards={(amount) => engine.dispatchEco({ type: "GAIN_SHARDS", amount })}
+    />
 
     <DevToolsModal 
       visible={showDevTools} 

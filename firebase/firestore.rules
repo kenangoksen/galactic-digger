@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ─── PUBLIC ACCESS (Guest Mode) ───
+    // Since we are using local device IDs without Firebase Auth,
+    // we must allow public read/write.
+    
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    
+    match /syndicates/{syndicateId} {
+      allow read, write: if true;
+      
+      match /raids/{raidId} {
+        allow read, write: if true;
+      }
+    }
+    
+    match /leaderboard/{period} {
+      allow read: if true;
+      allow write: if false; // Server only
+    }
+  }
+}
