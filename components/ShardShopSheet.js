@@ -2,7 +2,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import NiceModal from "./ui/NiceModal";
 
 // ASSETS
 const SHARD_ICON = null; // Placeholder to prevent crash
@@ -86,22 +87,45 @@ export default function ShardShopSheet({
     const [showTimeModal, setShowTimeModal] = useState(false);
     const [showIapModal, setShowIapModal] = useState(false);
 
+    // Modal State
+    const [modal, setModal] = useState({
+        visible: false,
+        title: "",
+        message: "",
+        type: "info",
+        onConfirm: null,
+        confirmText: "OK",
+        cancelText: "Cancel",
+    });
+
+    const showModal = (title, message, type = "info", onConfirm = null, confirmText = "OK", cancelText = "Cancel") => {
+        setModal({
+            visible: true,
+            title,
+            message,
+            type,
+            onConfirm,
+            confirmText,
+            cancelText,
+        });
+    };
+
     // Helper for IAP
     const handleIapBuy = (pack) => {
-        Alert.alert(
+        showModal(
             "PURCHASE (MOCK)",
             `Spend ${pack.price} for ${pack.shards} Shards?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                { 
-                    text: "BUY", 
-                    onPress: () => {
-                        watchAdForShards(pack.shards); 
-                        Alert.alert("SUCCESS", `You received ${pack.shards} Shards!`);
-                        setShowIapModal(false);
-                    } 
-                }
-            ]
+            "question",
+            () => {
+                watchAdForShards(pack.shards); 
+                setModal(prev => ({ ...prev, visible: false }));
+                setTimeout(() => {
+                    showModal("SUCCESS", `You received ${pack.shards} Shards!`, "success");
+                }, 300);
+                setShowIapModal(false);
+            },
+            "BUY",
+            "Cancel"
         );
     };
 
@@ -109,32 +133,31 @@ export default function ShardShopSheet({
     const buyTimelapse = (hours, cost) => {
         if (__DEV__) console.log("buyTimelapse called with:", { hours, cost, zone, step, totalDps }); // 🔍 Debug Log
         if (shards < cost) {
-            Alert.alert("INSUFFICIENT", "Not enough Shards!");
+            showModal("INSUFFICIENT", "Not enough Shards!", "error");
             return;
         }
         if (totalDps <= 0) {
-            Alert.alert("ZERO DPS", "You need DPS to warp time!");
+            showModal("ZERO DPS", "You need DPS to warp time!", "error");
             return;
         }
-        Alert.alert(
+        
+        showModal(
             "CONFIRM TIME WARP",
             `Warp ${hours} Hours for ${cost} Shards?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "WARP",
-                    onPress: () => {
-                        const payload = { 
-                            seconds: hours * 3600, 
-                            currentDps: totalDps,
-                            currentZone: zone,
-                            currentStep: step 
-                        };
-                        buyShopItem(`timelapse_${hours}h`, cost, payload);
-                        setShowTimeModal(false);
-                    }
-                }
-            ]
+            "question",
+            () => {
+                const payload = { 
+                    seconds: hours * 3600, 
+                    currentDps: totalDps,
+                    currentZone: zone,
+                    currentStep: step 
+                };
+                buyShopItem(`timelapse_${hours}h`, cost, payload);
+                setShowTimeModal(false);
+                setModal(prev => ({ ...prev, visible: false }));
+            },
+            "WARP",
+            "Cancel"
         );
     };
 
@@ -146,24 +169,22 @@ export default function ShardShopSheet({
 
         if (item.type === "FREE") {
             // Ad Flow
-            Alert.alert(
+            showModal(
                 "WATCH AD?",
                 "Watch a short video to earn +25 Shards?",
-                [
-                    { text: "Cancel", style: "cancel" },
-                    { 
-                        text: "WATCH", 
-                        onPress: () => {
-                            setIsLoadingAd(true);
-                            // Mock 2s
-                            setTimeout(() => {
-                                watchAdForShards(25);
-                                setIsLoadingAd(false);
-                                Alert.alert("REWARD", "You received +25 Shards!");
-                            }, 2000);
-                        } 
-                    }
-                ]
+                "question",
+                () => {
+                    setModal(prev => ({ ...prev, visible: false }));
+                    setIsLoadingAd(true);
+                    // Mock 2s
+                    setTimeout(() => {
+                        watchAdForShards(25);
+                        setIsLoadingAd(false);
+                        showModal("REWARD", "You received +25 Shards!", "success");
+                    }, 2000);
+                },
+                "WATCH",
+                "Cancel"
             );
             return;
         }
@@ -180,28 +201,26 @@ export default function ShardShopSheet({
 
         // Cost Check
         if (shards < cost) {
-            Alert.alert("INSUFFICIENT SHARDS", `You need ${cost} Shards.`);
+            showModal("INSUFFICIENT SHARDS", `You need ${cost} Shards.`, "error");
             return;
         }
 
         // Confirm
-        Alert.alert(
+        showModal(
             "CONFIRM PURCHASE",
             `Buy ${item.name} for ${cost} Shards?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                { 
-                    text: "BUY", 
-                    onPress: () => {
-                        // Payload prep
-                        let payload = {};
-                        if (item.id === "pack_tags") payload = { amount: 5 };
-                        if (item.id === "pack_fragments") payload = { amount: 10 };
+            "question",
+            () => {
+                // Payload prep
+                let payload = {};
+                if (item.id === "pack_tags") payload = { amount: 5 };
+                if (item.id === "pack_fragments") payload = { amount: 10 };
 
-                        buyShopItem(item.id, cost, payload);
-                    } 
-                }
-            ]
+                buyShopItem(item.id, cost, payload);
+                setModal(prev => ({ ...prev, visible: false }));
+            },
+            "BUY",
+            "Cancel"
         );
     };
 
@@ -413,6 +432,18 @@ export default function ShardShopSheet({
                     </View>
                 </View>
             )}
+
+            {/* NiceModal */}
+            <NiceModal 
+                visible={modal.visible}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                onConfirm={modal.onConfirm}
+                confirmText={modal.confirmText}
+                cancelText={modal.cancelText}
+                onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+            />
         </View>
     );
 }

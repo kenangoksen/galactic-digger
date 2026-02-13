@@ -3,11 +3,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import {
     ActivityIndicator,
-    Modal,
     Pressable,
     StyleSheet,
     Text,
-    View,
+    View
 } from "react-native";
 import { fmtD } from "../game/bn";
 
@@ -40,8 +39,8 @@ export default function WelcomeBackModal({
   };
 
   return (
-    <Modal transparent animationType="fade" visible={visible}>
-      <View style={styles.overlay}>
+    <View style={[styles.overlay, StyleSheet.absoluteFill, { zIndex: 50 }]}>
+      <View style={styles.overlayInner}>
         <View style={styles.card}>
           <LinearGradient
             colors={["#1e293b", "#0f172a"]}
@@ -172,7 +171,7 @@ export default function WelcomeBackModal({
           </LinearGradient>
         </View>
       </View>
-    </Modal>
+    </View>
   );
 }
 

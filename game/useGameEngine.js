@@ -2,12 +2,12 @@
 // Modular game engine hook. Reducer and helpers extracted to separate modules.
 
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useReducer,
+    useRef,
+    useState,
 } from "react";
 
 import achievementsDef from "../assets/config/achievements.json";
@@ -44,6 +44,23 @@ export function useGameEngine() {
   const [isChest, setIsChest] = useState(false); // ğŸ“¦ Treasure Chest State
   
 
+
+
+  // Syndicate Bonuses
+  const [specialty, setSpecialty] = useState(null);
+  const [specialtyLevel, setSpecialtyLevel] = useState(0);
+
+  useEffect(() => {
+    // Dynamic import to avoid cycles
+    import("./syndicate/syndicateService").then(({ getUserProfile }) => {
+        getUserProfile().then(p => {
+            if (p) {
+                setSpecialty(p.specialty);
+                setSpecialtyLevel(p.specialtyLevel || 0); 
+            }
+        }).catch(() => {});
+    });
+  }, []);
 
   // Auto-update maxUnlockedZone if we are somehow ahead of it
   useEffect(() => {
@@ -99,10 +116,11 @@ export function useGameEngine() {
     dispatchEco({ type: "RESET_GAME" });
   }, []);
 
-  // âœ… Planet visual â€” BURAYA DOKUNMADIM (senin sistem aynen)
+  // 🪐 Planet visual — Pseudo-random based on GLOBAL STAGE (Zone + Step)
   const planetCount = planets?.length || 1;
   const globalStageIndex = (zone - 1) * 10 + (step - 1);
-  const planetIndex = planetCount > 0 ? globalStageIndex % planetCount : 0;
+  // Use a large prime (9973) to scatter the index so 1,2,3... steps map to random-looking planets
+  const planetIndex = planetCount > 0 ? ((globalStageIndex * 9973) % planetCount) : 0;
   const unlockedCount = eco.unlockedCount || 2;
 
   const currentPlanet = planets?.[planetIndex] ||
@@ -160,8 +178,11 @@ export function useGameEngine() {
       dpsToTapMilestonesUnlocked: eco.dpsToTapMilestonesUnlocked, // âœ… Progress
       mineralBonusActive: Date.now() < (eco.mineralBonusEndTime || 0), // âœ… Ad Bonus Status
       activeArtifacts: eco.artifacts?.active?.map(id => eco.artifacts.byId[id]).filter(Boolean), // âœ… Artifacts
+      // Syndicate
+      specialty,
+      specialtyLevel
     });
-  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime, eco.stellarFragments, eco.dpsToTapMilestonesUnlocked, eco.mineralBonusEndTime, eco.artifacts]);
+  }, [ownedMiners, ownedSkills, zone, eco.cosmicProtocols, eco.tagsByMinerId, eco.universalConstantsLevels, eco.stellarFragmentsSpentLifetime, eco.stellarFragments, eco.dpsToTapMilestonesUnlocked, eco.mineralBonusEndTime, eco.artifacts, specialty, specialtyLevel]);
 
   const tapDamageBase = totals.tapDamage;
   const totalClickDamage = D(tapDamageBase).mul(getTapMultiplier()).toNumber();
@@ -359,7 +380,7 @@ export function useGameEngine() {
       let farmZone = currentZone;
       let farmStep = currentStep;
       
-      while (remainingSeconds > 0 && iterations < 1000) {
+      while (remainingSeconds > 0 && iterations < 10000) {
         iterations++;
         
         const isBoss = currentZone % 5 === 0;

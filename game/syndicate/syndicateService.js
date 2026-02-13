@@ -3,8 +3,10 @@
 // Conforms to user schema: federations, specialty, titanFragments, federationPower
 
 import {
+    arrayRemove,
     arrayUnion,
     collection,
+    deleteDoc,
     doc,
     getDoc,
     getDocs,
@@ -233,13 +235,16 @@ export async function levelUpSpecialty() {
   const user = await getUserProfile(userId);
   if (!user?.specialty) throw new Error("No specialty chosen");
   
-  const cost = (user.specialtyLevel + 1) * 100; 
-  if ((user.titanFragments || 0) < cost) throw new Error("Not enough Titan Fragments");
+  // Exponential Cost: 100 * 1.5^Level
+  const currentLvl = user.specialtyLevel || 0;
+  const cost = Math.floor(100 * Math.pow(1.5, currentLvl)); 
+  
+  if ((user.titanFragments || 0) < cost) throw new Error(`Not enough Titan Fragments (Need ${cost})`);
   
   await updateUserProfile(userId, {
     specialtyLevel: increment(1),
     titanFragments: increment(-cost),
   });
   
-  return { newLevel: user.specialtyLevel + 1, cost };
+  return { newLevel: currentLvl + 1, cost };
 }

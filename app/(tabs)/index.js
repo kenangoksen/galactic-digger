@@ -1,6 +1,6 @@
 // app/(tabs)/index.js
 import { useCallback, useState } from "react";
-import { Alert, Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 
 import BottomNav from "../../components/BottomNav";
 import SettingsSheetHost from "../../components/game/SettingsSheetHost";
@@ -11,6 +11,7 @@ import TopBar from "../../components/TopBar";
 import AchievementsModal from "../../components/ui/AchievementsModal"; // 🏆 New
 import ActiveBuffTray from "../../components/ui/ActiveBuffTray"; // ✅ New (Retry)
 import DevToolsModal from "../../components/ui/DevToolsModal";
+import NiceModal from "../../components/ui/NiceModal";
 import QuestSelectionModal from "../../components/ui/QuestSelectionModal"; // 🚀
 import StatisticsModal from "../../components/ui/StatisticsModal"; // 📊
 import TimeWarpResultModal from "../../components/ui/TimeWarpResultModal"; // ⏳
@@ -51,6 +52,29 @@ export default function HomeScreen() {
   const [questOptions, setQuestOptions] = useState([]); // 4 quest options
   const [showSyndicate, setShowSyndicate] = useState(false); // ⚡ Syndicate
 
+  // Modal State
+  const [modal, setModal] = useState({
+      visible: false,
+      title: "",
+      message: "",
+      type: "info",
+      onConfirm: null,
+      confirmText: "OK",
+      cancelText: "Cancel",
+  });
+
+  const showModal = useCallback((title, message, type = "info", onConfirm = null, confirmText = "OK", cancelText = "Cancel") => {
+      setModal({
+          visible: true,
+          title,
+          message,
+          type,
+          onConfirm,
+          confirmText,
+          cancelText,
+      });
+  }, []);
+
   const engine = useGameEngine();
   const syndicateHook = useSyndicate(engine.eco?.stellarFragmentsSpentLifetime || 0);
 
@@ -58,20 +82,17 @@ export default function HomeScreen() {
   const unclaimedCount = engine.unclaimedAchievements || 0;
 
   const handleReset = () => {
-    Alert.alert(
+    showModal(
       "RESET GAME",
       "Are you sure? All progress, minerals, and miners will be lost forever.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "RESET",
-          style: "destructive",
-          onPress: () => {
-            engine.resetGame();
-            setShowSettings(false);
-          },
-        },
-      ]
+      "question",
+      () => {
+        engine.resetGame();
+        setShowSettings(false);
+        setModal(prev => ({ ...prev, visible: false }));
+      },
+      "RESET",
+      "Cancel"
     );
   };
 
@@ -140,62 +161,34 @@ export default function HomeScreen() {
 
   const handleShop = useCallback(() => {
     setVisibleContent("SHOP");
-    expandSheet();
+    setActiveSheet("SHOP"); // Force open immediately
     setShowExplorers(false); // Close Explorers
     setShowArtifacts(false); // Close Artifacts
-  }, [expandSheet]);
+  }, []);
 
   // DevTools Mock Helper
 
   // Offline Earnings Handler
   const handleOfflineCollect = useCallback((multiplier) => {
       if (multiplier === "SHOP_REQUEST") {
-          Alert.alert(
-              "Yetersiz Shard", 
+          showModal(
+              "Yetersiz Shard",
               "Maalesef yeterli Shard yok. Mağazaya gitmek ister misin?",
-              [
-                  { text: "Hayır", style: "cancel" },
-                  { 
-                      text: "Evet", 
-                      onPress: () => {
-                          engine.collectOfflineEarnings(1); // Collect free first? Or keep pending?
-                          // Usually we just open shop and let modal stay?
-                          // If modal stays, user can buy then click 3x again.
-                          // But `WelcomeBackModal` covers screen.
-                          // Let's close modal (collect x1) OR keep it?
-                          // User said: "Mağaza açılsın".
-                          // If we open shop sheet, it might be behind modal if modal is topmost?
-                          // WelcomeBackModal is Modal component (z-index high).
-                          // We might need to close WelcomeBackModal temporarily?
-                          // Or better: Just navigate to shop and let user handle it?
-                          // Given modal is `Modal`, we can't show sheet over it easily without closing it.
-                          // Let's just Open Shop and Close Modal (collecting 1x as penalty/default? or 0x wait?)
-                          // "Satın almak ister misiniz" -> If yes, we should let them buy.
-                          // If they buy, they need to come back.
-                          // Complex flow.
-                          // For now: Close modal (claim 1x) -> Open Shop.
-                          // "Mağazaya gitmek ister misin?" implied leaving this screen.
-                          
-                          // BETTER UX: Just open Shop Sheet. 
-                          // If `WelcomeBackModal` is a React Native `Modal`, it covers everything.
-                          // We can't show BottomSheet over RN Modal.
-                          // So we MUST close standard Modal.
-                          // To keep earnings, we must NOT collect.
-                          // But `offlineEarnings` state controls visibility.
-                          // We need a way to "Hide" modal but keep state?
-                          // Too complex for now.
-                          // Let's just Collect 1x and Open Shop.
-                          engine.collectOfflineEarnings(1); 
-                          handleShop();
-                      }
-                  }
-              ]
+              "question",
+              () => {
+                  // Do NOT cancel earnings. Just open shop.
+                  // The modal will hide temporarily because of the layout logic below
+                  handleShop();
+                  setModal(prev => ({ ...prev, visible: false }));
+              },
+              "Evet",
+              "Hayır"
           );
           return;
       }
       
       engine.collectOfflineEarnings(multiplier);
-  }, [engine, handleShop]);
+  }, [engine, handleShop, showModal]);
 
   return (
     <>
@@ -300,44 +293,39 @@ export default function HomeScreen() {
                         onPurchase={() => {
                             const cost = 40;
                             if (engine.eco.shards >= cost) {
-                                Alert.alert(
+                                showModal(
                                     "Recruit Explorer",
                                     `Recruit a new Explorer for ${cost} Shards?`,
-                                    [
-                                        { text: "Cancel", style: "cancel" },
-                                        { 
-                                            text: "Recruit", 
-                                            onPress: () => {
-                                                engine.dispatchEco({ type: "SPEND_SHARDS", amount: cost });
-                                                engine.dispatchEco({ type: "GRANT_EXPLORER" });
-                                            }
-                                        }
-                                    ]
+                                    "question",
+                                    () => {
+                                        engine.dispatchEco({ type: "SPEND_SHARDS", amount: cost });
+                                        engine.dispatchEco({ type: "GRANT_EXPLORER" });
+                                        setModal(prev => ({ ...prev, visible: false }));
+                                    },
+                                    "Recruit",
+                                    "Cancel"
                                 );
                             } else {
-                                Alert.alert("Insufficient Shards", `You need ${cost} Shards to recruit an Explorer.`);
+                                showModal("Insufficient Shards", `You need ${cost} Shards to recruit an Explorer.`, "error");
                             }
                         }}
                         currentShards={engine.eco.shards}
                         onDismiss={(explorer) => {
-                            Alert.alert(
+                            showModal(
                                 "Dismiss Explorer",
                                 `Are you sure you want to dismiss ${explorer.name}? They will be lost forever.`,
-                                [
-                                    { text: "Cancel", style: "cancel" },
-                                    { 
-                                        text: "Dismiss", 
-                                        style: "destructive",
-                                        onPress: () => {
-                                            engine.dispatchEco({ type: "DISMISS_EXPLORER", explorerId: explorer.id });
-                                            // Close quest selection if open for this explorer (cleanup)
-                                            if (selectedExplorer?.id === explorer.id) {
-                                                setSelectedExplorer(null);
-                                                setQuestOptions([]);
-                                            }
-                                        }
+                                "question",
+                                () => {
+                                    engine.dispatchEco({ type: "DISMISS_EXPLORER", explorerId: explorer.id });
+                                    // Close quest selection if open for this explorer (cleanup)
+                                    if (selectedExplorer?.id === explorer.id) {
+                                        setSelectedExplorer(null);
+                                        setQuestOptions([]);
                                     }
-                                ]
+                                    setModal(prev => ({ ...prev, visible: false }));
+                                },
+                                "Dismiss",
+                                "Cancel"
                             );
                         }}
                         onCollect={(explorer) => {
@@ -586,8 +574,9 @@ export default function HomeScreen() {
               />
 
               {/* Offline Earnings Modal */}
+              {/* Hide if Shop is open so user can interact with it */}
               <WelcomeBackModal
-                visible={!!engine.offlineEarnings}
+                visible={!!engine.offlineEarnings && !(activeSheet !== null && visibleContent === "SHOP")}
                 earnings={engine.offlineEarnings?.amount || 0}
                 seconds={engine.offlineEarnings?.seconds || 0}
                 avgDps={engine.offlineEarnings?.avgDps} // ✅ Pass
@@ -598,6 +587,26 @@ export default function HomeScreen() {
               />
               
               {/* Prestige Modal */}
+              <StellarRewindModal
+                 visible={!!engine.prestigePending}
+                 reward={engine.prestigePending?.reward || 0} 
+                 stats={engine.stats}
+                 onConfirm={() => engine.confirmPrestige()}
+                 onCancel={() => engine.cancelPrestige()}
+              />
+
+              {/* NiceModal */}
+              <NiceModal 
+                  visible={modal.visible}
+                  title={modal.title}
+                  message={modal.message}
+                  type={modal.type}
+                  onConfirm={modal.onConfirm}
+                  confirmText={modal.confirmText}
+                  cancelText={modal.cancelText}
+                  onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+              />
+
               <StellarRewindModal
                 visible={engine.showRewindModal}
                 rewardAmount={engine.prestigeReward || 0}
@@ -637,7 +646,9 @@ export default function HomeScreen() {
       visible={showSyndicate}
       onClose={() => setShowSyndicate(false)}
       syndicateHook={syndicateHook}
+      shards={engine.eco.shards} // ✅ Pass Local Shards
       onAddShards={(amount) => engine.dispatchEco({ type: "GAIN_SHARDS", amount })}
+      onSpendShards={(amount) => engine.dispatchEco({ type: "SPEND_SHARDS", amount })} // ✅ Spend Handler
     />
 
     <DevToolsModal 

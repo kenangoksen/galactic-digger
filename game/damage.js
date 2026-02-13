@@ -319,6 +319,9 @@ export function computeTotals({
   dpsToTapMilestonesUnlocked, // ✅ Progress
   mineralBonusActive, // ✅ Ad Bonus
   activeArtifacts, // ✅ Artifacts
+  // Syndicate
+  specialty,
+  specialtyLevel,
 }) {
     const totals = createEmptyTotals();
 
@@ -350,6 +353,17 @@ export function computeTotals({
         
         const shard = artBonuses[ARTIFACT_AFFIX.SHARD_FIND];
         if (shard) totals.shardFindChance += shard.toNumber();
+    }
+
+    // 0.5 SYNDICATE SPECIALTY BONUSES
+    if (specialty && specialtyLevel > 0) {
+        const bonus = specialtyLevel * 0.05; // 5% per level
+        if (specialty === "striker") {
+            totals.tapMult *= (1 + bonus);
+        } else if (specialty === "technician") {
+            totals.globalDpsMult *= (1 + bonus);
+        } 
+        // guardian is Raid Time, handled in raidService
     }
 
     // 1. Gather Modifiers First (Universal + Protocols) because they affect Base/Tags

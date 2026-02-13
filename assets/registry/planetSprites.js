@@ -10,9 +10,20 @@ export const PLANET_SPRITES = {
   "planet_06.png": require("../images/sprites/planets/planet_06.png"),
   "planet_07.png": require("../images/sprites/planets/planet_07.png"),
   "planet_08.png": require("../images/sprites/planets/planet_08.png"),
+  "planet_09.png": require("../images/sprites/planets/planet_09.png"),
+  "planet_10.png": require("../images/sprites/planets/planet_10.png"),
+  "planet_11.png": require("../images/sprites/planets/planet_11.png"),
+  "planet_12.png": require("../images/sprites/planets/planet_12.png"),
+  "planet_13.png": require("../images/sprites/planets/planet_13.png"),
+  "planet_14.png": require("../images/sprites/planets/planet_14.png"),
+  "planet_15.png": require("../images/sprites/planets/planet_15.png"),
+  "planet_16.png": require("../images/sprites/planets/planet_16.png"),
+  "planet_17.png": require("../images/sprites/planets/planet_17.png"),
+  "planet_18.png": require("../images/sprites/planets/planet_18.png"),
+  "planet_19.png": require("../images/sprites/planets/planet_19.png"),
 };
 
-export const PLANET_COUNT = 8;
+export const PLANET_COUNT = 19;
 
 // Animation metadata for animated sprite sheets
 export const PLANET_ANIM_META = {

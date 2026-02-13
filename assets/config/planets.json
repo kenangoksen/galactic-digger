@@ -38,5 +38,60 @@
     "id": "planet_08",
     "name": "Solar Drift",
     "sprite": "planet_08.png"
+  },
+  {
+    "id": "planet_09",
+    "name": "Plasma Core",
+    "sprite": "planet_09.png"
+  },
+  {
+    "id": "planet_10",
+    "name": "Shadow Reef",
+    "sprite": "planet_10.png"
+  },
+  {
+    "id": "planet_11",
+    "name": "Emerald Haze",
+    "sprite": "planet_11.png"
+  },
+  {
+    "id": "planet_12",
+    "name": "Crimson Dune",
+    "sprite": "planet_12.png"
+  },
+  {
+    "id": "planet_13",
+    "name": "Azure Depths",
+    "sprite": "planet_13.png"
+  },
+  {
+    "id": "planet_14",
+    "name": "Golden Rings",
+    "sprite": "planet_14.png"
+  },
+  {
+    "id": "planet_15",
+    "name": "Obsidian Peak",
+    "sprite": "planet_15.png"
+  },
+  {
+    "id": "planet_16",
+    "name": "Titanium Shell",
+    "sprite": "planet_16.png"
+  },
+  {
+    "id": "planet_17",
+    "name": "Quantum Flare",
+    "sprite": "planet_17.png"
+  },
+  {
+    "id": "planet_18",
+    "name": "Nebula Bloom",
+    "sprite": "planet_18.png"
+  },
+  {
+    "id": "planet_19",
+    "name": "Gravity Well",
+    "sprite": "planet_19.png"
   }
 ]

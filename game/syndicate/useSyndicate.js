@@ -5,12 +5,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ensureAuth, getCurrentUserId } from "../../firebase/firebaseConfig";
 import {
+  buyBonusFight,
+  calculateRaidCost,
   canAttemptRaid,
   claimRaidReward,
+  debugResetRaid,
   getRaidLeaderboard,
   getTodaysRaid,
+  getYesterdaysRaid,
   RAID_DURATION_MS,
-  submitRaidDamage,
+  submitRaidDamage
 } from "./raidService";
 import {
   chooseSpecialty,
@@ -67,8 +71,9 @@ export default function useSyndicate(stellarFragmentsLifetime = 0) {
              }
         };
 
+        // Extended timeout to 20s to reduce false positives on slow connections
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Connection timed out. Check internet or Firestore rules.")), 10000)
+            setTimeout(() => reject(new Error("Connection took too long. Please check your internet.")), 20000)
         );
 
         await Promise.race([initPromise(), timeoutPromise]);
@@ -118,9 +123,12 @@ export default function useSyndicate(stellarFragmentsLifetime = 0) {
       if (unsubRef.current) unsubRef.current();
       unsubRef.current = subscribeFederation(federationId, (updated) => {
         setFederation(updated);
+        // Also refresh raid data when federation updates (e.g. level up)
+        getTodaysRaid(federationId).then(setTodaysRaid);
       });
     } catch (err) {
-      setError(err.message);
+      console.warn("Refresh failed:", err);
+      // Don't set global error here to avoid blocking UI interaction for minor sync fails
     }
   }, []);
 
@@ -145,7 +153,6 @@ export default function useSyndicate(stellarFragmentsLifetime = 0) {
       await refreshFederationData(result.id);
       return result;
     } catch (err) {
-      setError(err.message);
       throw err;
     }
   }, [refreshFederationData]);
@@ -163,7 +170,6 @@ export default function useSyndicate(stellarFragmentsLifetime = 0) {
       setRaidStatus(null);
       setLeaderboard([]);
     } catch (err) {
-      setError(err.message);
       throw err;
     }
   }, []);
@@ -177,36 +183,54 @@ export default function useSyndicate(stellarFragmentsLifetime = 0) {
     }
   }, []);
 
+  const doGetHistory = useCallback(async () => {
+    if (!federation?.id) return null;
+    try {
+      return await getYesterdaysRaid(federation.id);
+    } catch(e) {
+      console.warn("History fetch failed", e);
+      return null;
+    }
+  }, [federation]);
+
+  // ─── Refresh User Profile ───
+  const refreshUserProfile = useCallback(async () => {
+      if (!userId) return;
+      const profile = await getUserProfile(userId);
+      setUserProfile({ id: userId, ...profile });
+  }, [userId]);
+
   const doUpdateName = useCallback(async (newName) => {
     if (!userId) throw new Error("Not authenticated");
     try {
       setError(null);
       await updateUserProfile(userId, { displayName: newName });
+      await refreshUserProfile();
     } catch (err) {
       setError(err.message);
       throw err;
     }
-  }, [userId]);
+  }, [userId, refreshUserProfile]);
 
   const doChooseSpecialty = useCallback(async (specialty) => {
     try {
       setError(null);
       await chooseSpecialty(specialty);
+      await refreshUserProfile();
     } catch (err) {
-      setError(err.message);
       throw err;
     }
-  }, []);
+  }, [refreshUserProfile]);
 
   const doLevelUpSpecialty = useCallback(async () => {
     try {
       setError(null);
       await levelUpSpecialty();
+      await refreshUserProfile();
     } catch (err) {
-      setError(err.message);
       throw err;
     }
-  }, []);
+  }, [refreshUserProfile]);
 
   const doSubmitRaid = useCallback(async (tapCount) => {
     if (!federation?.id) throw new Error("Not in a federation");
@@ -216,7 +240,6 @@ export default function useSyndicate(stellarFragmentsLifetime = 0) {
       await refreshFederationData(federation.id);
       return result;
     } catch (err) {
-      setError(err.message);
       throw err;
     }
   }, [federation, refreshFederationData]);
@@ -226,16 +249,41 @@ export default function useSyndicate(stellarFragmentsLifetime = 0) {
     try {
       setError(null);
       const rewards = await claimRaidReward(federation.id);
+      await refreshFederationData(federation.id);
+      await refreshUserProfile(); // Update shards/fragments balance
       return rewards;
     } catch (err) {
-      setError(err.message);
       throw err;
     }
-  }, [federation]);
+  }, [federation, refreshFederationData, refreshUserProfile]);
+
+  const doBuyBonusFight = useCallback(async () => {
+    if (!federation?.id) throw new Error("Not in a federation");
+    try {
+      setError(null);
+      const result = await buyBonusFight(federation.id);
+      await refreshFederationData(federation.id);
+      await refreshUserProfile(); // Update shards balance
+      return result;
+    } catch (err) {
+      throw err;
+    }
+  }, [federation, refreshFederationData, refreshUserProfile]);
 
   const refresh = useCallback(async () => {
     if (federation?.id) {
       await refreshFederationData(federation.id);
+    }
+  }, [federation, refreshFederationData]);
+
+  const doDebugReset = useCallback(async () => {
+    if (!federation?.id) return;
+    try {
+        await debugResetRaid(federation.id);
+        await refreshFederationData(federation.id);
+    } catch(e) {
+        console.error("Debug reset failed", e);
+        throw e;
     }
   }, [federation, refreshFederationData]);
 
@@ -269,11 +317,19 @@ export default function useSyndicate(stellarFragmentsLifetime = 0) {
     joinSyndicate: doJoinFederation,
     leaveSyndicate: doLeaveFederation,
     searchSyndicates: searchFederations,
+    getHistory: doGetHistory,
     chooseDoctrine: doChooseSpecialty,
     levelUpDoctrine: doLevelUpSpecialty,
     submitRaid: doSubmitRaid,
     claimReward: doClaimReward,
+    buyBonusFight: doBuyBonusFight,
+    
+    // DEBUG
+    debugResetRaid: doDebugReset,
+    
     updateName: doUpdateName,
+    // Utilities
+    calculateRaidCost,
     refresh,
   };
 }

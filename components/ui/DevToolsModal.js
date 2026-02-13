@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import {
-    Alert,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -10,10 +9,34 @@ import {
     TextInput,
     View
 } from "react-native";
+import NiceModal from "./NiceModal";
 
 export default function DevToolsModal({ visible, onClose, engine }) {
   if (__DEV__) console.log("DevToolsModal Render. Visible:", visible);
   const [warpZone, setWarpZone] = useState("");
+  
+  // Modal State
+  const [modal, setModal] = useState({
+      visible: false,
+      title: "",
+      message: "",
+      type: "info",
+      onConfirm: null,
+      confirmText: "OK",
+      cancelText: "Cancel",
+  });
+
+  const showModal = (title, message, type = "info", onConfirm = null, confirmText = "OK", cancelText = "Cancel") => {
+      setModal({
+          visible: true,
+          title,
+          message,
+          type,
+          onConfirm,
+          confirmText,
+          cancelText,
+      });
+  };
 
   if (!visible) return null;
 
@@ -26,24 +49,24 @@ export default function DevToolsModal({ visible, onClose, engine }) {
        if (z > (engine.maxUnlockedZone || 1)) {
            engine.setMaxUnlockedZone(z);
        }
-       Alert.alert("Warped", `Welcome to Zone ${z}`);
+       showModal("Warped", `Welcome to Zone ${z}`, "success");
     }
   };
 
   const addMinerals = () => {
      engine.dispatchEco({ type: "GAIN_MINERALS", amount: 1e15 }); // 1 Quadrillion
-     Alert.alert("Rich!", "Added 1Q Minerals");
+     showModal("Rich!", "Added 1Q Minerals", "success");
   };
 
   const addFragments = () => {
      engine.dispatchEco({ type: "GAIN_FRAGMENTS", amount: 1000 });
-     Alert.alert("Star Power", "Added 1000 Fragments");
+     showModal("Star Power", "Added 1000 Fragments", "success");
   };
   
   const addTags = () => {
       // Add 5 Random Tags
       engine.dispatchEco({ type: "GAIN_TAG", amount: 5 });
-      Alert.alert("Gilded!", "Added 5 Random Starlink Tags");
+      showModal("Gilded!", "Added 5 Random Starlink Tags", "success");
   };
 
   const addTagsToFirst5 = () => {
@@ -55,7 +78,7 @@ export default function DevToolsModal({ visible, onClose, engine }) {
       ["miner_01", "miner_02", "miner_03", "miner_04", "miner_05"].forEach(id => {
           engine.dispatchEco({ type: "GAIN_TAG", targetMinerId: id, amount: 1 });
       });
-      Alert.alert("Gilded!", "Gave 1 Tag to first 5 miners.");
+      showModal("Gilded!", "Gave 1 Tag to first 5 miners.", "success");
   };
   
   const resetGame = () => {
@@ -126,7 +149,7 @@ export default function DevToolsModal({ visible, onClose, engine }) {
                 <View style={styles.grid}>
                    <Pressable style={styles.cheatBtn} onPress={() => {
                        engine.resetSkillCooldowns();
-                       Alert.alert("Refreshed", "Skill Cooldowns Reset");
+                       showModal("Refreshed", "Skill Cooldowns Reset", "success");
                    }}>
                       <Ionicons name="refresh-circle" size={18} color="#fbbf24" />
                       <Text style={styles.cheatTxt}>Reset Cooldowns</Text>
@@ -134,12 +157,12 @@ export default function DevToolsModal({ visible, onClose, engine }) {
                 </View>
               </View>
               
-              {/* DANGER */}
+               {/* DANGER */}
               <View style={styles.section}>
                  <Text style={[styles.label, {color: '#ef4444'}]}>Danger Zone</Text>
                  <Pressable style={styles.cheatBtn} onPress={() => {
                      engine.dispatchEco({ type: "DEBUG_ADD_ARTIFACT" });
-                     Alert.alert("Artifact Grant", "Added Random Artifact (Lv.100)");
+                     showModal("Artifact Grant", "Added Random Artifact (Lv.100)", "success");
                  }}>
                       <Ionicons name="trophy" size={18} color="#fca5a5" />
                       <Text style={styles.cheatTxt}>+Artifact</Text>
@@ -147,7 +170,7 @@ export default function DevToolsModal({ visible, onClose, engine }) {
                  
                  <Pressable style={styles.cheatBtn} onPress={() => {
                      engine.dispatchEco({ type: "GRANT_EXPLORER" });
-                     Alert.alert("Explorer Grant", "Added Random Explorer!");
+                     showModal("Explorer Grant", "Added Random Explorer!", "success");
                  }}>
                       <Ionicons name="rocket" size={18} color="#60a5fa" />
                       <Text style={styles.cheatTxt}>+Explorer</Text>
@@ -161,6 +184,18 @@ export default function DevToolsModal({ visible, onClose, engine }) {
             </ScrollView>
           </LinearGradient>
         </View>
+
+        {/* NiceModal */}
+        <NiceModal 
+            visible={modal.visible}
+            title={modal.title}
+            message={modal.message}
+            type={modal.type}
+            onConfirm={modal.onConfirm}
+            confirmText={modal.confirmText}
+            cancelText={modal.cancelText}
+            onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+        />
     </View>
   );
 }

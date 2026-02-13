@@ -3,11 +3,11 @@
 // Schema matched: federations, specialty (striker/technician/guardian), titanFragments
 
 import {
-    doc,
-    getDoc,
-    serverTimestamp,
-    setDoc,
-    updateDoc
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc
 } from "firebase/firestore";
 import { db, getCurrentUserId } from "../../firebase/firebaseConfig";
 import { FEDERATIONS_COL, getUserProfile, updateUserProfile } from "./syndicateService";
@@ -31,13 +31,21 @@ export const SPECIALTY_WEAKNESS_MAP = {
 };
 
 // ─── Titan HP Calculation ───
+// ─── Titan HP Calculation ───
 export function calculateTitanHp(level) {
-  const baseHp = 1e6; // 1 million base
-  return Math.floor(baseHp * Math.pow(1.05, level));
+  // Class-Based Balance: 50k Base, x2.0 per level
+  const baseHp = 50000;
+  return Math.floor(baseHp * Math.pow(2.0, level - 1));
 }
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+function getYesterdayKey() {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
 }
 
 export function getDailyWeakness() {
@@ -46,6 +54,14 @@ export function getDailyWeakness() {
     (now - new Date(now.getFullYear(), 0, 0)) / 86400000
   );
   return WEAKNESSES[dayOfYear % 3];
+}
+
+export function calculateRaidCost(level) {
+  const reward = 200 + (level * 50);
+  // Cost is ~40% of Reward, rounded to nearest 50
+  // Lvl 1: Reward 250 -> Cost 100
+  // Lvl 10: Reward 700 -> Cost 300
+  return Math.round((reward * 0.4) / 50) * 50;
 }
 
 // ─── Raid Functions ───
@@ -76,6 +92,7 @@ export async function getTodaysRaid(federationId) {
     defeated: false,
     contributions: {},
     rewardsClaimed: [],
+    isBonus: false,
     createdAt: serverTimestamp(),
   };
   
@@ -83,20 +100,33 @@ export async function getTodaysRaid(federationId) {
   return { id: todayKey, ...raidData };
 }
 
+export async function getYesterdaysRaid(federationId) {
+  const yesterdayKey = getYesterdayKey();
+  const raidRef = doc(db, FEDERATIONS_COL, federationId, RAIDS_COL, yesterdayKey);
+  const raidSnap = await getDoc(raidRef);
+  
+  if (raidSnap.exists()) {
+    return { id: raidSnap.id, ...raidSnap.data() };
+  }
+  return null;
+}
+
 export function calculateRaidTapDamage(user, titanWeakness) {
-  const basePower = user.federationPower || 1; // was syndicatePower
-  const specialtyLevel = user.specialtyLevel || 0; // was doctrineLevel
+  const specialtyLevel = user.specialtyLevel || 0; // Default to 0
   
-  // Base damage = federationPower * (1 + specialtyLevel * 0.05)
-  let damage = basePower * (1 + specialtyLevel * 0.05);
+  // Class-Based Damage: 100 Base, x2.1 per Level
+  // Decoupled from Main Game (federationPower removed)
+  // Lvl 0: 100 dmg
+  // Lvl 1: 210 dmg
+  let damage = 100 * Math.pow(2.1, specialtyLevel);
   
-  // Weakness bonus: +25% if specialty matches titan weakness
+  // Weakness bonus: +50% if specialty matches titan weakness (Buffed from 25%)
   const specialtyWeakness = SPECIALTY_WEAKNESS_MAP[user.specialty];
   if (specialtyWeakness === titanWeakness) {
-    damage *= 1.25;
+    damage *= 1.5;
   }
   
-  return Math.max(1, Math.floor(damage));
+  return Math.max(10, Math.floor(damage));
 }
 
 export async function canAttemptRaid(userId) {
@@ -201,13 +231,22 @@ export async function claimRaidReward(federationId) {
   if (!raid.defeated) throw new Error("Titan not yet defeated");
   if (raid.rewardsClaimed?.includes(userId)) throw new Error("Already claimed");
   
-  // Calculate rewards
+  // Calculate rewards (Exponential Scale)
   const level = raid.titanLevel || 1;
   const contributed = raid.contributions?.[userId]?.damage > 0;
   
+  // Base 50 Fragments, x1.6 per Level
+  const baseReward = 50 * Math.pow(1.6, level - 1);
+  const fragmentReward = Math.floor(contributed ? baseReward : baseReward * 0.1); // 10% if leeched
+  
+  // Shards: Buffed to make paid attempts (100s) profitable
+  // Lvl 1: 250 Shards
+  // Lvl 5: 450 Shards
+  const shardReward = contributed ? (200 + level * 50) : (20 + level * 5);
+
   const rewards = {
-    titanFragments: contributed ? 50 * level : 20 * level, // was titanShards
-    rubies: contributed ? 5 + level : 2 + Math.floor(level / 2),
+    titanFragments: fragmentReward, 
+    shards: shardReward,
   };
   
   // Mark claimed
@@ -219,9 +258,75 @@ export async function claimRaidReward(federationId) {
   const user = await getUserProfile(userId);
   await updateUserProfile(userId, {
     titanFragments: (user.titanFragments || 0) + rewards.titanFragments,
+    shards: (user.shards || 0) + rewards.shards,
   });
   
   return rewards;
+}
+
+export async function buyBonusFight(federationId) {
+  const userId = getCurrentUserId();
+  if (!userId) throw new Error("Not authenticated");
+
+  const todayKey = getTodayKey();
+  const raidRef = doc(db, FEDERATIONS_COL, federationId, RAIDS_COL, todayKey);
+  const raidSnap = await getDoc(raidRef);
+  
+  if (!raidSnap.exists()) throw new Error("No raid today");
+  const raid = raidSnap.data();
+
+  if (!raid.defeated) throw new Error("Current Titan must be defeated first");
+  if (raid.isBonus) throw new Error("Bonus fight already active or completed");
+
+  const level = raid.titanLevel || 1;
+  const cost = 100 * level + 400;
+
+  // REFACTOR: Shard check is now handled client-side (Local Eco) to match Shop balance.
+  // We trust the client has verified funds and will deduct them locally.
+  // This avoids sync issues between Firestore and Local State.
+
+  // Reset Raid for Bonus Fight
+  // We keep the SAME level, but reset damage and contributions
+  await updateDoc(raidRef, {
+    defeated: false,
+    totalDamage: 0,
+    contributions: {}, // Reset everyone's damage
+    rewardsClaimed: [], // Allow claiming rewards again
+    isBonus: true,      // Mark as bonus
+  });
+
+  return { success: true, cost };
+}
+
+export async function debugResetRaid(federationId) {
+  const userId = getCurrentUserId();
+  if (!userId) throw new Error("Not authenticated");
+
+  const todayKey = getTodayKey();
+  const raidRef = doc(db, FEDERATIONS_COL, federationId, RAIDS_COL, todayKey);
+  
+  // Fetch current to get level
+  const snap = await getDoc(raidRef);
+  const currentLevel = snap.exists() ? (snap.data().titanLevel || 1) : 1;
+
+  // 1. Reset Raid AND Recalculate HP (Fix for stale 1k HP)
+  await updateDoc(raidRef, {
+      defeated: false,
+      totalDamage: 0,
+      titanHp: calculateTitanHp(currentLevel), // Force update with new formula
+      contributions: {}, 
+      rewardsClaimed: [],
+      isBonus: false,
+  });
+
+  // 2. Reset My Attempts
+  await updateUserProfile(userId, {
+      lastRaidDate: todayKey,
+      raidAttemptsToday: 0,
+      // We don't deduct shards/fragments here, just reset logic state
+  });
+
+  return { success: true };
 }
 
 export async function getRaidLeaderboard(federationId) {

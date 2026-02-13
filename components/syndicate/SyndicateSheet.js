@@ -2,24 +2,26 @@
 // Main Federation (Clan) panel — FULL SCREEN MODAL
 // Enforces "Create Nickname" before joining/creating a clan.
 
+
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import * as Clipboard from "expo-clipboard";
+import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from "react-native";
 import { getDailyWeakness, WEAKNESSES } from "../../game/syndicate/raidService";
+import NiceModal from "../ui/NiceModal";
 import TitanRaidModal from "./TitanRaidModal";
 
 
-// ─── Specialty Config ───
 const SPECIALTIES = [
   { id: "striker",    label: "Striker",    icon: "flash",      color: "#ef4444", desc: "Tap Damage +5%/lvl", weakness: "physical" },
   { id: "technician", label: "Technician", icon: "construct",  color: "#3b82f6", desc: "Miner DPS +5%/lvl",   weakness: "energy" },
@@ -32,12 +34,27 @@ const WEAKNESS_LABELS = {
   shield:   { label: "Shield",   icon: "prism", color: "#8b5cf6" },
 };
 
-export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddShards }) {
+export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddShards, shards = 0, onSpendShards }) {
   const syn = syndicateHook;
 
   // ─── HOOKS (Must be at top) ───
   const [tab, setTab] = useState("overview"); // overview | members | specialty
   const [showRaid, setShowRaid] = useState(false);
+
+  // Custom Alert Modal
+  const [modal, setModal] = useState({ 
+      visible: false, 
+      title: "", 
+      message: "", 
+      type: "info",
+      onConfirm: null,
+      confirmText: "Confirm",
+      cancelText: "Cancel"
+  });
+  
+  const showModal = (title, message, type = "info", onConfirm = null, confirmText = "OK", cancelText = "Cancel") => {
+      setModal({ visible: true, title, message, type, onConfirm, confirmText, cancelText });
+  };
   
   // Forms
   const [joinCode, setJoinCode] = useState("");
@@ -50,6 +67,30 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
 
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
+
+  // ─── Raid Timer ───
+  useEffect(() => {
+    const updateTimer = () => {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setUTCHours(24, 0, 0, 0); // Next UTC Midnight
+        const diff = tomorrow - now;
+        
+        if (diff <= 0) {
+           setTimeLeft("00:00:00");
+        } else {
+           const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+           const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+           const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+           setTimeLeft(`${h}:${m}:${s}`);
+        }
+    };
+    
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // ─── Conditional Return AFTER Hooks ───
   if (!visible) return null;
@@ -81,16 +122,43 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
 
   const handleCreateFederation = async () => {
     if (!federationName.trim()) return;
-    setBusy(true);
-    try {
-      await syn.createSyndicate(federationName.trim()); 
-      setShowCreateForm(false);
-      setFederationName("");
-      Alert.alert("Success", "Federation established! You are now the leader.");
-    } catch (e) {
-      Alert.alert("Error", e.message);
+
+    const COST = 500;
+    if (shards < COST) {
+        showModal("Insufficient Shards", `You need ${COST} Shards to establish a Federation.`, "error");
+        return;
     }
-    setBusy(false);
+
+    showModal(
+        "Establish Federation",
+        `Create "${federationName}" for ${COST} Shards?`,
+        "question",
+        async () => {
+             setModal(prev => ({ ...prev, visible: false }));
+             setBusy(true); // show spinner?
+             // Actually NiceModal might close, so we might need a local spinner or just blocking interaction
+             // For now, let's proceed
+             
+             try {
+                if (onSpendShards) onSpendShards(COST);
+                await syn.createSyndicate(federationName.trim()); 
+                setShowCreateForm(false);
+                setFederationName("");
+                setTimeout(() => {
+                    showModal("Success", "Federation established! You are now the leader.", "success");
+                }, 500);
+             } catch (e) {
+                // Refund?
+                // if (onAddShards) onAddShards(COST);
+                setTimeout(() => {
+                    showModal("Error", e.message, "error");
+                }, 500);
+             }
+             setBusy(false);
+        },
+        "Create",
+        "Cancel"
+    );
   };
 
   const handleSearch = async () => {
@@ -100,11 +168,14 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
        // Search either by name match or exact Invite Code
        const results = await syn.searchSyndicates(joinCode.trim());
        setSearchResults(results);
+       if (results.length === 0) {
+           showModal("No Results", "No federations found matching that name or code.", "error");
+       }
      } catch(e) {
-       Alert.alert("Search Error", e.message);
+       showModal("Search Error", e.message, "error");
      }
      setSearching(false);
-  };
+    };
 
   const handleJoinFederation = async (inviteCode) => {
     setBusy(true);
@@ -113,9 +184,9 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
       setShowJoinForm(false);
       setJoinCode("");
       setSearchResults([]);
-      Alert.alert("Success", "Connection established. Welcome to the Federation.");
+      showModal("Success", "Connection established. Welcome to the Federation.", "success");
     } catch (e) {
-      Alert.alert("Error", e.message);
+      showModal("Federation not found", e.message, "error");
     }
     setBusy(false);
   };
@@ -127,38 +198,45 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
   };
 
   const handleLeave = () => {
-    Alert.alert(
-      "Leave Federation",
+    showModal(
+      "Leave Federation?",
       "Are you sure you want to leave? You'll lose access to raid rewards.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Leave",
-          style: "destructive",
-          onPress: async () => {
-            try { 
-                await syn.leaveSyndicate(); 
-                Alert.alert("Left", "You have left the federation.");
-            } catch (e) { 
-                Alert.alert("Error", e.message); 
-            }
-          },
-        },
-      ]
+      "question",
+      async () => {
+        setModal(prev => ({ ...prev, visible: false }));
+        try { 
+            await syn.leaveSyndicate(); 
+            // Small delay to allow modal close animation
+            setTimeout(() => {
+                showModal("Left Federation", "You have successfully left the federation.", "success");
+            }, 300);
+        } catch (e) { 
+            setTimeout(() => {
+                showModal("Error", e.message, "error"); 
+            }, 300);
+        }
+      },
+      "Leave",
+      "Cancel"
     );
   };
 
   const handleClaimReward = async () => {
+    if (busy) return;
+    setBusy(true);
     try {
       const rewards = await syn.claimReward();
-      if (onAddShards && rewards.rubies) onAddShards(rewards.rubies);
-      Alert.alert(
+      // rewards.shards is now returned instead of rubies
+      if (onAddShards && rewards.shards) onAddShards(rewards.shards);
+      showModal(
         "🎉 Rewards Claimed!",
-        `+${rewards.titanFragments} Titan Fragments\n+${rewards.rubies} Rubies`
+        `+${rewards.titanFragments} Titan Fragments\n+${rewards.shards} Shards`,
+        "success"
       );
     } catch (e) {
-      Alert.alert("Error", e.message);
+      showModal("Claim Failed", e.message, "error");
     }
+    setBusy(false);
   };
 
   // ─── Loading View ───
@@ -245,7 +323,7 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
             </Pressable>
           </View>
 
-          <View style={s.centerBox}>
+          <View style={[s.centerBox, (showCreateForm || showJoinForm) && { justifyContent: 'flex-start', paddingTop: 40 }]}>
             {!showCreateForm && !showJoinForm && (
               <>
                 <Ionicons name="planet" size={100} color="rgba(168,85,247,0.5)" />
@@ -260,7 +338,7 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
                   </View>
                   <View>
                     <Text style={s.optionTitle}>Create Federation</Text>
-                    <Text style={s.optionSub}>Start your own clan (Cost: 250 💎)</Text>
+                    <Text style={s.optionSub}>Start your own clan (Cost: 500 Shards)</Text>
                   </View>
                 </Pressable>
 
@@ -293,7 +371,7 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
                     <Text style={s.secondaryBtnText}>Cancel</Text>
                   </Pressable>
                   <Pressable style={s.primaryBtnSmall} onPress={handleCreateFederation} disabled={busy}>
-                    <Text style={s.primaryBtnText}>{busy ? "..." : "Create (250💎)"}</Text>
+                    <Text style={s.primaryBtnText}>{busy ? "..." : "Create (500 Shards)"}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -301,10 +379,10 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
 
             {/* Join Form / Search */}
             {showJoinForm && (
-              <View style={[s.formBox, { maxHeight: 400 }]}>
+              <View style={[s.formBox, { maxHeight: 500 }]}>
                 <Text style={s.formTitle}>Federation Search</Text>
                 
-                <View style={{ flexDirection: 'row', gap: 8, mb: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
                     <TextInput
                       style={[s.input, { flex: 1, marginBottom: 0 }]}
                       placeholder="Name or Invite Code"
@@ -356,6 +434,18 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
             )}
           </View>
         </View>
+
+        {/* Global Modal for Alerts */}
+        <NiceModal 
+            visible={modal.visible}
+            title={modal.title}
+            message={modal.message}
+            type={modal.type}
+            onConfirm={modal.onConfirm}
+            confirmText={modal.confirmText}
+            cancelText={modal.cancelText}
+            onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+        />
       </Modal>
     );
   }
@@ -407,21 +497,53 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
 
         <ScrollView style={s.body} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           
-          {/* Invite Box */}
-          <View style={s.inviteCard}>
-            <Text style={s.inviteLabel}>FEDERATION CODE</Text>
-            <Text style={s.inviteCode}>{fed.inviteCode}</Text>
-          </View>
+          {/* Invite Box (Tap to Copy) */}
+          <Pressable 
+            style={s.inviteCard}
+            onPress={async () => {
+                await Clipboard.setStringAsync(fed.inviteCode);
+                // Use NiceModal (showModal) instead of native Alert
+                showModal("Copied!", `Federation Code ${fed.inviteCode} copied to clipboard.`, "success");
+            }}
+          >
+            <Text style={s.inviteLabel}>FEDERATION CODE (TAP TO COPY)</Text>
+            <View style={{flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8}}>
+                <Text style={s.inviteCode}>{fed.inviteCode}</Text>
+                <Ionicons name="copy-outline" size={16} color="#9ca3af" />
+            </View>
+          </Pressable>
 
           {/* ═══ RAID TAB ═══ */}
           {tab === "overview" && (
             <>
+              {/* RAID TIMER CARD */}
+              <View style={{ 
+                  backgroundColor: 'rgba(0,0,0,0.3)', 
+                  borderRadius: 12, 
+                  padding: 12, 
+                  marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: 'rgba(168, 85, 247, 0.2)',
+                  alignItems: 'center', // Center content horizontally
+                  justifyContent: 'center',
+                  gap: 4
+              }}>
+                  <View style={{flexDirection:'row', alignItems:'center', gap:6, opacity: 0.7}}>
+                      <Ionicons name="time" size={14} color="#a855f7" />
+                      <Text style={{color:'#d1d5db', fontSize:10, fontWeight:'bold', letterSpacing: 1 }}>TIME LEFT</Text>
+                  </View>
+                  <Text style={{color:'#fff', fontSize:24, fontFamily:'monospace', fontWeight:'bold', letterSpacing: 2 }}>
+                      {timeLeft}
+                  </Text>
+              </View>
+
               {/* Titan Status */}
               <View style={s.titanCard}>
                 <View style={s.titanHeader}>
                   <Text style={s.titanName}>
                     🔥 Void Titan Lvl {raid?.titanLevel || 1}
                   </Text>
+                  {/* Old timer removed */}
                   <View style={[s.weaknessBadge, { backgroundColor: WEAKNESSES.includes(todayWeakness) ? WEAKNESS_LABELS[todayWeakness]?.color + "30" : "#333" }]}>
                     <Ionicons
                       name={WEAKNESS_LABELS[todayWeakness]?.icon}
@@ -453,19 +575,114 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
               {/* Action Buttons */}
               <View style={s.actionGrid}>
                 {!raid?.defeated && syn.raidStatus?.canRaid && (
-                  <Pressable style={s.raidBtn} onPress={() => setShowRaid(true)}>
+                  <Pressable 
+                    style={[s.raidBtn, (syn.raidStatus?.attemptsUsed > 0) && { backgroundColor: '#db2777' }]} 
+                    onPress={() => {
+                        const attemptsUsed = syn.raidStatus?.attemptsUsed || 0;
+                        const currentLevel = raid?.titanLevel || 1;
+                        // Dynamic Cost: ~40% of Reward
+                        const cost = attemptsUsed > 0 ? syn.calculateRaidCost(currentLevel) : 0;
+
+                        if (cost > 0) {
+                            if (shards < cost) {
+                                showModal("Insufficient Shards", `Extra attempt costs ${cost} Shards.`, "error");
+                                return;
+                            }
+                            
+                            const estimatedReward = Math.floor(50 * Math.pow(1.6, currentLevel - 1));
+                            // Full Reward (inc Shards)
+                            const shardReward = 200 + (currentLevel * 50);
+
+                            showModal(
+                                "Extra Attempt",
+                                `Spend ${cost} Shards for another attack?\n\n(Potential Reward: ~${shardReward} Shards + ${estimatedReward} Fragments)`,
+                                "question",
+                                () => {
+                                    setModal(prev => ({ ...prev, visible: false }));
+                                    if (onSpendShards) onSpendShards(cost);
+                                    setShowRaid(true);
+                                },
+                                `Fight (-${cost})`,
+                                "Cancel"
+                            );
+                        } else {
+                            setShowRaid(true);
+                        }
+                    }}
+                  >
                     <Ionicons name="flame" size={28} color="#fff" />
-                    <Text style={s.raidBtnText}>FIGHT TITAN</Text>
+                    <View>
+                        <Text style={s.raidBtnText}>
+                            {syn.raidStatus?.attemptsUsed > 0 ? "FIGHT AGAIN" : "FIGHT TITAN"}
+                        </Text>
+                        {syn.raidStatus?.attemptsUsed > 0 && (
+                            <Text style={{color:'#fff', fontSize:10, fontWeight:'bold'}}>
+                                {syn.calculateRaidCost(raid?.titanLevel || 1)} Shards
+                            </Text>
+                        )}
+                    </View>
                   </Pressable>
+                )}
+
+                {/* BONUS FIGHT BUTTON */}
+                {raid?.defeated && !raid?.isBonus && (
+                    <Pressable 
+                        style={[s.raidBtn, { backgroundColor: "#f59e0b" }]} 
+                        onPress={() => {
+                             const cost = 100 * (raid.titanLevel || 1) + 400;
+                             
+                             if (shards < cost) {
+                                 showModal("Insufficient Shards", `You need ${cost} Shards to revive the Titan.\nBalance: ${shards}`, "error");
+                                 return;
+                             }
+
+                             showModal(
+                                 "Bonus Fight",
+                                 `Revive the Titan for ${cost} Shards?\n\n• Everyone can fight again\n• Earn more rewards!`,
+                                 "question",
+                                 async () => {
+                                     setModal(prev => ({ ...prev, visible: false })); // Close confirm modal
+                                     try {
+                                         await syn.buyBonusFight();
+                                         if (onSpendShards) onSpendShards(cost); // ✅ Deduct locally
+                                         setTimeout(() => {
+                                             showModal("Titan Revived!", "The Void Titan has returned! Rally the federation!", "success");
+                                         }, 300);
+                                     } catch(e) {
+                                         setTimeout(() => {
+                                             showModal("Revive Failed", e.message, "error");
+                                         }, 300);
+                                     }
+                                 },
+                                 `Revive (-${cost})`,
+                                 "Cancel"
+                             );
+                        }}
+                    >
+                        <Ionicons name="refresh-circle" size={28} color="#fff" />
+                        <View>
+                            <Text style={s.raidBtnText}>BONUS FIGHT</Text>
+                            <Text style={{color: '#fff', fontSize: 10, fontWeight: 'bold'}}>
+                                {100 * (raid.titanLevel || 1) + 400} Shards
+                            </Text>
+                        </View>
+                    </Pressable>
                 )}
 
                 {canClaim && (
                   <Pressable style={s.claimBtn} onPress={handleClaimReward}>
                     <Ionicons name="gift" size={24} color="#fff" />
-                    <Text style={s.claimBtnText}>CLAIM REWARDS</Text>
+                    <View>
+                        <Text style={s.claimBtnText}>CLAIM REWARDS</Text>
+                        <Text style={{color:'#e9d5ff', fontSize:10, fontWeight:'bold'}}>
+                            ~{Math.floor(50 * Math.pow(1.6, (raid.titanLevel || 1) - 1))} Fragments
+                        </Text>
+                    </View>
                   </Pressable>
                 )}
               </View>
+
+
 
               {/* Leaderboard */}
               {syn.leaderboard.length > 0 && (
@@ -480,6 +697,59 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
                   ))}
                 </View>
               )}
+
+              {/* 📜 History Button (Below Leaderboard) */}
+              <Pressable 
+                  style={[s.secondaryBtn, { marginTop: 24, marginBottom: 8, borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1 }]}
+                  onPress={async () => {
+                      const history = await syn.getHistory();
+                      if (!history) {
+                          showModal("No Data", "No raid data found for yesterday.", "info");
+                          return;
+                      }
+                      
+                      const allAgents = Object.values(history.contributions || {})
+                          .sort((a,b) => b.damage - a.damage);
+                      
+                      let msg = `Titan Level: ${history.titanLevel}\n`;
+                      msg += `Status: ${history.defeated ? "✅ Defeated" : "❌ Failed"}\n`;
+                      msg += `Total Dmg: ${formatDmg(history.totalDamage)}\n\n`;
+                      msg += `🏆 Top Agents:\n`;
+                      allAgents.forEach((p, i) => {
+                          msg += `#${i+1} ${p.displayName}: ${formatDmg(p.damage)}\n`;
+                      });
+
+                      showModal("Yesterday's Report", msg, "info");
+                  }}
+              >
+                  <Text style={s.secondaryBtnText}>📜 View Previous Report</Text>
+              </Pressable>
+
+              {/* ⚡ DEBUG: RESET RAID */}
+              <Pressable 
+                  style={[s.raidBtn, { backgroundColor: "#111", marginTop: 20, borderWidth: 1, borderColor: '#333' }]} 
+                  onPress={() => {
+                        showModal(
+                            "DEBUG: Reset Raid", 
+                            "This will reset the Titan HP, your daily attempts, and rewards claimed status.\n\nUseful for testing infinite fights.",
+                            "question",
+                            async () => {
+                                setModal(prev => ({ ...prev, visible: false }));
+                                try {
+                                    await syn.debugResetRaid();
+                                    showModal("Raid Reset", "The timeline has been disrupted. The Titan is fresh.", "success");
+                                } catch(e) {
+                                    showModal("Reset Failed", e.message, "error");
+                                }
+                            },
+                            "RESET RAID",
+                            "Cancel"
+                        );
+                  }}
+              >
+                  <Ionicons name="bug" size={24} color="#ef4444" />
+                  <Text style={[s.raidBtnText, { color: "#ef4444" }]}>DEBUG: RESET RAID</Text>
+              </Pressable>
             </>
           )}
 
@@ -547,22 +817,59 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
                       </View>
                       <Text style={s.doctrineDesc}>{d.desc}</Text>
                       {isActive && (
-                        <Text style={s.doctrineLvl}>
-                          Lvl {syn.userProfile?.specialtyLevel || 0} • Next: {(syn.userProfile?.specialtyLevel + 1) * 100} 💎
-                        </Text>
+                        <View>
+                            <Text style={s.doctrineLvl}>
+                              Lvl {syn.userProfile?.specialtyLevel || 0}
+                            </Text>
+                            <Text style={{color:'#aaa', fontSize:10}}>
+                              Dmg: {formatDmg(100 * Math.pow(2.1, syn.userProfile?.specialtyLevel || 0))}
+                              {' -> '}
+                              <Text style={{color:'#a855f7'}}>
+                                  {formatDmg(100 * Math.pow(2.1, (syn.userProfile?.specialtyLevel || 0) + 1))}
+                              </Text>
+                            </Text>
+                        </View>
                       )}
                     </View>
                     {isActive ? (
                       <Pressable
-                        style={[s.actionBtnSmall, { backgroundColor: d.color }]}
-                        onPress={() => syn.levelUpDoctrine()} // Hook alias
+                        style={[
+                            s.actionBtnSmall,
+                            { backgroundColor: d.color },
+                            (syn.userProfile?.titanFragments || 0) < Math.floor(100 * Math.pow(1.5, syn.userProfile?.specialtyLevel || 0)) && { opacity: 0.5, backgroundColor: '#555' }
+                        ]}
+                        disabled={(syn.userProfile?.titanFragments || 0) < Math.floor(100 * Math.pow(1.5, syn.userProfile?.specialtyLevel || 0))}
+                        onPress={async () => {
+                             const lvl = syn.userProfile?.specialtyLevel || 0;
+                             const cost = Math.floor(100 * Math.pow(1.5, lvl));
+                             
+                             if ((syn.userProfile?.titanFragments || 0) < cost) return; 
+
+                             try {
+                                 await syn.levelUpDoctrine();
+                                 showModal("Success", "Specialty upgraded!", "success");
+                             } catch(e) {
+                                 showModal("Upgrade Failed", e.message, "error");
+                             }
+                        }}
                       >
-                        <Text style={s.actionBtnText}>Upgrade</Text>
+                        <Text style={s.actionBtnText}>
+                            {(syn.userProfile?.titanFragments || 0) < Math.floor(100 * Math.pow(1.5, syn.userProfile?.specialtyLevel || 0))
+                                ? `Need ${Math.floor(100 * Math.pow(1.5, syn.userProfile?.specialtyLevel || 0))} 💎`
+                                : `Upgrade (${Math.floor(100 * Math.pow(1.5, syn.userProfile?.specialtyLevel || 0))} 💎)`}
+                        </Text>
                       </Pressable>
                     ) : (
                       <Pressable
                         style={[s.actionBtnSmall, { backgroundColor: "rgba(255,255,255,0.1)" }]}
-                        onPress={() => syn.chooseDoctrine(d.id)} // Hook alias
+                        onPress={async () => {
+                             try {
+                                 await syn.chooseDoctrine(d.id);
+                                 showModal("Success", `${d.label} selected!`, "success");
+                             } catch(e) {
+                                 showModal("Selection Failed", e.message, "error");
+                             }
+                        }}
                       >
                         <Text style={s.actionBtnText}>Select</Text>
                       </Pressable>
@@ -584,6 +891,18 @@ export default function SyndicateSheet({ visible, onClose, syndicateHook, onAddS
         }}
         syndicateHook={syn}
       />
+
+        {/* Global Modal for Alerts */}
+        <NiceModal 
+            visible={modal.visible}
+            title={modal.title}
+            message={modal.message}
+            type={modal.type}
+            onConfirm={modal.onConfirm}
+            confirmText={modal.confirmText}
+            cancelText={modal.cancelText}
+            onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+        />
     </Modal>
   );
 }
