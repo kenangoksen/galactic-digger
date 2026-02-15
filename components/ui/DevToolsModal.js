@@ -54,8 +54,8 @@ export default function DevToolsModal({ visible, onClose, engine }) {
   };
 
   const addMinerals = () => {
-     engine.dispatchEco({ type: "GAIN_MINERALS", amount: 1e15 }); // 1 Quadrillion
-     showModal("Rich!", "Added 1Q Minerals", "success");
+     engine.dispatchEco({ type: "GAIN_MINERALS", amount: 1e100 }); // 1 Googol
+     showModal("Rich!", "Added 1e100 Minerals", "success");
   };
 
   const addFragments = () => {
@@ -126,7 +126,7 @@ export default function DevToolsModal({ visible, onClose, engine }) {
                 <View style={styles.grid}>
                    <Pressable style={styles.cheatBtn} onPress={addMinerals}>
                       <Ionicons name="diamond" size={18} color="#60a5fa" />
-                      <Text style={styles.cheatTxt}>+1Q Minerals</Text>
+                      <Text style={styles.cheatTxt}>+1e100 Minerals</Text>
                    </Pressable>
                    <Pressable style={styles.cheatBtn} onPress={addFragments}>
                       <Ionicons name="star" size={18} color="#a855f7" />

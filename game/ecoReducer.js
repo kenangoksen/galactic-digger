@@ -23,6 +23,8 @@ export const ECO_INIT = {
   cosmicProtocols: {}, 
   // STARLINK
   totalStarlinkTags: 0,
+  unopenedTags: 0, // NEW: Tags waiting to be opened
+  highestZoneLifetime: 0, // NEW: HZE for this Big Bang cycle
   tagsByMinerId: {},
   lifetimeTagsEarned: 0,
   // Universal Constants & Essence
@@ -258,6 +260,28 @@ export function ecoReducer(state, action) {
       };
     }
 
+    case "BUY_SKILLS_BULK": {
+        const { skillsToBuy, totalCost } = action;
+        if (!skillsToBuy || !skillsToBuy.length) return state;
+        
+        // Optimistic check: just deduct and update
+        // We assume caller (useGameEngine) did the validation to avoid double-looping here
+        if (D(state.minerals).lt(totalCost)) return state;
+
+        const nextOwnedSkills = { ...state.ownedSkills };
+        
+        for (const { minerId, skillId } of skillsToBuy) {
+            const current = nextOwnedSkills[minerId] || {};
+            nextOwnedSkills[minerId] = { ...current, [skillId]: true };
+        }
+
+        return {
+            ...state,
+            minerals: D(state.minerals).sub(totalCost),
+            ownedSkills: nextOwnedSkills
+        };
+    }
+
     case "UNLOCK_UP_TO": {
       const upTo = Number(action.count || 2);
       if (!Number.isFinite(upTo)) return state;
@@ -365,33 +389,96 @@ export function ecoReducer(state, action) {
         };
     }
     
-    case "GAIN_TAG": {
-        const amt = action.amount || 1;
-        const target = action.targetMinerId || null;
+    case "GAIN_UNOPENED_TAG": {
+        const amount = action.amount || 1;
+        return {
+            ...state,
+            unopenedTags: (state.unopenedTags || 0) + amount,
+            totalStarlinkTags: (state.totalStarlinkTags || 0) + amount,
+            lifetimeTagsEarned: (state.lifetimeTagsEarned || 0) + amount,
+        };
+    }
+
+    case "OPEN_TAG": {
+        if ((state.unopenedTags || 0) <= 0) return state;
+
+        // Randomly assign to a miner (CH logic: random initially)
+        // Or if action passes a targetId (Regilding later), use that.
+        // For OPEN_TAG (New), it's random.
+        const ownedIds = Object.keys(state.ownedMiners).filter(id => state.ownedMiners[id] > 0);
+        let targetId = "miner_01"; // Fallback
         
-        let newTagsMap = { ...state.tagsByMinerId };
+        if (ownedIds.length > 0) {
+           targetId = ownedIds[Math.floor(Math.random() * ownedIds.length)];
+        }
+
+        const newTagsMap = { ...state.tagsByMinerId };
+        newTagsMap[targetId] = (newTagsMap[targetId] || 0) + 1;
+
+        return {
+            ...state,
+            unopenedTags: state.unopenedTags - 1,
+            tagsByMinerId: newTagsMap,
+            lastOpenedMinerId: targetId, // For UI toast/modal
+        };
+    }
+
+    /* DEPRECATED: OLD RANDOM DROP LOGIC */
+    case "REALIGN_TAG_SCATTER": {
+        const { minerId } = action;
+        const COST = 2; // 2 SF
         
-        let finalTarget = target;
-        if (!finalTarget) {
-            const ownedIds = Object.keys(state.ownedMiners).filter(id => state.ownedMiners[id] > 0);
-            if (ownedIds.length > 0) {
-                finalTarget = ownedIds[Math.floor(Math.random() * ownedIds.length)];
-            }
+        if (D(state.stellarFragments).lt(COST)) return state;
+        
+        const currentCount = state.tagsByMinerId[minerId] || 0;
+        if (currentCount <= 0) return state;
+        
+        // Pick random target (not self)
+        const ownedIds = Object.keys(state.ownedMiners).filter(id => state.ownedMiners[id] > 0 && id !== minerId);
+        
+        let targetId = "miner_01";
+        if (ownedIds.length > 0) {
+            targetId = ownedIds[Math.floor(Math.random() * ownedIds.length)];
         }
         
-        if (finalTarget) {
-            newTagsMap[finalTarget] = (newTagsMap[finalTarget] || 0) + amt;
-        } else {
-             newTagsMap["unassigned"] = (newTagsMap["unassigned"] || 0) + amt;
-        }
+        const newTagsMap = { ...state.tagsByMinerId };
+        newTagsMap[minerId] = currentCount - 1;
+        newTagsMap[targetId] = (newTagsMap[targetId] || 0) + 1;
         
         return {
             ...state,
-            totalStarlinkTags: (state.totalStarlinkTags || 0) + amt,
-            lifetimeTagsEarned: (state.lifetimeTagsEarned || 0) + amt,
+            stellarFragments: D(state.stellarFragments).sub(COST),
             tagsByMinerId: newTagsMap
         };
     }
+
+    case "REALIGN_TAG_GATHER": {
+        const { minerId } = action; // The one receiving the tag
+        const COST = 80; // 80 SF
+        
+        if (D(state.stellarFragments).lt(COST)) return state;
+        
+        // Find valid sources (miners with tags > 0, excluding self)
+        const potentialSources = Object.keys(state.tagsByMinerId).filter(
+            id => id !== minerId && state.tagsByMinerId[id] > 0
+        );
+        
+        if (potentialSources.length === 0) return state;
+        
+        // Pick random source to steal from
+        const sourceId = potentialSources[Math.floor(Math.random() * potentialSources.length)];
+        
+        const newTagsMap = { ...state.tagsByMinerId };
+        newTagsMap[sourceId] = (newTagsMap[sourceId] || 0) - 1;
+        newTagsMap[minerId] = (newTagsMap[minerId] || 0) + 1;
+        
+        return {
+            ...state,
+            stellarFragments: D(state.stellarFragments).sub(COST),
+            tagsByMinerId: newTagsMap
+        };
+    }
+
 
     case "REDISTRIBUTE_TAGS": {
          const total = state.totalStarlinkTags || 0;
@@ -419,6 +506,8 @@ export function ecoReducer(state, action) {
         rerollCount: p.rerollCount ?? state.rerollCount,
 
         totalStarlinkTags: p.totalStarlinkTags || 0,
+        unopenedTags: p.unopenedTags || 0, // LOAD
+        highestZoneLifetime: p.highestZoneLifetime || 0, // LOAD
         tagsByMinerId: p.tagsByMinerId || {},
         lifetimeTagsEarned: p.lifetimeTagsEarned || 0,
         cosmicEssence: p.cosmicEssence || 0,
@@ -464,6 +553,8 @@ export function ecoReducer(state, action) {
           stellarFragments: D(state.stellarFragments).add(gained),
           cosmicProtocols: state.cosmicProtocols,
           totalStarlinkTags: state.totalStarlinkTags,
+          unopenedTags: state.unopenedTags, // Persist unopened tags
+          highestZoneLifetime: state.highestZoneLifetime, // Persist HZE
           tagsByMinerId: state.tagsByMinerId,
           lifetimeTagsEarned: state.lifetimeTagsEarned,
           cosmicEssence: state.cosmicEssence,
@@ -604,6 +695,8 @@ export function ecoReducer(state, action) {
             spentEssence: state.spentEssence,
             
             totalStarlinkTags: state.totalStarlinkTags,
+            unopenedTags: state.unopenedTags, // Check if we should keep these? Assuming yes.
+            highestZoneLifetime: 0, // RESET ON BIG BANG
             tagsByMinerId: state.tagsByMinerId,
             lifetimeTagsEarned: state.lifetimeTagsEarned,
 
@@ -795,6 +888,14 @@ export function ecoReducer(state, action) {
                 forgeCores: D(state.artifacts.forgeCores).sub(cost),
             }
         };
+    }
+
+    case "UPDATE_HIGHEST_ZONE": {
+        const zone = action.zone;
+        if (zone > (state.highestZoneLifetime || 0)) {
+            return { ...state, highestZoneLifetime: zone };
+        }
+        return state;
     }
 
     case "GRANT_EXPLORER": {

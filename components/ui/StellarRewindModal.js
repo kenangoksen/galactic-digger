@@ -1,5 +1,5 @@
 // components/ui/StellarRewindModal.js
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { fmt } from "../../game/damage";
@@ -12,15 +12,21 @@ export default function StellarRewindModal({
   currentZone,
 }) {
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
+    <Modal 
+      visible={visible} 
+      transparent 
+      animationType="fade" 
+      statusBarTranslucent={true}
+      hardwareAccelerated={true}
+    >
+      <View style={[styles.overlay, { zIndex: 9999 }]}>
         <LinearGradient
           colors={["#2e1065", "#0f172a"]}
           style={styles.modalContent}
         >
           {/* HEADER */}
           <View style={styles.header}>
-            <Ionicons name="infinite" size={32} color="#a855f7" />
+            <MaterialCommunityIcons name="orbit" size={32} color="#a855f7" />
             <Text style={styles.title}>STELLAR REWIND</Text>
           </View>
 
@@ -47,7 +53,7 @@ export default function StellarRewindModal({
             <Ionicons name="warning-outline" size={16} color="#fbbf24" />
             <Text style={styles.warningText}>
               Sector, Minerals, and Miners will be reset. {"\n"}
-              You keep Stellar Fragments, Protocols, and Premium Items.
+              You keep Stellar Fragments, Stellar Tags, Protocols, and Premium Items.
             </Text>
           </View>
 

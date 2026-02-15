@@ -1,4 +1,5 @@
 // app/(tabs)/index.js
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCallback, useState } from "react";
 import { Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -9,12 +10,13 @@ import MinersSheet from "../../components/MinersSheet";
 import SettingsSheet from "../../components/SettingsSheet";
 import TopBar from "../../components/TopBar";
 import AchievementsModal from "../../components/ui/AchievementsModal"; // 🏆 New
-import ActiveBuffTray from "../../components/ui/ActiveBuffTray"; // ✅ New (Retry)
 import DevToolsModal from "../../components/ui/DevToolsModal";
 import NiceModal from "../../components/ui/NiceModal";
 import QuestSelectionModal from "../../components/ui/QuestSelectionModal"; // 🚀
 import StatisticsModal from "../../components/ui/StatisticsModal"; // 📊
+import TagOpenModal from "../../components/ui/TagOpenModal"; // 🌟
 import TimeWarpResultModal from "../../components/ui/TimeWarpResultModal"; // ⏳
+import UnopenedTagsFab from "../../components/ui/UnopenedTagsFab"; // 🌟
 import WelcomeBackModal from "../../components/WelcomeBackModal";
 
 import { fmt, getNextCost } from "../../game/damage";
@@ -51,6 +53,7 @@ export default function HomeScreen() {
   const [selectedExplorer, setSelectedExplorer] = useState(null); // For quest selection
   const [questOptions, setQuestOptions] = useState([]); // 4 quest options
   const [showSyndicate, setShowSyndicate] = useState(false); // ⚡ Syndicate
+  const [showTagModal, setShowTagModal] = useState(false); // 🌟 Tags Modal
 
   // Modal State
   const [modal, setModal] = useState({
@@ -349,6 +352,11 @@ export default function HomeScreen() {
                   onClose={closeSheet}
                   unlockedCount={engine.unlockedCount}
                   tagsByMinerId={engine.eco.tagsByMinerId} // ✅ Pass Tags
+                  onBuyAllSkills={engine.buyAllAvailableSkills} // 🌟 Bulk Buy
+                  totals={engine.totals} // ✅ Pass Breakdown
+                  dpsMultiplier={engine.dpsMultiplier} // ✅ Pass Active Multiplier
+                  eco={engine.eco} // ✅ Pass Eco for Realignment
+                  dispatchEco={engine.dispatchEco} // ✅ Pass Dispatch for Realignment
                 />
             );
           }}
@@ -436,7 +444,7 @@ export default function HomeScreen() {
               <TopBar
                 minerals={engine.minerals}
                 fragments={engine.stellarFragments || 0}
-                clickDamage={engine.calcTapDamage().dmg}
+                clickDamage={engine.calcTapDamage().baseDmg} // âœ… Use Stable Base Dmg
                 dps={engine.totalDps}
                 prestigeReward={engine.prestigeReward}
                 streak={engine.uiStreak}
@@ -468,8 +476,7 @@ export default function HomeScreen() {
                       </View>
                   </Pressable>
               )}
-              
-              <ActiveBuffTray cosmicProtocols={engine.cosmicProtocols} />
+              {/* ActiveBuffTray Removed as per request */}
 
               <SideBarRight
                 mode={engine.mode} // "progress" | "farm"
@@ -481,6 +488,23 @@ export default function HomeScreen() {
                     setShowDevTools(true);
                 }}
               />
+              
+              {/* 🌟 REWIND BUTTON (Standalone) */}
+              {engine.rewindUnlocked && (
+                  <Pressable 
+                    onPress={engine.openRewindModal}
+                    style={styles.rewindBtn}
+                  >
+                      <MaterialCommunityIcons name="orbit" size={24} color="#d8b4fe" />
+                  </Pressable>
+              )}
+              
+              {/* 🌟 UNOPENED TAGS FAB */}
+              <UnopenedTagsFab 
+                  count={engine.eco?.unopenedTags || 0} 
+                  onPress={() => setShowTagModal(true)} 
+              />
+
               {/* SOL BAR */}
               <SideBarLeft
                 onSettings={() => setShowSettings(true)}
@@ -587,45 +611,40 @@ export default function HomeScreen() {
               />
               
               {/* Prestige Modal */}
-              <StellarRewindModal
-                 visible={!!engine.prestigePending}
-                 reward={engine.prestigePending?.reward || 0} 
-                 stats={engine.stats}
-                 onConfirm={() => engine.confirmPrestige()}
-                 onCancel={() => engine.cancelPrestige()}
-              />
 
-              {/* NiceModal */}
-              <NiceModal 
-                  visible={modal.visible}
-                  title={modal.title}
-                  message={modal.message}
-                  type={modal.type}
-                  onConfirm={modal.onConfirm}
-                  confirmText={modal.confirmText}
-                  cancelText={modal.cancelText}
-                  onClose={() => setModal(prev => ({ ...prev, visible: false }))}
-              />
-
-              <StellarRewindModal
-                visible={engine.showRewindModal}
-                rewardAmount={engine.prestigeReward || 0}
-                currentZone={engine.maxUnlockedZone}
-                onClose={() => engine.setShowRewindModal(false)}
-                onConfirm={engine.confirmStellarRewind}
-              />
-
-              {/* Big Bang Modal */}
-              <BigBangModal 
-                  visible={engine.showBigBangModal}
-                  onClose={() => engine.setShowBigBangModal(false)}
-                  onConfirm={engine.performBigBang}
-                  gainedEssence={engine.calcBigBangGain?.().gain || 0}
-                  highestZone={engine.calcBigBangGain?.().highestZone || 0}
-              />
             </>
           )}
         </MinersSheetHost>
+
+        {/* --- GLOBAL MODALS --- */}
+        {/* Must be OUTSIDE Host to be on top of Sheet */}
+
+        <StellarRewindModal
+          visible={engine.showRewindModal}
+          rewardAmount={engine.prestigeReward || 0}
+          currentZone={engine.maxUnlockedZone}
+          onClose={() => engine.setShowRewindModal(false)}
+          onConfirm={engine.confirmStellarRewind}
+        />
+
+        <BigBangModal 
+            visible={engine.showBigBangModal}
+            onClose={() => engine.setShowBigBangModal(false)}
+            onConfirm={engine.performBigBang}
+            gainedEssence={engine.calcBigBangGain?.().gain || 0}
+            highestZone={engine.calcBigBangGain?.().highestZone || 0}
+        />
+
+        <NiceModal 
+            visible={modal.visible}
+            title={modal.title}
+            message={modal.message}
+            type={modal.type}
+            onConfirm={modal.onConfirm}
+            confirmText={modal.confirmText}
+            cancelText={modal.cancelText}
+            onClose={() => setModal(prev => ({ ...prev, visible: false }))}
+        />
       </ImageBackground>
     </View>
 
@@ -639,6 +658,15 @@ export default function HomeScreen() {
         visible={showAchievements}
         onClose={() => setShowAchievements(false)}
         engine={engine} // ✅ Pass shared engine instance
+      />
+      
+      {/* 🌟 TAG OPEN MODAL */}
+      <TagOpenModal 
+          visible={showTagModal}
+          unopenedCount={engine.eco?.unopenedTags || 0}
+          lastOpenedMinerId={engine.eco?.lastOpenedMinerId}
+          onOpenTag={() => engine.dispatchEco({ type: "OPEN_TAG" })}
+          onClose={() => setShowTagModal(false)}
       />
 
     {/* ⚡ Syndicate Panel */}
@@ -693,4 +721,19 @@ const styles = StyleSheet.create({
       fontSize: 10,
       fontWeight: 'bold',
   },
+  rewindBtn: {
+      position: 'absolute',
+      right: 16,
+      top: 360, // Below SideBarRight (approx)
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(168, 85, 247, 0.2)',
+      borderWidth: 1.5,
+      borderColor: '#a855f7',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 40,
+  }
 });
+

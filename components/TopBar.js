@@ -47,26 +47,53 @@ export default function TopBar(props) {
   return (
     <View style={styles.wrapper}>
       <View style={styles.bar}>
-        <Stat 
-          icon={icons.mineral} 
-          value={fmtD(minerals)} 
-          onPress={() => handlePress("mineral")}
-        />
-        <Stat 
-          icon={icons.fragment} 
-          value={fragText} 
-          onPress={() => handlePress("fragment")}
-        />
-        <Stat 
-          icon={icons.sword} 
-          value={fmtD(clickDamage)} 
-          onPress={() => handlePress("sword")}
-        />
-        <Stat 
-          icon={icons.dps} 
-          value={fmtD(dps)} 
-          onPress={() => handlePress("dps")}
-        />
+        
+        {/* LEFT COLUMN: Resources */}
+        <View style={styles.columnLeft}>
+            <Stat 
+              icon={icons.mineral} 
+              value={fmtD(minerals)} 
+              onPress={() => handlePress("mineral")}
+              align="left"
+            />
+            <Stat 
+              icon={icons.fragment} 
+              value={fragText} 
+              onPress={() => handlePress("fragment")}
+              isFragment={true}
+              align="left"
+            />
+        </View>
+
+        {/* RIGHT COLUMN: Damage */}
+        <View style={styles.columnRight}>
+            <Stat 
+              icon={icons.sword} 
+              value={fmtD(clickDamage)} 
+              onPress={() => handlePress("sword")}
+              align="right"
+            />
+            <Stat 
+              icon={icons.dps} 
+              value={fmtD(dps)} 
+              onPress={() => handlePress("dps")}
+              align="right"
+            />
+        </View>
+
+        {/* ✅ CENTER BADGE: Active/Idle */}
+        {hasIdleBonus && (
+            <View style={[
+                styles.modeBadge, 
+                isIdle ? styles.modeBadgeIdle : styles.modeBadgeActive
+            ]}>
+                <View style={[styles.modeDot, { backgroundColor: isIdle ? '#888' : '#00ff00' }]} />
+                <Text style={styles.modeText}>
+                    {isIdle ? "IDLE" : "ACTIVE"}
+                </Text>
+            </View>
+        )}
+
       </View>
 
 
@@ -77,19 +104,6 @@ export default function TopBar(props) {
                 {streak} Combo (x{streakMult.toFixed(2)})
             </Text>
         </View>
-      )}
-
-      {/* ✅ Game Mode Badge - Active/Idle */}
-      {hasIdleBonus && (
-          <View style={[
-              styles.modeBadge, 
-              isIdle ? styles.modeBadgeIdle : styles.modeBadgeActive
-          ]}>
-              <View style={[styles.modeDot, { backgroundColor: isIdle ? '#888' : '#00ff00' }]} />
-              <Text style={styles.modeText}>
-                  {isIdle ? "IDLE" : "ACTIVE"}
-              </Text>
-          </View>
       )}
 
       {/* Tooltip Bubble */}
@@ -105,12 +119,17 @@ export default function TopBar(props) {
   );
 }
 
-function Stat({ icon, value, onPress }) {
-
+function Stat({ icon, value, onPress, align = "left", isFragment }) {
   return (
-    <Pressable onPress={onPress} style={styles.stat}>
-      <Image source={icon} style={styles.icon} />
-      <Text style={styles.value}>{value}</Text>
+    <Pressable onPress={onPress} style={[styles.stat, align === 'right' && styles.statRight]}>
+      {align === 'left' && <Image source={icon} style={styles.icon} />}
+      
+      <Text style={[
+          styles.value, 
+          isFragment && styles.fragmentValue 
+      ]}>{value}</Text>
+      
+      {align === 'right' && <Image source={icon} style={styles.icon} />}
     </Pressable>
   );
 }
@@ -128,8 +147,9 @@ const styles = StyleSheet.create({
   bar: {
     width: "100%",
     height: 54, 
-    borderRadius: 27,
+    borderRadius: 16, 
     paddingHorizontal: 16, 
+    paddingVertical: 4,
     backgroundColor: "rgba(0,0,0,0.65)",
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.15)",
@@ -138,26 +158,48 @@ const styles = StyleSheet.create({
     justifyContent: "space-between", 
   },
 
+  columnLeft: {
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: 2,
+      zIndex: 2, // Ensure clicks work
+  },
+
+  columnRight: {
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: 2,
+      zIndex: 2,
+  },
+
   stat: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingVertical: 5, // Hit slop area
+  },
+  
+  statRight: {
+      justifyContent: 'flex-end',
   },
 
   icon: {
-    width: 28,
-    height: 28,
+    width: 16,
+    height: 16,
     resizeMode: "contain",
   },
 
   value: {
     color: "#fff",
     fontWeight: "800",
-    fontSize: 13, 
+    fontSize: 11,
     textShadowColor: "rgba(0,0,0,0.8)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+    letterSpacing: 0.5,
+  },
+  
+  fragmentValue: {
+      color: "#fbbf24", 
   },
 
   // Tooltip Styles
@@ -175,8 +217,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 8,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderBottomColor: "rgba(0,0,0,0.85)", // Arrow color
-    marginBottom: -1, // Overlap slightly
+    borderBottomColor: "rgba(0,0,0,0.85)", 
+    marginBottom: -1, 
   },
   tooltipBody: {
     backgroundColor: "rgba(0,0,0,0.85)",
@@ -198,7 +240,7 @@ const styles = StyleSheet.create({
   // Streak
   streakBadge: {
     position: 'absolute',
-    bottom: -32, // Push lower into the specific gap between TopBar and ZoneSwitcher
+    bottom: -32, 
     backgroundColor: '#ffaa00',
     paddingVertical: 2,
     paddingHorizontal: 10,
@@ -214,36 +256,38 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
-  // Game Mode Badge
+  // Game Mode Badge (Centered in Bar)
   modeBadge: {
-    position: 'absolute',
-    bottom: -18, // Tucked closer
-    right: 12, 
+    position: 'absolute', // Keep absolute to center without affecting flow
+    left: '50%',
+    top: '50%',
+    transform: [{translateX: -20}, {translateY: -9}], // Center exact
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4, // Tighter gap
-    paddingVertical: 2, // Smaller padding
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    justifyContent: 'center',
+    gap: 4, 
+    width: 60,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 1,
-    zIndex: 95,
+    zIndex: 1,
   },
   modeBadgeActive: {
-    backgroundColor: 'rgba(0, 50, 0, 0.8)',
-    borderColor: 'rgba(0, 255, 0, 0.3)',
+    backgroundColor: 'rgba(0, 50, 0, 0.4)', // More transparent
+    borderColor: 'rgba(0, 255, 0, 0.2)',
   },
   modeBadgeIdle: {
-    backgroundColor: 'rgba(30, 30, 30, 0.8)',
+    backgroundColor: 'rgba(30, 30, 30, 0.4)',
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   modeDot: {
-    width: 5, // Smaller dot
-    height: 5,
-    borderRadius: 2.5,
+    width: 4, 
+    height: 4,
+    borderRadius: 2,
   },
   modeText: {
     color: '#fff',
-    fontSize: 9, // Smaller font
+    fontSize: 8, 
     fontWeight: '700',
     letterSpacing: 0.5,
   },

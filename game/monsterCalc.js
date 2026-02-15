@@ -40,3 +40,13 @@ export function getNextUnlockCost(ownedCount = 0) {
     if (ownedCount < costs.length) return costs[ownedCount];
     return Math.floor(500 * Math.pow(1.2, ownedCount - costs.length + 1)); 
 }
+
+// ---------------- Primal Boss Reward (Stellar Fragments) ----------------
+// Formula: ((Zone - 80) / 25) ^ 1.3
+export function getPrimalReward(zone) {
+    if (zone < 100) return 0;
+    const base = (zone - 80) / 25;
+    if (base <= 0) return 0;
+    return Math.floor(Math.pow(base, 1.3));
+}
+

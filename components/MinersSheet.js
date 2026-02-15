@@ -13,10 +13,13 @@ import {
 } from "react-native";
 import { D, fmtD } from "../game/bn";
 import { getBulkCost } from "../game/damage";
+import MinerDetailsModal from "./MinerDetailsModal";
+import StellarRealignmentModal from "./StellarRealignmentModal"; // ✅ New Modal
 
 const MINER_PLACEHOLDER = require("../assets/images/sprites/miners/miner_01.png");
 
 // Shared Icon Map (Same as SkillsSheet)
+// Shared Icon Map (Same as MinerDetailsModal)
 const SKILL_ICONS = {
     "s_clickstorm": "flash",
     "s_powersurge": "flame",
@@ -27,27 +30,19 @@ const SKILL_ICONS = {
     "s_superclicks": "hammer",
     "s_energize": "battery-charging",
     "s_reload": "refresh-circle",
+    "dpsMultiplier": "sword-cross",
+    "globalDpsMultiplier": "earth",
+    "tapMultiplier": "finger-print",
+    "mineralMultiplier": "diamond-stone",
+    "critChance": "target",
+    "critMultiplier": "nuke",
+    "unlock_feature_rewind": "orbit", // ✅ Rewind Icon
+    "default": "star"
 };
 
 function getSkillIconName(kind, value) {
-  switch (kind) {
-    case "unlockActiveSkill":
-      return SKILL_ICONS[value] || "star"; // Match active skill icon
-    case "tapMultiplier":
-      return "finger-print";
-    case "dpsMultiplier":
-      return "flash";
-    case "globalDpsMultiplier":
-      return "planet";
-    case "critChance":
-      return "locate"; 
-    case "critMultiplier":
-      return "nuclear"; 
-    case "mineralMultiplier":
-      return "diamond";
-    default:
-      return "star";
-  }
+  if (kind === "unlockActiveSkill") return SKILL_ICONS[value] || SKILL_ICONS.default;
+  return SKILL_ICONS[kind] || SKILL_ICONS.default;
 }
 
 // Decimal-safe: dpsBase string/number/Decimal olabilir
@@ -65,6 +60,8 @@ const MinerRow = memo(function MinerRow({
   purchasedSkillsForMiner,
   tags = 0,       // Starlink Tags
   buyAmount = 1,  // ✅ Default 1
+  currentDps,     // ✅ Live DPS from totals
+  onShowDetails,  // ✅ New Prop
 }) {
   const cost = getBulkCost(miner, level, buyAmount); // ✅ Use bulk cost
 
@@ -72,19 +69,24 @@ const MinerRow = memo(function MinerRow({
   const canBuy = D(minerals).gte(cost);
 
   const action = level <= 0 ? "UNLOCK" : "UPGRADE";
-  const dpsPerLvl = minerDpsPerLevel(miner);
   
-  // Base DPS
-  let totalDpsVal = D(dpsPerLvl).mul(Math.max(1, level));
-  
-  // Apply Starlink Multiplier to displayed DPS
-  if (tags > 0) {
-      const tagMult = 1 + tags * 0.50; // hardcoded 0.50 or pass config?
-      totalDpsVal = totalDpsVal.mul(tagMult);
+  // Use passed currentDps if available, else usage deprecated fallback
+  // If currentDps is supplied, it includes ALL multipliers (Leveling, Tags, Global, Active)
+  let displayDps = D(0);
+  if (currentDps) {
+      displayDps = D(currentDps);
+  } else {
+      // Fallback (should not happen if parents are updated)
+      const dpsPerLvl = minerDpsPerLevel(miner);
+      displayDps = D(dpsPerLvl).mul(Math.max(1, level));
+      if (tags > 0) {
+          const tagMult = 1 + tags * 0.50; 
+          displayDps = displayDps.mul(tagMult);
+      }
   }
-  
-  const dpsLine = D(dpsPerLvl).gt(0)
-    ? `${fmtD(totalDpsVal)} DPS`
+
+  const dpsLine = D(displayDps).gt(0)
+    ? `${fmtD(displayDps)} DPS`
     : "— DPS";
 
   // Animation ref (Keep subtle press effect)
@@ -138,54 +140,44 @@ const MinerRow = memo(function MinerRow({
         )}
       </View>
 
-      {/* INFO */}
-      <View style={styles.info}>
+      {/* INFO - Press to Show Details */}
+      <Pressable style={styles.info} onPress={() => onShowDetails && onShowDetails(miner.id)}>
         <Text numberOfLines={1} style={styles.name}>{miner.name}</Text>
         <Text style={styles.dpsText}>{dpsLine}</Text>
         
-        {/* SKILLS STRIP - Simplified */}
+        {/* SKILLS STRIP - Visual Only */}
         {!!(sortedSkills.length > 0) && (
           <View style={styles.skillStrip}>
             {sortedSkills.map((sk) => {
               const unlockAt = Number(sk.unlockAt || 9999);
               const locked = level < unlockAt;
               const purchased = !!purchasedSkillsForMiner?.[sk.id];
-              const skCost = D(sk.cost || 0);
-              const canAffordSkill = !locked && !purchased && D(minerals).gte(skCost);
-
-              let iconColor = "#ffffff40";
-              const iconName = getSkillIconName(sk.kind, sk.value); // Use value for mapping match
-
-              if (purchased) iconColor = "#4ade80"; // Green
-              else if (canAffordSkill) iconColor = "#fbbf24"; // Gold
-              else if (!locked) iconColor = "#94a3b8"; // Available grey
+              const iconName = getSkillIconName(sk.kind, sk.value); 
 
               return (
-                <Pressable
+                <View
                   key={sk.id}
-                  disabled={locked || purchased}
-                  onPress={() => onBuySkill && onBuySkill(miner.id, sk.id)}
                   style={[
-                    styles.skillDot,
-                    locked && styles.skillDotLocked,
-                    purchased && styles.skillDotOwned,
-                    canAffordSkill && styles.skillDotBuyable,
+                    styles.skillBox, 
+                    locked && styles.skillBoxLocked,
+                    purchased && styles.skillBoxOwned,
                   ]}
                 >
-                    {locked ? 
-                        <Ionicons name="lock-closed" size={8} color="rgba(255,255,255,0.2)" /> : 
-                        <Ionicons name={iconName} size={10} color={iconColor} />
-                    }
-                </Pressable>
+                    <MaterialCommunityIcons 
+                        name={iconName} // ✅ Always show skill icon, never lock icon
+                        size={12} 
+                        color={purchased ? "#4ade80" : locked ? "#64748b" : "#fbbf24"} 
+                    />
+                </View>
               );
             })}
           </View>
         )}
-      </View>
+      </Pressable>
 
       {/* ACTION BUTTON */}
       <Pressable
-        onPress={() => onBuyOrUpgrade(miner.id)}
+        onPress={() => onBuyOrUpgrade(miner.id, buyAmount)}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={!canBuy}
@@ -215,9 +207,16 @@ function MinersSheetImpl({
   onBuySkill,
   onClose,
   unlockedCount = 2,
+  onBuyAllSkills, // 🌟 New Prop
+  totals, // ✅ Live DPS Breakdown
+  dpsMultiplier = 1, // ✅ Active Skill Multiplier
+  eco, // ✅ Passed from Index
+  dispatchEco, // ✅ Passed from Index
 }) {
   const listRef = useRef(null);
   const [buyMultiplier, setBuyMultiplier] = useState(1);
+  const [selectedMinerId, setSelectedMinerId] = useState(null); // ✅ Details Modal State
+  const [showRealignment, setShowRealignment] = useState(false); // ✅ Realignment Modal State
 
   const toggleMult = () => {
       setBuyMultiplier(prev => {
@@ -227,10 +226,45 @@ function MinersSheetImpl({
       });
   };
 
-  const data = useMemo(() => {
+  const visibleMiners = useMemo(() => {
     const count = Math.max(2, Number(unlockedCount || 2));
     return miners.slice(0, Math.min(count, miners.length));
   }, [miners, unlockedCount]);
+
+  const renderItem = ({ item }) => {
+    const level = Math.floor(Number(owned[item.id] || 0));
+    const tags = tagsByMinerId?.[item.id] || 0;
+    
+    // Calculate Live DPS
+    let dpsStart = D(0);
+    if (totals && totals.breakdown && totals.breakdown.miners[item.id]) {
+        // breakdown.dps already includes: Base * Level * LevelingMult * LocalPassives * Tags
+        dpsStart = D(totals.breakdown.miners[item.id].dps);
+        
+        // Apply Global Factors that aren't in breakdown (handled in totals.dps usually)
+        // totals.globalDpsMult includes: Protocols, Artifacts, Global Passives, Fragments
+        dpsStart = dpsStart.mul(totals.globalDpsMult || 1);
+        
+        // Apply Active Skills
+        dpsStart = dpsStart.mul(dpsMultiplier);
+    } 
+
+    return (
+      <MinerRow
+        miner={item}
+        level={level}
+        minerals={minerals}
+        getNextCost={getNextCost}
+        onBuyOrUpgrade={onBuyOrUpgrade}
+        onBuySkill={onBuySkill}
+        purchasedSkillsForMiner={ownedSkills?.[item.id]}
+        tags={tags}
+        buyAmount={buyMultiplier}
+        currentDps={dpsStart} // ✅ Pass calculated DPS
+        onShowDetails={setSelectedMinerId} // ✅ Open Modal
+      />
+    );
+  };
 
   return (
     <View style={styles.sheet} pointerEvents="auto">
@@ -243,7 +277,7 @@ function MinersSheetImpl({
         
         <View style={styles.headerRight}>
             <Pressable onPress={toggleMult} style={styles.multBtn}>
-                <Text style={styles.multBtnTxt}>{buyMultiplier}x</Text>
+                <Text style={styles.multBtnTxt}>{buyMultiplier === 10000 ? "MAX" : `x${buyMultiplier}`}</Text>
             </Pressable>
             <Pressable onPress={onClose} style={styles.closeBtn}>
                 <Ionicons name="close" size={20} color="#fff" />
@@ -253,29 +287,74 @@ function MinersSheetImpl({
 
       <FlatList
         ref={listRef}
-        data={data}
+        data={visibleMiners}
         keyExtractor={(it) => it.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         removeClippedSubviews={false}
-        renderItem={({ item: m }) => {
-          const lvl = Number(owned[m.id] || 0);
-          const purchasedMap = ownedSkills?.[m.id] || {};
-          return (
-            <MinerRow
-              miner={m}
-              level={lvl}
-              minerals={minerals}
-              getNextCost={getNextCost}
-              onBuyOrUpgrade={(mid) => onBuyOrUpgrade(mid, buyMultiplier)}
-              onBuySkill={onBuySkill}
-              purchasedSkillsForMiner={purchasedMap}
-              tags={tagsByMinerId[m.id] || 0} 
-              buyAmount={buyMultiplier}
-            />
-          );
-        }}
+        renderItem={renderItem}
+        ListFooterComponent={
+            <View style={{paddingBottom: 20}}>
+            <Pressable 
+                onPress={onBuyAllSkills} 
+                style={({pressed}) => [
+                    styles.buyAllBtn,
+                    pressed && { opacity: 0.8, transform: [{scale: 0.98}] }
+                ]}
+            >
+                <MaterialCommunityIcons name="lightning-bolt" size={16} color="#000" />
+                <Text style={styles.buyAllTxt}>BUY AVAILABLE SKILLS</Text>
+            </Pressable>
+            
+            {/* STELLAR REALIGNMENT BUTTON */}
+            <Pressable 
+                onPress={() => setShowRealignment(true)}
+                style={({pressed}) => [
+                    styles.realignBtn,
+                    pressed && { opacity: 0.8, transform: [{scale: 0.98}] }
+                ]}
+            >
+                <MaterialCommunityIcons name="star-four-points" size={16} color="#fbbf24" />
+                <View>
+                    <Text style={styles.realignBtnTxt}>STELLAR REALIGNMENT</Text>
+                    <Text style={styles.realignSubTxt}>Transfer Tags • Optimize DPS</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={16} color="#fbbf24" />
+            </Pressable>
+         </View>
+        }
+      />
+      
+      {/* MINER DETAILS MODAL */}
+      <MinerDetailsModal
+        visible={!!selectedMinerId}
+        miner={miners.find(m => m.id === selectedMinerId)}
+        onClose={() => setSelectedMinerId(null)}
+        level={Math.floor(Number(owned[selectedMinerId] || 0))}
+        onBuySkill={onBuySkill}
+        purchasedSkills={ownedSkills?.[selectedMinerId]}
+        tags={tagsByMinerId?.[selectedMinerId] || 0}
+        minerals={minerals}
+        ownedMiners={owned}
+        ownedSkills={ownedSkills}
+        tagsByMinerId={tagsByMinerId} // ✅
+        eco={eco} // ✅
+        currentDps={
+            selectedMinerId && totals?.breakdown?.miners?.[selectedMinerId]
+            ? D(totals.breakdown.miners[selectedMinerId].dps).mul(totals.globalDpsMult || 1).mul(dpsMultiplier)
+            : 0
+        }
+      />
+
+      {/* STELLAR REALIGNMENT MODAL */}
+      <StellarRealignmentModal
+        visible={showRealignment}
+        onClose={() => setShowRealignment(false)}
+        eco={eco || {}}
+        dispatchEco={dispatchEco}
+        ownedMiners={owned}
+        totals={totals}
       />
     </View>
   );
@@ -433,31 +512,27 @@ const styles = StyleSheet.create({
   },
   skillStrip: {
     flexDirection: "row",
-    marginTop: 4,
+    marginTop: 6,
     gap: 4,
   },
-  skillDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.05)",
+  skillBox: {
+    width: 20, // ✅ Reduced from 24
+    height: 20,
+    borderRadius: 5, // Slightly less rounded
+    backgroundColor: "#1e293b",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "#334155",
   },
-  skillDotLocked: {
-    opacity: 0.5,
-    backgroundColor: "transparent",
-    borderColor: "rgba(255,255,255,0.05)",
+  skillBoxLocked: {
+     opacity: 0.8,
+    backgroundColor: "#0f172a", 
+    borderColor: "#1e293b", 
   },
-  skillDotOwned: {
-    backgroundColor: "rgba(74, 222, 128, 0.2)",
+  skillBoxOwned: {
+    backgroundColor: "rgba(74, 222, 128, 0.15)",
     borderColor: "#4ade80",
-  },
-  skillDotBuyable: {
-    borderColor: "#fbbf24",
-    backgroundColor: "rgba(251, 191, 36, 0.1)",
   },
   buyBtn: {
     backgroundColor: "#2563eb", // Solid Blue
@@ -488,4 +563,45 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "bold",
   },
+  buyAllBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: '#fbbf24', // Gold
+      paddingVertical: 12,
+      marginHorizontal: 8,
+      marginTop: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#f59e0b',
+  },
+  buyAllTxt: {
+      color: '#000',
+      fontWeight: 'bold',
+      fontSize: 12,
+      letterSpacing: 0.5
+  },
+  realignBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: 'rgba(55, 65, 81, 0.5)', // Dark Grey
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      marginHorizontal: 8,
+      marginTop: 12, // ✅ Added gap
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#4b5563',
+  },
+  realignBtnTxt: {
+      color: '#fbbf24', // Gold
+      fontWeight: 'bold',
+      fontSize: 12,
+  },
+  realignSubTxt: {
+      color: '#9ca3af',
+      fontSize: 10,
+  }
 });

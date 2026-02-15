@@ -78,6 +78,62 @@ function baseDpsForMiner(def, level) {
 }
 
 // -----------------------------------------------------------------------------
+// Leveling Multipliers (Clicker Heroes Style)
+// -----------------------------------------------------------------------------
+// 200-1000: 4x every 25 levels
+// 1000+: 10x every 1000 levels, 4x every 25 levels otherwise
+// Galactic Digger Implementation:
+// - Start checking at Lvl 200
+// - Every 25 levels: 4x
+// - Every 1000 levels: 10x (replaces the 4x at that specific step, or stacks? CH is specific multipliers at specific levels)
+// Simplified CH Formula:
+// 1. From 200 to Level: count how many 25s passed.
+// 2. Count how many 1000s passed.
+// 3. 4^(count25) * 10^(count1000) / adjustment for overlap?
+// Better: Iterative or closed form?
+// Closed form:
+// Let `completed25s` = floor((Level - 200) / 25) + 1 (if Level >= 200)
+// Actually CH logic is: At level 200, 225, 250... multiply by 4.
+// At level 1000, 2000... multiply by 10 INSTEAD of 4.
+export function getLevelingMultiplier(level) {
+    if (level < 200) return D(1);
+
+    let multiplier = 1;
+    // We can do a loop for precision or a formula. Loop is fine for < 10000 levels (fast).
+    // If levels go to 1e100, we need a formula with logs.
+    // Galactic Digger levels can be huge?
+    // User said "e+100'lere ulaÅŸmak". So levels might be high.
+    // Formula approach:
+    
+    // Multipliers apply at: 200, 225, 250...
+    // Count of 25-boundaries passed: floor((Level - 200) / 25) + 1
+    // Count of 1000-boundaries passed: floor((Level - 1000) / 1000) + 1 (only if Level >= 1000)
+    
+    // Each 25-boundary gives 4x.
+    // Each 1000-boundary replaces a 4x with 10x? Or is it 10x ON TOP?
+    // CH Wiki: "Every 25 levels is 4x damage. Every 1000 levels is 10x damage."
+    // Usually 1000s are "instead of" the 4x at that specific 25-step.
+    // So ratio is 10/4 = 2.5x extra per 1000 levels.
+    
+    // 1. Total 25-steps passed starting from 200
+    // L=200 -> 1 step. L=224 -> 1 step. L=225 -> 2 steps.
+    const steps = Math.floor((level - 200) / 25) + 1;
+    
+    // 2. Count 1000-steps passed starting from 1000
+    const thousands = level >= 1000 ? Math.floor((level - 1000) / 1000) + 1 : 0;
+    
+    // 3. Base multiplier: 4^steps
+    // 4. Boost for thousands: replace 4 with 10 => multiply by (10/4) per thousand
+    // multiplier = 4^steps * (2.5)^thousands
+    
+    // Using BreakInfinity for safety
+    const base = Decimal.pow(4, steps);
+    const boost = Decimal.pow(2.5, thousands);
+    
+    return base.mul(boost);
+}
+
+// -----------------------------------------------------------------------------
 // Layers
 // -----------------------------------------------------------------------------
 
@@ -375,8 +431,8 @@ export function computeTotals({
     const baseTagPower = 0.50;
     const tagPower = baseTagPower + totals.starlinkTagPowerAdd;
 
-    let baseDps = 0;
-    let baseTap = 0;
+    let baseDps = D(0);
+    let baseTap = D(0);
 
     for (const m of minersDef || []) {
         const lvl = Math.max(0, Math.floor(toNum(ownedMiners?.[m.id], 0)));
@@ -385,14 +441,22 @@ export function computeTotals({
         // Base DPS/Tap
         let dps = baseDpsForMiner(m, lvl);
         let tap = baseTapForMiner(m, lvl);
-
+        
+        // Leveling Multiplier (Infinite Scaling)
+        const lvlMult = getLevelingMultiplier(lvl);
+        // Remove unsafe number multiplication: dps *= lvlMult.toNumber();
+        
+        // Coerce dps to Decimal and apply multiplier
+        let dpsD = D(dps).mul(lvlMult);
+        let tapD = D(tap).mul(lvlMult);
+        
         // Passive Skills (Miner Local)
-        let dpsMul = 1;
+        let dpsMul = D(1);
         const purchasedMap = getPurchasedSkillMap(ownedSkills, m.id);
         for (const sk of m.skills || []) {
             if (!isSkillActive({ minerLevel: lvl, purchasedMap, skill: sk })) continue;
             
-            if (sk.kind === 'dpsMultiplier') dpsMul *= (1 + sk.value);
+            if (sk.kind === 'dpsMultiplier') dpsMul = dpsMul.mul(1 + sk.value);
             // Global passive skills
             if (sk.kind === 'globalDpsMultiplier') totals.globalDpsMult *= (1 + sk.value);
             if (sk.kind === 'tapMultiplier') totals.tapMult *= (1 + sk.value);
@@ -401,25 +465,35 @@ export function computeTotals({
             if (sk.kind === 'critMultiplier') totals.critMult *= (1 + sk.value);
         }
         
-        dps *= dpsMul;
+        dpsD = dpsD.mul(dpsMul);
 
         // Tags
         const tags = tagsByMinerId?.[m.id] || 0;
         if (tags > 0) {
             const tagMul = 1 + (tags * tagPower);
-            dps *= tagMul;
-            tap *= tagMul;
+            dpsD = dpsD.mul(tagMul);
+            tapD = tapD.mul(tagMul);
         }
 
-        baseDps += dps;
-        baseTap += tap;
+        // Add to Totals (Decimal)
+        baseDps = D(baseDps).add(dpsD); 
+        baseTap = D(baseTap).add(tapD); // baseTap was number, now Decimal accumulation
         
-        totals.breakdown.miners[m.id] = { dps, tap, tags };
+        // Breakdowns need to be strings or Decimals? 
+        // Consumers might expect numbers, but with E100 we must use string/Decimal.
+        // Let's store string in breakdown to avoid serialization issues? 
+        // Or keep Decimal if the consumer (UI) handles fmtD.
+        totals.breakdown.miners[m.id] = { 
+            dps: dpsD, // Decimal
+            tap: tapD, 
+            tags 
+        };
     }
     
     // STARTING POWER BOOST (Singular Genesis)
-    baseDps *= totals.startingPowerMult;
-    baseTap *= totals.startingPowerMult; // Assuming it affects tap base too
+    baseDps = baseDps.mul(totals.startingPowerMult); // Decimal
+    const startingPowerTap = D(totals.startingPowerMult); 
+    baseTap = baseTap.mul(startingPowerTap); // Decimal
 
     // ✅ PASSIVE FRAGMENT BONUS (10% per unspent fragment)
     // CH-style: +10% DPS per Soul. Additive or Multiplicative? 
@@ -435,7 +509,7 @@ export function computeTotals({
 
     // 3. Apply Global Multipliers
     // DPS
-    totals.dps = baseDps * totals.globalDpsMult;
+    totals.dps = baseDps.mul(totals.globalDpsMult); // Decimal * Number
     
     // Add DPS->Tap Conversion (Progressive Milestones)
     const unlockedCount = Object.keys(dpsToTapMilestonesUnlocked || {}).length;
@@ -455,16 +529,17 @@ export function computeTotals({
     let dpsToTapRatio = Math.min(maxRatio, ratioUnclamped);
     
     // Step 3: Convert DPS to Tap Base
-    let tapBaseFromDps = totals.dps * dpsToTapRatio;
+    // totals.dps is Decimal now.
+    let tapBaseFromDps = totals.dps.mul(dpsToTapRatio);
     
     // Step 4: Full Tap Damage Order
     // (MinerBase + DPS_Base) * Multipliers
-    let totalBaseTap = baseTap + tapBaseFromDps;
+    let totalBaseTap = baseTap.add(tapBaseFromDps);
     
     // Apply Multipliers
-    totals.tapDamage = totalBaseTap * totals.tapMult;
+    totals.tapDamage = totalBaseTap.mul(totals.tapMult);
     
-    if (totals.tapDamage < 1) totals.tapDamage = 1;
+    if (totals.tapDamage.lt(1)) totals.tapDamage = D(1);
 
     // ✅ Mineral Bonus (Ad)
     if (mineralBonusActive) {

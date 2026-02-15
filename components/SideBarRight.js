@@ -18,8 +18,8 @@ export default function SideBarRight({
   mode = "progress", // "progress" | "farm"
   onToggleMode,
   onAdPress,
-  onDevTools, // ✅ Prop added
-  adReady = true, // reklam hazır mı? true iken parıltı
+  onDevTools, 
+  adReady = true, 
 }) {
   // ---- Tooltip State ----
   const [showTooltip, setShowTooltip] = useState(false);

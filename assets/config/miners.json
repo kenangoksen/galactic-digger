@@ -592,14 +592,6 @@
         "value": 0.02,
         "unlockAt": 100,
         "cost": "150000000000"
-      },
-      {
-        "id": "m10_s100_prestige",
-        "name": "Stellar Rewind",
-        "kind": "prestige_unlock",
-        "value": 1,
-        "unlockAt": 150,
-        "cost": "1000000000000000000"
       }
     ]
   },
@@ -1144,6 +1136,14 @@
         "kind": "critMultiplier",
         "value": 0.25,
         "unlockAt": 75
+      },
+      {
+        "id": "m20_unlock_rewind",
+        "name": "Unlock: Stellar Rewind",
+        "kind": "unlock_feature_rewind",
+        "value": 1,
+        "unlockAt": 150,
+        "cost": "10000000000000000000000000" 
       }
     ]
   },

@@ -19,15 +19,15 @@ import { AppState } from "react-native";
 import { createArtifact, getArtifactBonuses } from "./artifacts/artifactService";
 import { ARTIFACT_AFFIX } from "./artifacts/artifactTypes";
 import { D } from "./bn";
-import { DAMAGE_CONFIG, STARLINK_CONFIG } from "./config";
+import { DAMAGE_CONFIG } from "./config";
 import configCache from "./ConfigCache";
-import { computeTotals, getBulkCost, getPrimalReward } from "./damage";
+import { computeTotals, getBulkCost } from "./damage";
 import { loadGame, saveGame, serializeEco } from "./persistGame";
 import { DEFAULT_STATS, initStats } from "./stats";
 
 // Extracted modules
 import { ECO_INIT, ecoReducer } from "./ecoReducer";
-import { calculateStellarRewindReward, getNextUnlockCost, monsterHp, monsterMineral } from "./monsterCalc";
+import { calculateStellarRewindReward, getNextUnlockCost, getPrimalReward, monsterHp, monsterMineral } from "./monsterCalc";
 
 
 
@@ -790,6 +790,23 @@ export function useGameEngine() {
           if (localZone > (s.thisRewind.highestSector || 1)) s.thisRewind.highestSector = localZone;
       }
 
+      // 🌟 HZE & GUARANTEED TAG REWARD
+      // Access eco state without adding dependency
+      const currentEco = latestStateRef.current?.eco || {};
+      const hze = currentEco.highestZoneLifetime || 0;
+      
+      if (localZone > hze) {
+          // New Record!
+          dispatchEco({ type: "UPDATE_HIGHEST_ZONE", zone: localZone });
+          
+          // Guaranteed Tag Drop (Zone 100, 110, 120...)
+          if (localZone >= 100 && localZone % 10 === 0) {
+              dispatchEco({ type: "GAIN_UNOPENED_TAG", amount: 1 });
+              setTagToast({ message: "Stellar Tag Unlocked!" });
+              setTimeout(() => setTagToast(null), 3000);
+          }
+      }
+
       // Primal Reward
       if (isPrimal) {
           const rawPReward = getPrimalReward(localZone);
@@ -805,18 +822,19 @@ export function useGameEngine() {
                  // Optional: Toast
              }
              
-              // STARLINK TAG DROP LOGIC
-              // 10% Chance + Protocol Bonus
-              const dropChance = (STARLINK_CONFIG.DROP_CHANCE || 0.1) + (totals.protocolModifiers?.starlinkTagDropBonus || 0);
-              if (Math.random() < dropChance) {
-                 dispatchEco({ type: "GAIN_TAG", amount: 1 });
-                 // Toast Logic (We don't know who got it until we check state, 
-                 // but dispatch happens asynchronously. 
-                 // For now, simpler: Just show "Starlink Tag Found!"
-                 // Or we can peek at who would get it (random).
-                 setTagToast({ message: "Starlink Tag Found!" });
-                 setTimeout(() => setTagToast(null), 3000);
-             }
+              // STARLINK TAG DROP LOGIC REMOVED (Replaced by Guaranteed HZE Reward)
+              /*
+               const dropChance = (STARLINK_CONFIG.DROP_CHANCE || 0.1) + (totals.protocolModifiers?.starlinkTagDropBonus || 0);
+               if (Math.random() < dropChance) {
+                  dispatchEco({ type: "GAIN_TAG", amount: 1 });
+                  // Toast Logic (We don't know who got it until we check state, 
+                  // but dispatch happens asynchronously. 
+                  // For now, simpler: Just show "Starlink Tag Found!"
+                  // Or we can peek at who would get it (random).
+                  setTagToast({ message: "Starlink Tag Found!" });
+                  setTimeout(() => setTagToast(null), 3000);
+               }
+               */
 
              // ğŸ“Š Stats (Fragments)
              if (s && s.lifetime) {
@@ -1085,9 +1103,17 @@ export function useGameEngine() {
     const critBonus = getCritChanceBonus();
     const finalCritChance = Math.min(1.0, critChance + critBonus);
     
+    // Calculate Base Damage for UI (No Crit)
+    let baseDmg = dmg;
+    // 5. Skill Multipliers (Super Clicks, Energize)
+    // We delegate to getTapMultiplier which checks activeSkills
+    const skillMult = getTapMultiplier();
+    baseDmg = baseDmg.mul(skillMult);
+
     const isCritNow = Math.random() < finalCritChance;
     
-    let finalDmg = dmg;
+    let finalDmg = baseDmg; // Start with fully multiplied base
+    
     if (isCritNow) {
         const critMultBase = totals.critMult;
         // Apply Crit Multiplier logic if separate? 
@@ -1096,44 +1122,13 @@ export function useGameEngine() {
         finalDmg = finalDmg.mul(critMultBase);
     }
     
-    // 5. Skill Multipliers (Super Clicks, Energize)
-    // We delegate to getTapMultiplier which checks activeSkills
-    finalDmg = finalDmg.mul(getTapMultiplier());
+    // Return Object
+    return {
+        dmg: finalDmg,
+        isCrit: isCritNow,
+        baseDmg: baseDmg 
+    };
     
-    // --- Stats Tracking ---
-    if (trackStats && s && s.lifetime) {
-        // Taps
-        s.lifetime.totalTaps = (s.lifetime.totalTaps || 0) + 1;
-        s.thisRewind.totalTaps = (s.thisRewind.totalTaps || 0) + 1;
-        s.thisSession.totalTaps = (s.thisSession.totalTaps || 0) + 1;
-
-        // Damage (Safe decimal add)
-        s.lifetime.totalTapDamage = D(s.lifetime.totalTapDamage).add(finalDmg).toString();
-        s.lifetime.totalDamage = D(s.lifetime.totalDamage).add(finalDmg).toString();
-        
-        s.thisRewind.damageTap = D(s.thisRewind.damageTap).add(finalDmg).toString();
-        s.thisRewind.damageAll = D(s.thisRewind.damageAll).add(finalDmg).toString();
-        
-        s.thisSession.damageAll = D(s.thisSession.damageAll).add(finalDmg).toString();
-
-        // Peaks
-        if (D(finalDmg).gt(s.lifetime.highestTapHit)) s.lifetime.highestTapHit = finalDmg;
-        if (D(finalDmg).gt(s.thisRewind.highestTapHit)) s.thisRewind.highestTapHit = finalDmg;
-
-        // Stats: Streak
-        if (streakCount > (s.lifetime.longestStreak || 0)) s.lifetime.longestStreak = streakCount;
-        if (streakCount > (s.thisRewind.longestStreak || 0)) s.thisRewind.longestStreak = streakCount;
-
-        // Crit
-        if (isCritNow) {
-            s.lifetime.totalCriticalTaps = (s.lifetime.totalCriticalTaps || 0) + 1;
-            s.thisRewind.criticalTaps = (s.thisRewind.criticalTaps || 0) + 1;
-            if (D(finalDmg).gt(s.lifetime.peakCriticalTapHit)) s.lifetime.peakCriticalTapHit = finalDmg;
-            if (D(finalDmg).gt(s.thisRewind.peakCritTapHit)) s.thisRewind.peakCritTapHit = finalDmg;
-        }
-    }
-
-    return { dmg: finalDmg, isCrit: isCritNow };
   }, [totals.tapDamage, totals.critChance, totals.critMult, activeSkills, getCritChanceBonus, getTapMultiplier]);
 
 
@@ -1375,6 +1370,54 @@ export function useGameEngine() {
     [ownedMiners],
   );
 
+  // Buy All Available Skills
+  const buyAllAvailableSkills = useCallback(() => {
+    // 1. Snapshot current state
+    const currentMinerals = D(minerals);
+    let remainingMinerals = currentMinerals;
+    let totalCost = D(0);
+    const skillsToBuy = [];
+
+    // 2. Iterate all unlocked miners
+    for (const miner of minersDef) {
+        const minerLvl = Number(ownedMiners[miner.id] || 0);
+        if (minerLvl <= 0) continue; // Skip locked miners
+
+        if (miner.skills) {
+            for (const skill of miner.skills) {
+                // Check if already owned
+                const isOwned = ownedSkills[miner.id]?.[skill.id];
+                if (isOwned) continue;
+
+                // Check level requirement
+                const unlockAt = Number(skill.unlockAt || 9999);
+                if (minerLvl < unlockAt) continue;
+
+                // SKIP Rewind Skill (Manual Only)
+                if (skill.kind === "unlock_feature_rewind") continue;
+
+                // Check cost
+                const cost = D(skill.cost || 0);
+                if (remainingMinerals.gte(cost)) {
+                    remainingMinerals = remainingMinerals.sub(cost);
+                    totalCost = totalCost.add(cost);
+                    skillsToBuy.push({ minerId: miner.id, skillId: skill.id });
+                }
+            }
+        }
+    }
+
+    // 3. Dispatch if we have anything to buy
+    if (skillsToBuy.length > 0) {
+        dispatchEco({ 
+            type: "BUY_SKILLS_BULK", 
+            skillsToBuy, 
+            totalCost 
+        });
+        // Optional: Toast or feedback? User said "no extra info needed", just turn green.
+    }
+  }, [minerals, ownedMiners, ownedSkills]);
+
   useEffect(() => {
     // Reducer state gÃ¼ncellendiÄŸinde optimistic layer'Ä± temizle
     if (Object.keys(pendingOwnedMiners).length) {
@@ -1459,8 +1502,9 @@ export function useGameEngine() {
     const skill = minerDef.skills?.find((s) => s.id === skillId);
     if (!skill) return;
 
-    // âœ… SPECIAL: Prestige Skill Intercept
-    if (skill.kind === "prestige_unlock") {
+    // ✅ SPECIAL: Rewind Skill Intercept
+    // Never "buy" it. Just open modal. It stays available.
+    if (skill.kind === "unlock_feature_rewind") {
         setShowRewindModal(true);
         return;
     }
@@ -1740,6 +1784,7 @@ export function useGameEngine() {
     mode,
     toggleMode,
     zone,
+    maxUnlockedZone,
     step,
     isBossPlanet,
     isChest, // âœ… Exported for UI (e.g. show different sprite)
@@ -1759,11 +1804,22 @@ export function useGameEngine() {
     },
     uiStreak, // Exported for Combo UI
     isIdle, // âœ… Exported for Mode Badge
+    hasIdleBonus: (eco.cosmicProtocols?.silent_observer || 0) > 0, // âœ… Only show if owned
+    
+    // Rewind Feature
+    // Active if Miner 20 is Level 150+ (Unlocked)
+    rewindUnlocked: (ownedMiners['miner_20'] || 0) >= 150,
+    openRewindModal: () => setShowRewindModal(true),
+    showRewindModal,
+    closeRewindModal: () => setShowRewindModal(false),
+    confirmStellarRewind,
+    prestigeReward,
 
     ownedSkills,
     buyOrUpgradeMiner,
-    buySkill,
-
+    buySkill, // Single
+    buyAllAvailableSkills, // Bulk
+    
     // totals / damage
     totalDps,
     totalClickDamage,
@@ -1840,10 +1896,14 @@ export function useGameEngine() {
     upgradeProtocol: (id, amount = 1) => dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId: id, amount }),
 
     // Statistics
-    stats: statsRef.current, // ğŸ“Š
+    stats: statsRef.current, // 📊
     getStats: () => statsRef.current, // âœ… Getter for fresh ref access
     claimedAchievements: eco.claimedAchievements || [], // ğŸ† Exposed for UI
     unclaimedAchievements, // 🔔 EXPOSED BADGE COUNT
+
+    // Totals & Multipliers (Exposed for UI Breakdown)
+    totals, 
+    dpsMultiplier: getDpsMultiplier(), // âœ… Current Active Skill Multiplier
 
     // Dev Tools Exports
     dispatchEco,
