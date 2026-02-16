@@ -59,6 +59,15 @@ export function serializeEco(eco) {
     },
     claimedAchievements: eco?.claimedAchievements || [],
     mineralBonusEndTime: Number(eco?.mineralBonusEndTime || 0),
+    // DAILY QUESTS
+    dailyQuest: eco?.dailyQuest ? {
+      lastResetDate: eco.dailyQuest.lastResetDate || null,
+      weeklyProgress: Number(eco.dailyQuest.weeklyProgress || 0),
+      weeklyClaimed: Boolean(eco.dailyQuest.weeklyClaimed || false),
+      activeQuests: eco.dailyQuest.activeQuests || [],
+      rerollCount: Number(eco.dailyQuest.rerollCount || 0),
+      weekNumber: Number(eco.dailyQuest.weekNumber || 0),
+    } : null,
   };
 }
 
@@ -107,6 +116,15 @@ export function normalizeLoadedEco(rawEco) {
     },
     claimedAchievements: eco.claimedAchievements || [],
     mineralBonusEndTime: Number(eco.mineralBonusEndTime || 0),
+    // DAILY QUESTS
+    dailyQuest: {
+      lastResetDate: eco.dailyQuest?.lastResetDate || null,
+      weeklyProgress: Number(eco.dailyQuest?.weeklyProgress || 0),
+      weeklyClaimed: Boolean(eco.dailyQuest?.weeklyClaimed || false),
+      activeQuests: eco.dailyQuest?.activeQuests || [],
+      rerollCount: Number(eco.dailyQuest?.rerollCount || 0),
+      weekNumber: Number(eco.dailyQuest?.weekNumber || 0),
+    },
   };
 }
 

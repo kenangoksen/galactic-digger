@@ -19,6 +19,7 @@ export default function SideBarRight({
   onToggleMode,
   onAdPress,
   onDevTools, 
+  onDailyQuests, // 📅 New
   adReady = true, 
 }) {
   // ---- Tooltip State ----
@@ -136,6 +137,17 @@ export default function SideBarRight({
                 <Image source={ICON_AD} style={styles.icon} />
               </View>
             </Pressable>
+
+            {/* ---- DAILY QUESTS BUTTON ---- */}
+            <View style={styles.btnWrapper}>
+                <Pressable 
+                    style={({pressed}) => [styles.sideBtn, pressed && styles.btnPressed, {backgroundColor: 'rgba(251, 191, 36, 0.2)', borderColor: 'rgba(251, 191, 36, 0.5)'}]}
+                    onPress={onDailyQuests}
+                >
+                    <Ionicons name="clipboard" size={22} color="#fbbf24" />
+                </Pressable>
+                <Text style={styles.btnLabel}>Quests</Text>
+            </View>
 
             {/* ---- MODE TOGGLE (Bottom) ---- */}
             <Pressable onPress={handleToggle} style={styles.btnWrap} hitSlop={12}>

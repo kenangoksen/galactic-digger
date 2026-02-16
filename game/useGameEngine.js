@@ -101,7 +101,11 @@ export function useGameEngine() {
   const [isIdle, setIsIdle] = useState(false); // Siyalatas / Silent Observer check
   
   // Time Warp Result State
+  // Time Warp Result State
   const [timeWarpResult, setTimeWarpResult] = useState(null);
+
+  // Quest Tracker Refs (Batched)
+  const questTapsRef = useRef(0);
 
   const resetGame = useCallback(async () => {
     // 1. Clear storage
@@ -544,6 +548,8 @@ export function useGameEngine() {
         calcOffline(loaded);
       }
       setHydrated(true);
+      // 🔄 Always check/populate daily quests AFTER state is fully loaded
+      dispatchEco({ type: "CHECK_DAILY_RESET" });
     })();
 
     // 2. AppState Listener
@@ -784,6 +790,11 @@ export function useGameEngine() {
           s.lifetime.totalGoldEarned = D(s.lifetime.totalGoldEarned).add(gained).toString();
           s.thisRewind.goldEarned = D(s.thisRewind.goldEarned).add(gained).toString();
           s.thisSession.goldEarned = D(s.thisSession.goldEarned).add(gained).toString();
+          
+          // QUEST: Kill Boss
+          if (localZone % 5 === 0) {
+              dispatchEco({ type: "INCREMENT_QUEST_STAT", statType: "KILL_BOSS", amount: 1 });
+          }
 
           // Highest Sector
           if (localZone > (s.lifetime.highestSector || 1)) s.lifetime.highestSector = localZone;
@@ -1049,6 +1060,9 @@ export function useGameEngine() {
     if (skill.effect !== 'reload' && skill.effect !== 'energize') {
          lastUsedSkillRef.current = skillId;
     }
+    
+    // QUEST: Activate Skill
+    dispatchEco({ type: "INCREMENT_QUEST_STAT", statType: "ACTIVATE_SKILL", amount: 1 });
   };
 
   // --- LOOPS ---
@@ -1160,6 +1174,11 @@ export function useGameEngine() {
     
     // 2. Damage Calc
     
+    // QUEST: Tap (Batched) - Manual Only
+    if (!isAuto) {
+        questTapsRef.current += 1;
+    }
+
     // 2. Damage Calc
     const { dmg, isCrit } = calcTapDamage(true, isAuto);
     applyDamage(dmg);
@@ -1254,6 +1273,12 @@ export function useGameEngine() {
       }
 
       applyDamageRef.current(dmg);
+      
+      // QUEST: Flush Taps
+      if (questTapsRef.current > 0) {
+          dispatchEco({ type: "INCREMENT_QUEST_STAT", statType: "TAP", amount: questTapsRef.current });
+          questTapsRef.current = 0;
+      }
     }, TICK_MS);
 
     return () => clearInterval(id);
@@ -1362,6 +1387,9 @@ export function useGameEngine() {
 
       dispatchEco({ type: "BUY_MINER", minerId, amount: multiplier });
       dispatchEco({ type: "CHECK_MILESTONES" }); // âœ… Check unlock milestones
+      
+      // QUEST: Buy Upgrade
+      dispatchEco({ type: "INCREMENT_QUEST_STAT", statType: "BUY_UPGRADE", amount: multiplier });
 
       requestAnimationFrame(() => {
         buyLockRef.current = false;
@@ -1731,6 +1759,9 @@ export function useGameEngine() {
       const newEnd = Math.max(now, currentEnd) + DURATION;
       
       dispatchEco({ type: "EXTEND_MINERAL_BONUS", endTime: newEnd });
+      
+      // QUEST: Watch Ad
+      dispatchEco({ type: "INCREMENT_QUEST_STAT", statType: "WATCH_AD", amount: 1 });
   }, [eco.mineralBonusEndTime]);
 
   // 🏆 Achievements Watcher (Updates badge live)
@@ -1773,6 +1804,45 @@ export function useGameEngine() {
 
     return () => clearInterval(interval);
   }, [eco.claimedAchievements]); // Re-create if claimed list changes
+
+  const unlockProtocol = (protocolId) => dispatchEco({ type: "UNLOCK_PROTOCOL", protocolId });
+  const upgradeProtocol = (protocolId, amount = 1) => dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId, amount });
+  const openTag = () => {
+      dispatchEco({ type: "OPEN_TAG" });
+      dispatchEco({ type: "INCREMENT_QUEST_STAT", statType: "OPEN_TAG", amount: 1 });
+  };
+  const resetLastOpenedMiner = () => dispatchEco({ type: "RESET_LAST_OPENED" });
+
+  // Quest Actions
+  const claimDailyQuest = (questIndex, double = false) => {
+      // Logic for 2x Ad (Mocking Ad Watch if double is true)
+      if (double) {
+          // In real app, show Ad here. For now, assume success.
+          console.log("Ad Watched for 2x Reward");
+      }
+      
+      // Calculate DPS for mineral rewards
+      const currentDps = dpsRef.current;
+      dispatchEco({ type: "CLAIM_QUEST_REWARD", questIndex, double, payload: { dps: currentDps } });
+  };
+  
+  const rerollDailyQuest = (questIndex) => {
+      // Mock Ad Watch for Reroll? 
+      // User said "Reroll with Ad".
+      // So we don't deduct shards, we just verify ad.
+      console.log("Ad Watched for Reroll");
+      // Actually reducer expects 'cost' if we implemented shard cost.
+      // But for Ad, cost is 0 shards. 
+      // Let's update reducer to separate "REROLL_WITH_SHARDS" vs "REROLL_WITH_AD".
+      // Or just pass cost 0.
+      dispatchEco({ type: "REROLL_QUEST", questIndex, cost: 0 });
+  };
+
+  const claimWeeklyQuestChest = () => dispatchEco({ type: "CLAIM_WEEKLY_CHEST", payload: { dps: dpsRef.current } });
+  
+  const checkDailyQuestReset = useCallback(() => {
+      dispatchEco({ type: "CHECK_DAILY_RESET" });
+  }, []);
 
   return {
     // visuals / stage
@@ -1890,10 +1960,18 @@ export function useGameEngine() {
         return getNextUnlockCost(ownedCount);
     },
     
-    unlockProtocol: (id) => dispatchEco({ type: "UNLOCK_PROTOCOL", protocolId: id }),
+    unlockProtocol,
     rerollSlot: (idx) => dispatchEco({ type: "REROLL_SLOT", slotIndex: idx }),
     generateSummonPool: () => dispatchEco({ type: "GENERATE_SUMMON_POOL" }),
-    upgradeProtocol: (id, amount = 1) => dispatchEco({ type: "UPGRADE_PROTOCOL", protocolId: id, amount }),
+    upgradeProtocol,
+    openTag,
+    resetLastOpenedMiner,
+    
+    // quests
+    claimDailyQuest,
+    rerollDailyQuest,
+    claimWeeklyQuestChest,
+    checkDailyQuestReset, // NEW
 
     // Statistics
     stats: statsRef.current, // 📊

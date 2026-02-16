@@ -6,7 +6,7 @@ import minersDef from "../../assets/config/miners.json";
 // Placeholder image
 const MINER_IMG = require("../../assets/images/sprites/miners/miner_01.png");
 
-export default function TagOpenModal({ visible, unopenedCount, onOpenTag, onClose, lastOpenedMinerId }) {
+export default function TagOpenModal({ visible, unopenedCount, onOpenTag, onClose, lastOpenedMinerId, onReset }) {
     const [state, setState] = useState("CHEST"); // CHEST, OPENING, REVEALED
     const [revealedMiner, setRevealedMiner] = useState(null);
     const [autoOpen, setAutoOpen] = useState(false);
@@ -27,21 +27,26 @@ export default function TagOpenModal({ visible, unopenedCount, onOpenTag, onClos
         }
     }, [visible]);
 
-    // Auto Open Logic - REMOVED (User wants manual Control)
-    // We reuse 'autoOpen' state to mean "Batch Mode" (Opening multiple)
+    // State Machine: CHEST -> RESETTING -> OPENING -> REVEALED
     
-    // Watch for Last Opened Miner update to show correct info
+    // Watch for State Transitions
     useEffect(() => {
-        if (lastOpenedMinerId && state === "OPENING") {
+        // 1. If RESETTING and ID is null, we are ready to open
+        if (state === "RESETTING" && !lastOpenedMinerId) {
+            console.log("TagModal: Reset Complete. Starting Open...");
+            handleOpen();
+        }
+
+        // 2. If OPENING and ID is present, we have a result
+        if (state === "OPENING" && lastOpenedMinerId) {
+            console.log("TagModal: Result Received! Revealing...");
             const m = minersDef.find(m => m.id === lastOpenedMinerId);
             setRevealedMiner(m || { name: "Unknown Miner" });
             
-            // Allow animation to finish
             setTimeout(() => {
                 setState("REVEALED");
                 Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
                 
-                // Spin light
                 Animated.loop(
                     Animated.timing(lightRotate, {
                         toValue: 1, duration: 4000, easing: Easing.linear, useNativeDriver: true
@@ -53,7 +58,8 @@ export default function TagOpenModal({ visible, unopenedCount, onOpenTag, onClos
     }, [lastOpenedMinerId, state]); 
 
     const handleOpen = () => {
-        if (state !== "CHEST") return;
+        // Only start opening if Chest (First time) or Resetting (Next time)
+        if (state !== "CHEST" && state !== "RESETTING") return;
         
         setState("OPENING");
         
@@ -70,20 +76,21 @@ export default function TagOpenModal({ visible, unopenedCount, onOpenTag, onClos
             Animated.spring(scale, { toValue: 0, duration: 200, useNativeDriver: true }) // Shrink out
         ]).start(() => {
             shake.setValue(0);
-            onOpenTag(); // Trigger Action
+            console.log("TagModal: Anim done. Dispatching Open Action.");
+            if (onOpenTag) onOpenTag(); 
         });
     };
 
     const handleNext = () => {
-        // Reset and immediately open next
-        setState("CHEST");
+        console.log("TagModal: Next Clicked. Resetting...");
+        
+        // 1. Trigger Reset Action
+        if (onReset) onReset();
+
+        // 2. Enter Resetting State (Wait for ID to be null)
+        setState("RESETTING");
         scale.setValue(1);
         fade.setValue(0);
-        
-        // Small delay to show chest then open
-        setTimeout(() => {
-            handleOpen();
-        }, 100);
     };
 
     const handleResetToChest = () => {

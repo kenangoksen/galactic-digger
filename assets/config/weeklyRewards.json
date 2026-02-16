@@ -1,0 +1,48 @@
+[
+  {
+    "week": 1,
+    "title": "Galactic Supply Crate",
+    "icon": "treasure-chest",
+    "color": "#3b82f6",
+    "rewards": [
+      { "type": "shards", "amount": 500, "label": "500 Shards" },
+      { "type": "fragments", "amount": 10000, "label": "10K Fragments" },
+      { "type": "artifacts", "amount": 2, "label": "2 Artifacts" }
+    ]
+  },
+  {
+    "week": 2,
+    "title": "Stellar Treasure Vault",
+    "icon": "safe-square",
+    "color": "#8b5cf6",
+    "rewards": [
+      { "type": "shards", "amount": 750, "label": "750 Shards" },
+      { "type": "fragments", "amount": 15000, "label": "15K Fragments" },
+      { "type": "artifacts", "amount": 1, "label": "1 Artifact" },
+      { "type": "minerals_hours", "amount": 4, "label": "4h Minerals" }
+    ]
+  },
+  {
+    "week": 3,
+    "title": "Cosmic Commander Chest",
+    "icon": "shield-star",
+    "color": "#f59e0b",
+    "rewards": [
+      { "type": "shards", "amount": 1000, "label": "1K Shards" },
+      { "type": "fragments", "amount": 20000, "label": "20K Fragments" },
+      { "type": "artifacts", "amount": 2, "label": "2 Artifacts" }
+    ]
+  },
+  {
+    "week": 4,
+    "title": "Legendary Nebula Chest",
+    "icon": "star-shooting",
+    "color": "#ef4444",
+    "rewards": [
+      { "type": "shards", "amount": 1500, "label": "1.5K Shards" },
+      { "type": "fragments", "amount": 25000, "label": "25K Fragments" },
+      { "type": "artifacts", "amount": 3, "label": "3 Artifacts" },
+      { "type": "minerals_hours", "amount": 8, "label": "8h Minerals" }
+    ]
+  }
+]

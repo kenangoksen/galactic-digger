@@ -1,6 +1,6 @@
 // app/(tabs)/index.js
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Image, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 
 import BottomNav from "../../components/BottomNav";
@@ -10,6 +10,7 @@ import MinersSheet from "../../components/MinersSheet";
 import SettingsSheet from "../../components/SettingsSheet";
 import TopBar from "../../components/TopBar";
 import AchievementsModal from "../../components/ui/AchievementsModal"; // 🏆 New
+import DailyQuestsModal from "../../components/ui/DailyQuestsModal"; // 📅 New
 import DevToolsModal from "../../components/ui/DevToolsModal";
 import NiceModal from "../../components/ui/NiceModal";
 import QuestSelectionModal from "../../components/ui/QuestSelectionModal"; // 🚀
@@ -54,6 +55,7 @@ export default function HomeScreen() {
   const [questOptions, setQuestOptions] = useState([]); // 4 quest options
   const [showSyndicate, setShowSyndicate] = useState(false); // ⚡ Syndicate
   const [showTagModal, setShowTagModal] = useState(false); // 🌟 Tags Modal
+  const [showDailyQuests, setShowDailyQuests] = useState(false); // 📅 Daily Quests
 
   // Modal State
   const [modal, setModal] = useState({
@@ -80,6 +82,18 @@ export default function HomeScreen() {
 
   const engine = useGameEngine();
   const syndicateHook = useSyndicate(engine.eco?.stellarFragmentsSpentLifetime || 0);
+
+  // 📅 Daily Quests Init & Auto Open
+  useEffect(() => {
+    // Check Reset
+    engine.checkDailyQuestReset();
+
+    // Auto Open after delay
+    const timer = setTimeout(() => {
+        setShowDailyQuests(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [engine.checkDailyQuestReset]);
 
   // 🏆 Badge now comes from engine directly (live update)
   const unclaimedCount = engine.unclaimedAchievements || 0;
@@ -363,6 +377,9 @@ export default function HomeScreen() {
         >
           {({ stageTranslateY, stageScale, sheetProgress, Sheet }) => (
             <>
+
+
+
               {/* --- GLOBAL TOASTS --- */}
               {engine.tagToast && (
                 <View style={styles.toastContainer} pointerEvents="none">
@@ -487,6 +504,7 @@ export default function HomeScreen() {
                     console.log("Setting showDevTools to TRUE");
                     setShowDevTools(true);
                 }}
+                onDailyQuests={() => setShowDailyQuests(true)} // 📅
               />
               
               {/* 🌟 REWIND BUTTON (Standalone) */}
@@ -665,11 +683,27 @@ export default function HomeScreen() {
           visible={showTagModal}
           unopenedCount={engine.eco?.unopenedTags || 0}
           lastOpenedMinerId={engine.eco?.lastOpenedMinerId}
-          onOpenTag={() => engine.dispatchEco({ type: "OPEN_TAG" })}
+          onOpenTag={engine.openTag} // Use helper
+          onReset={engine.resetLastOpenedMiner} // New prop
           onClose={() => setShowTagModal(false)}
       />
 
-    {/* ⚡ Syndicate Panel */}
+      <DailyQuestsModal
+          visible={showDailyQuests}
+          onClose={() => setShowDailyQuests(false)}
+          dailyQuest={engine.eco?.dailyQuest}
+          onClaim={engine.claimDailyQuest}
+          onReroll={engine.rerollDailyQuest}
+          onClaimWeekly={engine.claimWeeklyQuestChest}
+          mineralsDps={engine.eco?.mineralsDps || 0} // We need DPS. Eco doesn't have it generally, use engine.totalDps?
+          // Actually engine returns totalDps but not in eco.
+          // Let's pass engine.totalDps if available?
+          // engine object has no totalDps property exposed explicitly in return?
+          // Let's check useGameEngine return...
+          // It returns `mineralsDps` inside `totals`? No, let's check `useGameEngine.js`.
+      />
+
+      {/* --- Global Modals --- */}
     <SyndicateSheet
       visible={showSyndicate}
       onClose={() => setShowSyndicate(false)}

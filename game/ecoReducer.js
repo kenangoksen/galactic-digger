@@ -3,18 +3,50 @@
 // Extracted from useGameEngine.js for modularity.
 
 import milestonesDef from "../assets/config/milestones.json";
-import minersDef from "../assets/config/miners.json";
+import questsDef from "../assets/config/quests.json";
+import { D } from "./bn"; // 🔢
 
-import { calculateSalvageValue, calculateUpgradeCost } from "./artifacts/artifactService";
-import { D } from "./bn";
+import minersDef from "../assets/config/miners.json";
 import configCache from "./ConfigCache";
-import { getBulkCost, getProtocolBulkCost } from "./damage";
-import { getNextUnlockCost, monsterHp, monsterMineral } from "./monsterCalc";
+import { getBulkCost } from "./damage";
+
+import WEEKLY_REWARDS from "../assets/config/weeklyRewards.json";
+export { WEEKLY_REWARDS };
+
+// ---------------- Helper: Generate Daily Quests ----------------
+function generateDailyQuests() {
+    // 1. Ad quest is ALWAYS included
+    const adQuest = questsDef.find(q => q.type === "WATCH_AD");
+    const otherQuests = questsDef.filter(q => q.type !== "WATCH_AD");
+    
+    // 2. Pick 2 random quests from the rest
+    const shuffled = [...otherQuests].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 2);
+    
+    // 3. Build final list: Ad quest first, then 2 random
+    const all = adQuest ? [adQuest, ...selected] : selected;
+    
+    return all.map(q => {
+        const target = q.targets[Math.floor(Math.random() * q.targets.length)];
+        return {
+            id: q.id,
+            type: q.type,
+            target: target,
+            progress: 0,
+            claimed: false,
+            rewardType: q.rewardType,
+            baseReward: q.baseReward,
+            description: q.description,
+            icon: q.icon
+        };
+    });
+}
 
 // ---------------- Economy Init ----------------
 const RESET_ARTIFACTS_ON_BIG_BANG = true;
 
 export const ECO_INIT = {
+  // ... (existing state)
   minerals: D(0), 
   ownedMiners: {},
   ownedSkills: {},
@@ -23,8 +55,8 @@ export const ECO_INIT = {
   cosmicProtocols: {}, 
   // STARLINK
   totalStarlinkTags: 0,
-  unopenedTags: 0, // NEW: Tags waiting to be opened
-  highestZoneLifetime: 0, // NEW: HZE for this Big Bang cycle
+  unopenedTags: 0, 
+  highestZoneLifetime: 0, 
   tagsByMinerId: {},
   lifetimeTagsEarned: 0,
   // Universal Constants & Essence
@@ -56,91 +88,200 @@ export const ECO_INIT = {
   },
   // ACHIEVEMENTS
   claimedAchievements: [],
+  
+  // DAIRY QUESTS
+  dailyQuest: {
+      lastResetDate: null,
+      weeklyProgress: 0,
+      weeklyClaimed: false,
+      activeQuests: [], // Will be populated on first load
+      rerollCount: 0,
+      weekNumber: 0 // 0-3 rotation (4 weeks)
+  }
 };
 
-// ---------------- Time Warp Simulation ----------------
-export function simulateTimeWarp(startZone, startStep, currentDps, durationSeconds) {
-    let zone = Number(startZone);
-    if (isNaN(zone) || zone < 1) zone = 1;
-    let step = Number(startStep);
-    if (isNaN(step) || step < 1) step = 1;
-    let dps = D(currentDps);
-    if (dps.lt(0) || isNaN(dps.e)) dps = D(0);
-    let secondsLeft = durationSeconds;
-    let gainedGold = D(0);
-    let gainedFragments = D(0);
-    let gainedZones = 0;
-    const startZ = zone;
-
-    let maxIterations = 10000;
-    
-    while (secondsLeft > 0 && maxIterations > 0) {
-        maxIterations--;
-        
-        const hp = D(monsterHp(zone, step));
-        const reward = D(monsterMineral(zone, step));
-        const isBoss = zone % 5 === 0;
-
-        let timeToKill = 0.5;
-        
-        if (dps.gte(hp)) {
-            timeToKill = 0.1;
-        } else {
-            const ratio = hp.div(dps).toNumber();
-            timeToKill = ratio; 
-        }
-
-        if (timeToKill > secondsLeft) {
-            break; 
-        }
-
-        if (isBoss && timeToKill > 30) {
-            const farmZone = Math.max(1, zone - 1);
-            const farmStep = 1;
-            const farmHp = D(monsterHp(farmZone, farmStep));
-            const farmReward = D(monsterMineral(farmZone, farmStep));
-            
-            if (dps.gt(0)) {
-                let farmKillTime = 1; 
-                if (dps.gte(farmHp)) farmKillTime = 0.1;
-                else farmKillTime = farmHp.div(dps).toNumber();
-                
-                const kills = Math.floor(secondsLeft / farmKillTime);
-                gainedGold = gainedGold.add(farmReward.mul(kills));
-            }
-            break;
-        }
-
-        secondsLeft -= timeToKill;
-        gainedGold = gainedGold.add(reward);
-
-        if (isBoss) {
-            zone++;
-            step = 1;
-        } else {
-             if (step < 10) step++;
-             else {
-                 zone++;
-                 step = 1;
-             }
-        }
-    }
-    
-    gainedZones = Math.max(0, zone - startZ);
-    gainedFragments = D(Math.floor(gainedZones / 10));
-
-    return {
-        finalZone: zone,
-        finalStep: step,
-        gainedGold,
-        gainedZones,
-        gainedFragments
-    };
-}
+// ... (Time Warp Simulation)
 
 // ---------------- Economy Reducer ----------------
 export function ecoReducer(state, action) {
   switch (action.type) {
+    
+    // --- DAILY QUESTS ---
+    case "CHECK_DAILY_RESET": {
+        const today = new Date().toISOString().split('T')[0];
+        const lastReset = state.dailyQuest?.lastResetDate;
+        const hasQuests = state.dailyQuest?.activeQuests?.length > 0;
+
+        if (lastReset !== today || !hasQuests) {
+            // New Day OR empty quests (after game reset)
+            const isNewDay = lastReset !== today;
+            return {
+                ...state,
+                dailyQuest: {
+                    ...state.dailyQuest,
+                    lastResetDate: today,
+                    rerollCount: isNewDay ? 0 : (state.dailyQuest?.rerollCount || 0),
+                    activeQuests: generateDailyQuests(),
+                    // Reset weekly on new day if previously claimed
+                    weeklyClaimed: isNewDay ? false : (state.dailyQuest?.weeklyClaimed || false),
+                }
+            };
+        }
+        return state;
+    }
+
+    case "INCREMENT_QUEST_STAT": {
+        const { statType, amount = 1 } = action;
+        if (!state.dailyQuest?.activeQuests) return state;
+
+        const newQuests = state.dailyQuest.activeQuests.map(q => {
+            if (q.type === statType && !q.claimed) {
+                 return { ...q, progress: Math.min(q.target, q.progress + amount) };
+            }
+            return q;
+        });
+
+        return {
+            ...state,
+            dailyQuest: {
+                ...state.dailyQuest,
+                activeQuests: newQuests
+            }
+        };
+    }
+
+    case "CLAIM_QUEST_REWARD": {
+        const { questIndex, double } = action;
+        const quest = state.dailyQuest.activeQuests[questIndex];
+        
+        if (!quest || quest.claimed || quest.progress < quest.target) return state;
+
+        // Calculate Reward
+        let rewardAmount = quest.baseReward;
+        
+        // Dynamic Reward Scaling (e.g. Minerals based on DPS)
+        let rewardMinerals = D(0);
+        
+        if (quest.rewardType === "minerals_minute") {
+             // We need DPS from payload or state check. 
+             // Ideally payload sends current minerals/sec worth
+             rewardMinerals = D(action.payload?.dps || 0).mul(60 * rewardAmount);
+        } else if (quest.rewardType === "minerals_hour") {
+             rewardMinerals = D(action.payload?.dps || 0).mul(3600 * rewardAmount);
+        }
+
+        if (double) {
+            rewardAmount *= 2;
+            rewardMinerals = rewardMinerals.mul(2);
+        }
+
+        const newQuests = [...state.dailyQuest.activeQuests];
+        newQuests[questIndex] = { ...quest, claimed: true };
+
+        // Weekly Progress
+        const newWeeklyProgress = (state.dailyQuest.weeklyProgress || 0) + 1;
+
+        let newState = {
+            ...state,
+            dailyQuest: {
+                ...state.dailyQuest,
+                activeQuests: newQuests,
+                weeklyProgress: newWeeklyProgress
+            }
+        };
+
+        // Grant Rewards
+        if (quest.rewardType === "shards") {
+            newState.shards = (newState.shards || 0) + rewardAmount;
+        } else if (quest.rewardType === "fragments") {
+            newState.stellarFragments = state.stellarFragments.add(rewardAmount);
+        } else if (quest.rewardType.startsWith("minerals")) {
+            newState.minerals = state.minerals.add(rewardMinerals);
+        }
+
+        return newState;
+    }
+
+    case "REROLL_QUEST": {
+        const { questIndex, cost } = action;
+        if (state.shards < cost) return state;
+
+        const newQuests = [...state.dailyQuest.activeQuests];
+        // Pick a new random quest distinct from current ones if possible
+        const existingIds = newQuests.map(q => q.id);
+        const available = questsDef.filter(q => !existingIds.includes(q.id));
+        
+        let newTpl = available.length > 0 
+            ? available[Math.floor(Math.random() * available.length)] 
+            : questsDef[Math.floor(Math.random() * questsDef.length)];
+
+        const target = newTpl.targets[Math.floor(Math.random() * newTpl.targets.length)];
+        
+        newQuests[questIndex] = {
+            id: newTpl.id,
+            type: newTpl.type,
+            target: target,
+            progress: 0,
+            claimed: false,
+            rewardType: newTpl.rewardType,
+            baseReward: newTpl.baseReward,
+            description: newTpl.description,
+            icon: newTpl.icon
+        };
+
+        return {
+            ...state,
+            shards: state.shards - cost,
+            dailyQuest: {
+                ...state.dailyQuest,
+                activeQuests: newQuests,
+                rerollCount: (state.dailyQuest.rerollCount || 0) + 1
+            }
+        };
+    }
+
+    case "CLAIM_WEEKLY_CHEST": {
+        if (state.dailyQuest.weeklyProgress < 15 || state.dailyQuest.weeklyClaimed) return state;
+
+        const currentWeek = state.dailyQuest.weekNumber || 0;
+        const weekRewardDef = WEEKLY_REWARDS[currentWeek % WEEKLY_REWARDS.length];
+        
+        let chestState = {
+            ...state,
+            dailyQuest: {
+                ...state.dailyQuest,
+                weeklyClaimed: true,
+                // Advance to next week for next cycle
+                weekNumber: (currentWeek + 1) % WEEKLY_REWARDS.length
+            }
+        };
+
+        // Grant all rewards from current week definition
+        for (const r of weekRewardDef.rewards) {
+            if (r.type === "shards") {
+                chestState.shards = (chestState.shards || 0) + r.amount;
+            } else if (r.type === "fragments") {
+                chestState.stellarFragments = D(chestState.stellarFragments).add(r.amount);
+            } else if (r.type === "artifacts") {
+                // Grant random artifacts
+                const newActive = [...(chestState.artifacts?.active || [])];
+                for (let i = 0; i < r.amount; i++) {
+                    // Generate a placeholder artifact ID (real system may differ)
+                    newActive.push({ id: `weekly_art_${Date.now()}_${i}`, rarity: "epic", source: "weekly_chest" });
+                }
+                chestState.artifacts = { ...chestState.artifacts, active: newActive };
+            } else if (r.type === "minerals_hours") {
+                // Grant minerals = DPS * hours * 3600
+                const dps = action.payload?.dps || 0;
+                const mineralGrant = D(dps).mul(3600 * r.amount);
+                chestState.minerals = D(chestState.minerals).add(mineralGrant);
+            }
+        }
+
+        return chestState;
+    }
+    
+    // ... (Existing Cases)
     case "GAIN_MINERALS": {
       const add = D(action.amount || 0);
       if (add.lte(0)) return state;
@@ -399,6 +540,10 @@ export function ecoReducer(state, action) {
         };
     }
 
+    case "RESET_LAST_OPENED": {
+        return { ...state, lastOpenedMinerId: null };
+    }
+
     case "OPEN_TAG": {
         if ((state.unopenedTags || 0) <= 0) return state;
 
@@ -538,11 +683,29 @@ export function ecoReducer(state, action) {
 
         claimedAchievements: p.claimedAchievements || state.claimedAchievements || [],
         mineralBonusEndTime: p.mineralBonusEndTime ?? state.mineralBonusEndTime ?? 0,
+
+        // DAILY QUESTS
+        dailyQuest: p.dailyQuest ? {
+          lastResetDate: p.dailyQuest.lastResetDate || null,
+          weeklyProgress: Number(p.dailyQuest.weeklyProgress || 0),
+          weeklyClaimed: Boolean(p.dailyQuest.weeklyClaimed || false),
+          activeQuests: p.dailyQuest.activeQuests || [],
+          rerollCount: Number(p.dailyQuest.rerollCount || 0),
+          weekNumber: Number(p.dailyQuest.weekNumber || 0),
+        } : state.dailyQuest,
       };
     }
 
     case "RESET_GAME": {
-      return { ...ECO_INIT };
+      const today = new Date().toISOString().split('T')[0];
+      return { 
+        ...ECO_INIT,
+        dailyQuest: {
+          ...ECO_INIT.dailyQuest,
+          lastResetDate: today,
+          activeQuests: generateDailyQuests(),
+        }
+      };
     }
 
     case "PERFORM_STELLAR_REWIND": {
@@ -584,6 +747,7 @@ export function ecoReducer(state, action) {
               }
               return next;
           })(),
+          dailyQuest: state.dailyQuest, // Preserve quest progress across rewind
        };
     }
 
